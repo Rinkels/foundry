@@ -1,0 +1,37 @@
+{% extends 'common/base.html' %}
+{% block content %}
+<h2>📝 Task List</h2>
+<a href="{% url 'task:task_create' %}" class="btn btn-success mb-3">➕ Add Task</a>
+<a href="{% url 'task:kanban_view' %}" class="btn btn-outline-primary">🧩 Open Kanban Board</a>
+
+<table class="table table-dark table-hover">
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Assigned To</th>
+      <th>Due Date</th>
+      <th>Priority</th>
+      <th>Completed</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for task in tasks %}
+    <tr>
+      <td>{{ task.title }}</td>
+      <td>{{ task.assigned_to }}</td>
+      <td>{{ task.due_date }}</td>
+      <td>{{ task.priority }}</td>
+      <td>
+        {% if task.completed %} ✅ {% else %} ⏳ {% endif %}
+      </td>
+      <td>
+        <a href="{% url 'task:task_edit' task.pk %}" class="btn btn-sm btn-primary">✏️</a>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6">No tasks yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

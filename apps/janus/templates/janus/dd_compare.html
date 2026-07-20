@@ -1,0 +1,113 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div class="d-flex align-items-end justify-content-between gap-3 mb-3">
+  <div>
+    <div class="text-soft small"><a href="{% url 'janus:dd-cockpit' %}">← Back to cockpit</a></div>
+    <h1 class="mb-0">Compare Targets</h1>
+    <div class="text-soft mt-1">Side-by-side section scores for the latest run per target.</div>
+  </div>
+</div>
+
+<div class="neon-glass-card p-4">
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th style="min-width:220px;">Section</th>
+          <th class="text-center" style="width:90px;">Weight</th>
+          {% for c in cols %}
+            <th style="min-width:200px;">
+              <div style="font-weight:800;">
+                <a href="{% url 'janus:dd-run-detail' c.run_id %}">{{ c.target_name }}</a>
+              </div>
+              <div class="text-soft small">{{ c.template }}</div>
+              <div class="text-soft small">
+                Score: <span style="font-weight:800;">{{ c.overall_score|floatformat:0 }}</span>
+                {% if c.verdict %} • {{ c.verdict|cut:"_"|title }}{% endif %}
+              </div>
+            </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td>
+              <div style="font-weight:700;">{{ r.section_title }}</div>
+            </td>
+            <td class="text-center text-soft">{{ r.weight }}</td>
+
+            {% for s in r.scores %}
+              <td>
+                {% if s is None %}
+                  <span class="text-soft">-</span>
+                {% else %}
+                  <div class="d-flex justify-content-between">
+                    <span class="text-soft small">Score</span>
+                    <span style="font-weight:800;">{{ s|floatformat:0 }}</span>
+                  </div>
+                  <div style="height:10px; border-radius:999px; background: rgba(255,255,255,0.08); overflow:hidden;">
+                    <div style="height:10px; width: {{ s }}%; background: rgba(255,255,255,0.35);"></div>
+                  </div>
+                {% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% empty %}
+          <tr><td colspan="99" class="text-soft">No comparable data yet. Create runs and enter responses.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+      <div class="neon-glass-card p-4 mt-3">
+  <h3 class="mb-2">Key Metrics</h3>
+  <div class="text-soft small mb-3">Quantitative snapshots (facts) per latest run.</div>
+
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th style="min-width:220px;">Metric</th>
+          {% for c in cols %}
+            <th style="min-width:200px;">{{ c.target_name }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="text-soft">Customers</td>
+          {% for c in cols %}<td>{% if c.snap_customers is not None %}{{ c.snap_customers }}{% else %}-{% endif %}</td>{% endfor %}
+        </tr>
+        <tr>
+          <td class="text-soft">ARR</td>
+          {% for c in cols %}<td>{% if c.snap_arr is not None %}${{ c.snap_arr|floatformat:0 }}{% else %}-{% endif %}</td>{% endfor %}
+        </tr>
+        <tr>
+          <td class="text-soft">MRR</td>
+          {% for c in cols %}<td>{% if c.snap_mrr is not None %}${{ c.snap_mrr|floatformat:0 }}{% else %}-{% endif %}</td>{% endfor %}
+        </tr>
+        <tr>
+          <td class="text-soft">Gross Margin</td>
+          {% for c in cols %}<td>{% if c.snap_gm is not None %}{{ c.snap_gm }}%{% else %}-{% endif %}</td>{% endfor %}
+        </tr>
+        <tr>
+          <td class="text-soft">NRR</td>
+          {% for c in cols %}<td>{% if c.snap_nrr is not None %}{{ c.snap_nrr }}%{% else %}-{% endif %}</td>{% endfor %}
+        </tr>
+        <tr>
+          <td class="text-soft">Burn (monthly)</td>
+          {% for c in cols %}<td>{% if c.snap_burn is not None %}${{ c.snap_burn|floatformat:0 }}{% else %}-{% endif %}</td>{% endfor %}
+        </tr>
+        <tr>
+          <td class="text-soft">Runway (months)</td>
+          {% for c in cols %}<td>{% if c.snap_runway is not None %}{{ c.snap_runway }}{% else %}-{% endif %}</td>{% endfor %}
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,103 @@
+<footer class="mt-5 py-4 border-top
+               {% if site.theme == 'dark' %}
+                 bg-dark text-light
+               {% else %}
+                 bg-white
+               {% endif %}">
+  <div class="container small text-muted">
+
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
+      <p class="mb-0">
+        &copy; {{ site.name }} {% now "Y" %}. All rights reserved.
+      </p>
+
+      <div class="d-flex flex-wrap gap-3 align-items-center">
+
+        {% for fl in site.footer_links %}
+          <a class="text-decoration-none {% if site.theme == 'dark' %}text-light{% else %}text-dark{% endif %}"
+             href="{{ fl.href }}"{% if fl.external %} target="_blank" rel="noopener"{% endif %}>{{ fl.label }}{% if fl.external %} &nearr;{% endif %}</a>
+        {% endfor %}
+        {% if site.footer_links %}<span class="text-muted">|</span>{% endif %}
+
+        <a class="text-decoration-none {% if site.theme == 'dark' %}text-light{% else %}text-dark{% endif %}"
+           href="{{ rel_root|default:'' }}sitemap.xml">Sitemap</a>
+
+        <a class="text-decoration-none {% if site.theme == 'dark' %}text-light{% else %}text-dark{% endif %}"
+           href="{{ rel_root|default:'' }}insights.html">Insights</a>
+
+        {% if latest_articles %}
+          <span class="text-muted">|</span>
+          <span class="text-muted">Latest:</span>
+
+          {% for a in latest_articles %}
+            <a class="text-decoration-none {% if site.theme == 'dark' %}text-light{% else %}text-dark{% endif %}"
+               href="{{ rel_root|default:'' }}insights/{{ a.slug }}.html">{{ a.title|truncatechars:28 }}</a>
+          {% endfor %}
+        {% endif %}
+
+        <a class="text-decoration-none {% if site.theme == 'dark' %}text-light{% else %}text-dark{% endif %}"
+           href="{{ rel_root|default:'' }}privacy-policy.html">Privacy Policy</a>
+
+        <a class="text-decoration-none {% if site.theme == 'dark' %}text-light{% else %}text-dark{% endif %}"
+           href="{{ rel_root|default:'' }}terms-of-service.html">Terms of Service</a>
+      </div>
+
+    </div>
+
+  </div>
+</footer>
+
+{% if site.theme_css == 'aurora' or site.theme_css == 'verdant' or site.theme_css == 'bauhaus' %}
+<script>
+  (function () {
+    const key = "ifms_theme";
+    const themes = ["theme-aurora", "theme-verdant", "theme-bauhaus"];
+
+    function currentTheme() {
+      const html = document.documentElement;
+      return themes.find(t => html.classList.contains(t)) || themes[1]; // default verdant
+    }
+
+    function setTheme(theme) {
+      const html = document.documentElement;
+      themes.forEach(t => html.classList.remove(t));
+      html.classList.add(theme);
+      localStorage.setItem(key, theme);
+    }
+
+    const btn = document.getElementById("themeToggle");
+    if (btn) {
+      btn.addEventListener("click", function () {
+        const now = currentTheme();
+        const idx = themes.indexOf(now);
+        const next = themes[(idx + 1) % themes.length];
+        setTheme(next);
+      });
+    }
+  })();
+</script>
+
+<script>
+  (function () {
+    const key = "ifms_theme";
+    const themes = ["theme-aurora", "theme-verdant", "theme-bauhaus"];
+
+    function setTheme(theme) {
+      const html = document.documentElement;
+      themes.forEach(t => html.classList.remove(t));
+      html.classList.add(theme);
+      localStorage.setItem(key, theme);
+    }
+
+    const select = document.getElementById("themeSelect");
+    if (!select) return;
+
+    const current = themes.find(t => document.documentElement.classList.contains(t)) || "theme-verdant";
+    select.value = current;
+
+    select.addEventListener("change", function () {
+      setTheme(this.value);
+    });
+  })();
+</script>
+{% endif %}

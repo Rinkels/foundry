@@ -1,0 +1,260 @@
+{% extends "common/base.html" %}
+{% load static %}
+
+{% block title %}{{ idea.name }} | Janus{% endblock %}
+
+{% block topnav %}
+  <a class="nav-link" href="{% url 'janus:dashboard' %}"><i class="fa-solid fa-arrow-left"></i> Back</a>
+  <a class="nav-link" href="{% url 'janus:sprint_create' idea.pk %}"><i class="fa-solid fa-flag-checkered"></i> New Sprint</a>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  .panel {
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06);
+    border-radius: 16px;
+    padding: 1.25rem;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .pill {
+    display:inline-flex; align-items:center; gap:.4rem;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06);
+    border-radius:999px;
+    padding:.2rem .6rem;
+    font-size:.85rem;
+    color:#eaf1ff;
+  }
+  .pill.pass { border-color: rgba(0,255,180,.35); }
+  .pill.fail { border-color: rgba(255,90,120,.35); }
+  .muted { color: rgba(234,241,255,.65); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="py-2">
+  <h1 class="text-white mb-1">{{ idea.name }}</h1>
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <span class="pill"><i class="fa-regular fa-circle"></i> {{ idea.status }}</span>
+    <span class="pill"><i class="fa-solid fa-tag"></i> {{ idea.idea_type }}</span>
+    <span class="pill"><i class="fa-solid fa-gauge-high"></i> Conviction {{ idea.founder_conviction }}/5</span>
+    {% if idea.entity %}<span class="pill"><i class="fa-solid fa-building"></i> {{ idea.entity }}</span>{% endif %}
+  </div>
+
+  <div class="panel mb-4">
+    <div class="text-white mb-1"><b>Problem</b></div>
+    <div class="muted">{{ idea.problem_statement }}</div>
+    <div class="mt-3 text-white"><b>Target customer</b></div>
+    <div class="muted">{{ idea.target_customer }}</div>
+  </div>
+  <div class="panel mt-4">
+    <h2 class="h4 text-white mb-2">Gates</h2>
+    <ul class="mb-0">
+      {% for g in idea.gates.all %}
+        <li class="muted">
+          {{ g.get_gate_display }}:
+          <b class="text-white">{% if g.passed %}PASS{% else %}FAIL{% endif %}</b>
+          <span class="muted">({{ g.rationale }})</span>
+        </li>
+      {% empty %}
+        <li class="muted">No gates evaluated yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  {% if idea.graduation %}
+    <div class="panel mt-4">
+      <h2 class="h4 text-white mb-2">Graduated ✅</h2>
+      <div class="muted">Strategy: <b class="text-white">{{ idea.graduation.strategy }}</b></div>
+      <div class="muted">Objective: <b class="text-white">{{ idea.graduation.objective }}</b></div>
+    </div>
+  {% endif %}
+  <div class="row g-4">
+    <!-- Sprint Panel -->
+    <div class="col-12 col-lg-6">
+      <div class="panel h-100">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h2 class="h4 text-white mb-0">Sprint</h2>
+          <a class="btn btn-sm btn-outline-warning" href="{% url 'janus:sprint_create' idea.pk %}">
+            <i class="fa-solid fa-plus"></i> Create Sprint
+          </a>
+        </div>
+        <form method="post"
+              action="{% url 'janus:evaluate_gate_customer_pain' idea.pk %}"
+              class="mt-3">
+          {% csrf_token %}
+
+          <button type="submit"
+                    class="btn btn-sm {% if gate1_would_pass %}btn-outline-success{% else %}btn-outline-warning{% endif %}"
+                    {% if not can_eval_gate1 %}disabled aria-disabled="true"{% endif %}>
+              <i class="fa-solid fa-shield-check"></i> Evaluate Gate 1 (Customer Pain)
+          </button>
+
+          {% if not latest_sprint and not active_sprint %}
+            <div class="muted small mt-2">
+              Create a sprint first to evaluate this gate.
+            </div>
+          {% elif not can_eval_gate1 %}
+            <div class="muted small mt-2">
+              Add at least 1 interview before evaluating.
+            </div>
+          {% endif %}
+        </form>
+
+
+        {% if active_sprint %}
+          <div class="mb-2">
+            <span class="pill pass"><i class="fa-solid fa-bolt"></i> Active</span>
+            <span class="pill mono">{{ active_sprint.start_date }} → {{ active_sprint.end_date }}</span>
+          </div>
+          <div class="muted">
+            Interviews: <b class="text-white">{{ interview_count }}</b>
+            <span class="mx-2">|</span>
+            Avg pain: <b class="text-white">{{ avg_pain|floatformat:2 }}</b>
+          </div>
+          {% if pain_type %}
+  <span class="pill {% if pain_type == 'Risk' %}fail{% endif %}">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    {{ pain_type }} Pain
+  </span>
+{% endif %}
+
+          {% if latest_sprint or active_sprint %}
+              <div class="mt-2 d-flex gap-2 flex-wrap">
+                <span class="pill">
+                  <i class="fa-solid fa-microphone"></i>
+                  Interviews: {{ interview_count }}{% if required_interviews %}/{{ required_interviews }}{% endif %}
+                </span>
+
+                <span class="pill">
+                  <i class="fa-solid fa-gauge-high"></i>
+                  Avg pain: {{ avg_pain|floatformat:1 }}{% if pain_threshold %}/{{ pain_threshold }}{% endif %}
+                </span>
+              </div>
+          {% endif %}
+          <div class="mt-3">
+            <a class="btn btn-sm btn-outline-light" href="{% url 'janus:evidence_create' active_sprint.id %}">
+              <i class="fa-solid fa-microphone"></i> Add Evidence
+            </a>
+          </div>
+        {% else %}
+          <div class="muted mb-2">No active sprint.</div>
+          {% if latest_sprint %}
+            <div class="mb-2">
+              <span class="pill"><i class="fa-regular fa-calendar"></i> Latest: {{ latest_sprint.status }}</span>
+              <span class="pill mono">{{ latest_sprint.start_date }}{% if latest_sprint.end_date %} → {{ latest_sprint.end_date }}{% endif %}</span>
+            </div>
+            <div class="muted">
+              Interviews: <b class="text-white">{{ interview_count }}</b>
+              <span class="mx-2">|</span>
+              Avg pain: <b class="text-white">{{ avg_pain|floatformat:2 }}</b>
+            </div>
+            <div class="mt-3">
+              <div class="muted small">
+                Tip: Activate the sprint in Admin: <span class="mono">Janus → Validation sprints → Action → Activate</span>
+              </div>
+            </div>
+          {% else %}
+            <div class="muted">No sprints created yet.</div>
+          {% endif %}
+        {% endif %}
+
+        {% if sprints %}
+          <hr class="border-light opacity-25 my-3">
+          <div class="text-white mb-2"><b>All Sprints</b></div>
+          <ul class="mb-0">
+            {% for s in sprints %}
+              <li class="muted">
+                <span class="pill">{{ s.status }}</span>
+                <span class="mono">{{ s.start_date }}{% if s.end_date %} → {{ s.end_date }}{% endif %}</span>
+                <span class="muted">| budget cap {{ s.budget_cap }} | interviews {{ s.required_interviews }} | pain ≥ {{ s.pain_threshold }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Hypothesis Review Panel -->
+    <div class="col-12 col-lg-6">
+      <div class="panel h-100">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h2 class="h4 text-white mb-0">Hypothesis Review</h2>
+          <span class="pill"><i class="fa-solid fa-list-check"></i> {{ idea.hypotheses.count }} total</span>
+        </div>
+
+        <div class="muted small mb-3">
+          Use this as the “truth dashboard”: what’s critical, what’s optional, and what evidence you’re looking for.
+        </div>
+
+        {% if idea.hypotheses.all %}
+          <div class="d-flex flex-column gap-3">
+            {% for h in idea.hypotheses.all %}
+              <div class="panel" style="padding: .9rem;">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <div class="text-white"><b>{{ h.statement }}</b></div>
+                  <span class="pill">{{ h.status }}</span>
+                </div>
+
+                {# If you add the new fields later, these will automatically light up #}
+                {% if h.criticality %}
+                  <div class="mt-2">
+                    <span class="pill {% if h.criticality == 'non_negotiable' %}fail{% endif %}">
+                      <i class="fa-solid fa-key"></i> {{ h.get_criticality_display }}
+                    </span>
+                    <span class="pill">
+                      <i class="fa-solid fa-dice"></i> {{ h.get_risk_profile_display }}
+                    </span>
+                  </div>
+                {% endif %}
+
+                <div class="mt-2">
+                  <div class="muted small"><b>Must be true</b></div>
+                  <div class="muted">{{ h.must_be_true|linebreaksbr }}</div>
+                </div>
+
+                <div class="mt-2">
+                  <div class="muted small"><b>Disproof</b></div>
+                  <div class="muted">{{ h.disproof|linebreaksbr }}</div>
+                </div>
+
+                {% if h.validation_signals %}
+                  <div class="mt-2">
+                    <div class="muted small"><b>What I’ll look for</b></div>
+                    <div class="muted">{{ h.validation_signals|linebreaksbr }}</div>
+                  </div>
+                {% endif %}
+
+                <div class="mt-2">
+                  <a class="btn btn-sm btn-outline-light" href="/admin/janus/hypothesis/{{ h.id }}/change/">
+                    <i class="fa-solid fa-pen"></i> Edit
+                  </a>
+                </div>
+              </div>
+              {% if forloop.first %}
+              <div class="mt-2">
+                <span class="pill">
+                  <i class="fa-solid fa-microphone"></i>
+                  Interviews: {{ interview_count }}
+                </span>
+                <span class="pill">
+                  <i class="fa-solid fa-gauge-high"></i>
+                  Avg pain: {{ avg_pain|floatformat:1 }}
+                </span>
+              </div>
+            {% endif %}
+
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="muted">No hypotheses yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

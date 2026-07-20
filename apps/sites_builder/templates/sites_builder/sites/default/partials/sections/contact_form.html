@@ -1,0 +1,119 @@
+{% comment %}
+Reusable public contact form. Posts JSON to the CRM intake endpoint
+(default: crm.mindsgate.com/crm/public/contact-us/; override with the
+human-curated `endpoint` block key — sanitizer keeps https URLs only).
+Field names are the CRM contract — do not rename. `source_domain`/`source_url`
+are stamped client-side so one endpoint serves every site.
+{% endcomment %}
+<section class="lp-section lp-form-band"{% if s.anchor %} id="{{ s.anchor }}"{% endif %}>
+  <div class="lp-container">
+    {% if s.eyebrow %}<div class="lp-section__eyebrow">{{ s.eyebrow }}</div>{% endif %}
+    {% if s.heading %}<h2 class="lp-section__heading">{{ s.heading }}</h2>{% endif %}
+    {% if s.subhead %}<p class="lp-section__subhead">{{ s.subhead }}</p>{% endif %}
+
+    <form class="lp-form" method="post"
+          data-endpoint="{{ s.endpoint|default:'https://crm.mindsgate.com/crm/public/contact-us/' }}">
+      {# honeypot — real users never see or fill this #}
+      <input class="lp-form__hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+      <div class="lp-form__grid">
+        <div class="lp-form__field">
+          <label class="lp-form__label">First name</label>
+          <input class="lp-form__input" name="first_name" placeholder="First name" autocomplete="given-name">
+        </div>
+        <div class="lp-form__field">
+          <label class="lp-form__label">Last name</label>
+          <input class="lp-form__input" name="last_name" placeholder="Last name" autocomplete="family-name">
+        </div>
+        <div class="lp-form__field">
+          <label class="lp-form__label">Email</label>
+          <input class="lp-form__input" name="email" type="email" placeholder="you@company.com" autocomplete="email" required>
+        </div>
+        <div class="lp-form__field">
+          <label class="lp-form__label">Phone</label>
+          <input class="lp-form__input" name="phone" placeholder="+1 555 123 4567" autocomplete="tel">
+        </div>
+        <div class="lp-form__field lp-form__field--wide">
+          <label class="lp-form__label">Subject</label>
+          <input class="lp-form__input" name="subject" placeholder="How can we help?">
+        </div>
+        <div class="lp-form__field">
+          <label class="lp-form__label">Category</label>
+          <select class="lp-form__input" name="category">
+            <option value="sales">Sales</option>
+            <option value="support">Support</option>
+            <option value="partnership" selected>Partnership</option>
+            <option value="investment">Investment</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="lp-form__field">
+          <label class="lp-form__label">Preferred contact</label>
+          <select class="lp-form__input" name="preferred_contact_method">
+            <option value="either" selected>Either</option>
+            <option value="email">Email</option>
+            <option value="phone">Phone</option>
+          </select>
+        </div>
+        <div class="lp-form__field lp-form__field--wide">
+          <label class="lp-form__label">Message</label>
+          <textarea class="lp-form__input lp-form__textarea" name="message" rows="5"
+                    placeholder="Tell us a little about what you're building..." required></textarea>
+        </div>
+      </div>
+
+      <div class="lp-form__foot">
+        <div class="lp-form__consent">By submitting, you agree we may contact you about your request.</div>
+        <button class="btn btn-primary" type="submit">Send message</button>
+      </div>
+      <div class="lp-form__status" role="status" aria-live="polite"></div>
+    </form>
+  </div>
+</section>
+
+<script>
+(function () {
+  document.querySelectorAll(".lp-form[data-endpoint]").forEach(function (form) {
+    if (form.dataset.bound) return;
+    form.dataset.bound = "1";
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var btn = form.querySelector('button[type="submit"]');
+      var status = form.querySelector(".lp-form__status");
+      var label = btn.textContent;
+
+      var data = Object.fromEntries(new FormData(form).entries());
+      data.source_domain = window.location.hostname;
+      data.source_url = window.location.href;
+
+      btn.disabled = true;
+      btn.textContent = "Sending…";
+      status.className = "lp-form__status";
+
+      try {
+        var r = await fetch(form.dataset.endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+        var j = await r.json();
+        if (j.ok) {
+          status.textContent = "Thanks — your message is in. We'll get back to you shortly.";
+          status.classList.add("lp-form__status--ok");
+          form.reset();
+        } else {
+          status.textContent = "Something went wrong: " + (j.error || "unknown error") + ". You can also email us directly.";
+          status.classList.add("lp-form__status--err");
+        }
+      } catch (err) {
+        status.textContent = "We couldn't send that just now — please try again, or email us directly.";
+        status.classList.add("lp-form__status--err");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = label;
+      }
+    });
+  });
+})();
+</script>

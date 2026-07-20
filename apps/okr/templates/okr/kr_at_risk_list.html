@@ -1,0 +1,47 @@
+{% extends "common/base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="neon-glass-card okr-heatmap-card">
+  <div class="okr-heatmap-head">
+    <div>
+      <div class="okr-title">At-Risk Key Results</div>
+      <div class="okr-subtitle">Overdue objectives where KR is below target</div>
+    </div>
+    <a class="btn btn-secondary okr-btn" href="{% url 'okr:strategy-heatmap' %}">← Back</a>
+  </div>
+
+  <div class="okr-table-wrap">
+    <table class="okr-table">
+      <thead>
+        <tr>
+          <th>Strategy</th>
+          <th>Objective</th>
+          <th>Key Result</th>
+          <th class="num">Current</th>
+          <th class="num">Target</th>
+          <th>Entity</th>
+          <th>Last update</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for kr, last_update in at_risk %}
+        <tr>
+          <td>{{ kr.objective.strategy.name }}</td>
+          <td>{{ kr.objective.name }}</td>
+          <td>{{ kr.name }}</td>
+          <td class="num">{{ kr.current_value }}</td>
+          <td class="num">{{ kr.target_value }}</td>
+          <td>{{ kr.objective.strategy.entity.name }}</td>
+          <td class="muted">{% if last_update %}{{ last_update|date:"Y-m-d" }}{% else %}—{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="okr-empty">No at-risk key results 🎉</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

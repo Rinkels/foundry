@@ -1,0 +1,142 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div class="glass-header mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="mb-0">{{ project.name }} — Manage</h1>
+      <div class="text-soft">
+        Live health · revisions · logs
+        {% if overview.service %} · service: <span class="text-info">{{ overview.service }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <form method="post" action="{% url 'atlas:pull' project.slug %}" class="d-inline"
+            onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Pulling…';">
+        {% csrf_token %}
+        <button class="btn-glass" type="submit"
+                title="Fetch latest code for review/debugging — does NOT deploy.">⤓ Pull latest</button>
+      </form>
+      <form method="post" action="{% url 'atlas:deploy' project.slug %}" class="d-inline"
+            onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Deploying…';">
+        {% csrf_token %}
+        <button class="btn-glass" type="submit"
+                title="Pull latest from GitHub, build, and deploy to Cloud Run (roll forward).">🚀 Deploy latest</button>
+      </form>
+      <a class="btn-glass" href="{% url 'atlas:project_manage' project.slug %}">↻ Refresh</a>
+      <a class="btn-glass" href="{% url 'atlas:project_detail' project.slug %}">← Project</a>
+    </div>
+  </div>
+</div>
+
+{% if overview.error %}
+  <div class="neon-glass-card p-3 mb-3">
+    <div class="text-soft small">Could not reach the service</div>
+    <pre class="mb-0 text-danger" style="white-space:pre-wrap;">{{ overview.error }}</pre>
+  </div>
+{% else %}
+
+  {# ---- Health ---- #}
+  <div class="neon-glass-card p-3 mb-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div>
+        <div class="text-soft small">Health</div>
+        {% if health.ok %}
+          <span class="badge bg-success">● Serving</span>
+        {% elif health %}
+          <span class="badge bg-danger">● Down</span>
+        {% else %}
+          <span class="badge bg-secondary">unknown</span>
+        {% endif %}
+        {% if health.status %}<span class="text-soft ms-2">HTTP {{ health.status }} · {{ health.ms }} ms</span>{% endif %}
+        {% if health.error %}<span class="text-danger ms-2">{{ health.error }}</span>{% endif %}
+      </div>
+      <div class="text-end">
+        <div class="text-soft small">URL</div>
+        {% if overview.url %}<a href="{{ overview.url }}" target="_blank">{{ overview.url }}</a>{% else %}—{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ---- Metrics (last 24h) ---- #}
+  {% if metrics %}
+  <div class="neon-glass-card p-3 mb-3">
+    <div class="text-soft small mb-2">Last 24 hours</div>
+    {% if metrics.has_data %}
+      <div class="row text-center g-3">
+        <div class="col">
+          <div class="h3 mb-0 text-info">{{ metrics.requests }}</div>
+          <div class="text-soft small">requests</div>
+        </div>
+        <div class="col">
+          <div class="h3 mb-0 {% if metrics.error_rate > 1 %}text-danger{% else %}text-success{% endif %}">{{ metrics.error_rate }}%</div>
+          <div class="text-soft small">5xx error rate</div>
+        </div>
+        <div class="col">
+          <div class="h3 mb-0">{% if metrics.p95_ms %}{{ metrics.p95_ms }} ms{% else %}—{% endif %}</div>
+          <div class="text-soft small">p95 latency</div>
+        </div>
+        {% if cost %}
+        <div class="col">
+          <div class="h3 mb-0 text-warning">~${{ cost.monthly }}</div>
+          <div class="text-soft small">est. Cloud Run / month</div>
+        </div>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="text-soft">No traffic metrics in the last 24h{% if metrics.error %} — {{ metrics.error }}{% endif %}.</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ---- Revisions + rollback ---- #}
+  <div class="neon-glass-card p-0 overflow-hidden mb-3">
+    <div class="p-3 text-soft small">Revisions (newest first)</div>
+    <table class="table table-dark mb-0">
+      <thead><tr><th>Revision</th><th>Created</th><th>Traffic</th><th>Ready</th><th class="text-end">Action</th></tr></thead>
+      <tbody>
+        {% for r in revisions %}
+        <tr>
+          <td><strong>{{ r.name }}</strong>{% if r.name == overview.latest_ready %} <span class="badge bg-info">latest</span>{% endif %}</td>
+          <td class="text-soft">{{ r.created }}</td>
+          <td>{% if r.traffic %}<span class="badge bg-success">{{ r.traffic }}%</span>{% else %}<span class="text-soft">0%</span>{% endif %}</td>
+          <td>{% if r.ready %}✅{% else %}<span class="text-danger">⚠</span>{% endif %}</td>
+          <td class="text-end">
+            {% if r.traffic == 100 %}
+              <span class="text-soft small">live</span>
+            {% elif r.ready %}
+              <form method="post" action="{% url 'atlas:project_rollback' project.slug %}" class="d-inline"
+                    onsubmit="return confirm('Send 100% of traffic to {{ r.name }}?');">
+                {% csrf_token %}
+                <input type="hidden" name="revision" value="{{ r.name }}">
+                <button class="btn-glass" type="submit">↩ Roll back to this</button>
+              </form>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-soft p-3">No revisions found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# ---- Recent logs ---- #}
+  <div class="neon-glass-card p-0 overflow-hidden">
+    <div class="p-3 text-soft small">Recent logs (last 24h)</div>
+    <div style="max-height: 360px; overflow:auto; font-family: monospace; font-size: 0.82rem;" class="p-3 pt-0">
+      {% for l in logs %}
+        <div class="d-flex gap-2">
+          <span class="text-soft" style="min-width:160px;">{{ l.ts }}</span>
+          <span style="min-width:64px;" class="{% if l.severity == 'ERROR' or l.severity == 'CRITICAL' %}text-danger{% elif l.severity == 'WARNING' %}text-warning{% else %}text-soft{% endif %}">{{ l.severity }}</span>
+          <span>{{ l.text }}</span>
+        </div>
+      {% empty %}
+        <div class="text-soft">No recent logs.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+{% endif %}
+
+{% endblock %}

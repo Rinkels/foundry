@@ -1,0 +1,25 @@
+{% load site_assets %}
+<section class="lp-section lp-hero{% if s.image %} lp-hero--split{% endif %}">
+  <div class="lp-container lp-hero__inner">
+    <div class="lp-hero__text">
+      {% if s.eyebrow %}<div class="lp-hero__eyebrow">{{ s.eyebrow }}</div>{% endif %}
+      {% if s.headline_accent %}
+        <h1 class="lp-hero__headline">{{ s.headline|accentize:s.headline_accent }}</h1>
+      {% else %}
+        <h1 class="lp-hero__headline">{{ s.headline }}</h1>
+      {% endif %}
+      {% if s.subhead %}<p class="lp-hero__subhead">{{ s.subhead }}</p>{% endif %}
+      {% if s.primary_cta or s.secondary_cta %}
+        <div class="lp-hero__ctas">
+          {% if s.primary_cta %}<a class="btn btn-primary" href="{{ s.primary_cta.href|default:'#' }}">{{ s.primary_cta.label }}</a>{% endif %}
+          {% if s.secondary_cta %}<a class="btn btn-secondary" href="{{ s.secondary_cta.href|default:'#' }}">{{ s.secondary_cta.label }}</a>{% endif %}
+        </div>
+      {% endif %}
+    </div>
+    {% if s.image %}
+      <div class="lp-hero__media">
+        <img class="lp-hero__image" src="{{ s.image }}" alt="{{ s.headline }}" loading="lazy">
+      </div>
+    {% endif %}
+  </div>
+</section>

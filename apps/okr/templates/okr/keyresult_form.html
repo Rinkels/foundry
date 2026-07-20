@@ -1,0 +1,60 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div style="max-width: 920px; margin: 0 auto;">
+  <div class="d-flex align-items-end justify-content-between gap-3 mb-3">
+    <div>
+      <h2 class="mb-0">
+        {% if form.instance.pk %}✏️ Edit Key Result{% else %}➕ Add Key Result{% endif %}
+      </h2>
+      <div class="text-soft mt-1">Set a measurable target and track progress cleanly.</div>
+    </div>
+    {% if object.objective_id %}
+      <a href="{% url 'okr:objective-detail' object.objective_id %}">← Back to Objective</a>
+    {% else %}
+      <a href="{% url 'okr:objective-list' %}">← Back to Objectives</a>
+    {% endif %}
+
+  </div>
+
+  <form method="post" class="neon-glass-card p-4">
+    {% csrf_token %}
+
+    <div class="row g-3">
+      {% for field in form %}
+        <div class="col-12 col-md-6">
+          <label class="text-soft mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          <div class="mt-1">{{ field }}</div>
+
+          {% if field.help_text %}
+            <div class="text-soft mt-1" style="font-size: .9rem;">{{ field.help_text }}</div>
+          {% endif %}
+
+          {% if field.errors %}
+            <div class="mt-1" style="color: var(--danger, #ff5b7a); font-size: .9rem;">
+              {{ field.errors|join:", " }}
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap mt-4">
+      <button type="submit" class="btn-glass">
+        {% if form.instance.pk %}💾 Update Key Result{% else %}➕ Save Key Result{% endif %}
+      </button>
+      <a href="{% url 'okr:objective-detail' objective.pk %}" class="btn-glass">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  // If widgets don't yet have input-glass attrs (until KeyResultForm is updated),
+  // force the class client-side as a safety net.
+  (function () {
+    document.querySelectorAll("form input, form select").forEach(el => el.classList.add("input-glass"));
+    document.querySelectorAll("form textarea").forEach(el => el.classList.add("textarea-glass"));
+  })();
+</script>
+
+{% endblock %}

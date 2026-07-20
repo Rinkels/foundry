@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "autoPort": true,
+  "configurations": [
+    {
+      "name": "mindsgate-static",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["serve_preview.py"],
+      "port": 8912
+    }
+  ]
+}

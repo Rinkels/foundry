@@ -1,0 +1,34 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div style="max-width: 920px; margin: 0 auto;">
+  <div class="d-flex align-items-end justify-content-between gap-3 mb-3">
+    <div>
+      <h2 class="mb-0">Create New Entity</h2>
+      <div class="text-soft mt-1">This will auto-generate the OKR structure after creation.</div>
+    </div>
+
+    <a href="{% url 'okr:entity-list' %}" class="text-strong" style="text-decoration: underline;">
+      ← Back to Entities
+    </a>
+  </div>
+
+  <form method="post" class="neon-glass-card p-4">
+    {% csrf_token %}
+
+    <div class="form-grid">
+      <label for="{{ form.name.id_for_label }}" class="text-soft">Name</label>
+      {{ form.name }}
+
+      <label for="{{ form.description.id_for_label }}" class="text-soft">Description</label>
+      {{ form.description }}
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap mt-4">
+      <button type="submit" class="btn-glass">Create and Auto-Generate OKRs</button>
+      <a href="{% url 'okr:entity-list' %}" class="btn-glass">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

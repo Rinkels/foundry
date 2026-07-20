@@ -1,0 +1,107 @@
+{% extends "common/base.html" %}
+{% block title %}AI Article Studio - {{ site.name }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 0 auto;">
+  <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
+    <div>
+      <h1 class="mb-1">AI Article Studio</h1>
+      <div class="text-soft small">{{ site.name }}</div>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn-glass" href="{% url 'sites_builder:article_list' site.pk %}">Back to articles</a>
+      <a class="btn-glass" href="{% url 'sites_builder:site_detail' site.pk %}">Back to site</a>
+    </div>
+  </div>
+
+  <div class="neon-glass-card p-4 mb-3">
+    <div class="text-soft">
+      Here are AI-suggested evergreen titles based on your site content.
+      Click <b>Generate with AI</b> to create a draft you can edit and publish.
+    </div>
+    <div class="text-soft small mt-2">
+      Tip: pick one “cornerstone” guide first, then create 3 supporting articles that link to it.
+    </div>
+  </div>
+<div class="neon-glass-card p-4 mb-3">
+  <form method="get" class="row g-3 align-items-end">
+        <input type="hidden" name="tone" value="{{ tone }}">
+        <input type="hidden" name="audience" value="{{ audience }}">
+        <input type="hidden" name="keyword" value="{{ keyword }}">
+        <input type="hidden" name="length" value="{{ length }}">
+
+    <div class="col-12 col-md-3">
+      <label class="text-soft small mb-1">Tone</label>
+      <select name="tone" class="input-glass">
+        <option value="friendly" {% if tone == "friendly" %}selected{% endif %}>Friendly</option>
+        <option value="technical" {% if tone == "technical" %}selected{% endif %}>Technical</option>
+        <option value="startup" {% if tone == "startup" %}selected{% endif %}>Startup</option>
+        <option value="investor" {% if tone == "investor" %}selected{% endif %}>Investor</option>
+      </select>
+    </div>
+
+    <div class="col-12 col-md-3">
+      <label class="text-soft small mb-1">Audience</label>
+      <select name="audience" class="input-glass">
+        <option value="general" {% if audience == "general" %}selected{% endif %}>General</option>
+        <option value="business" {% if audience == "business" %}selected{% endif %}>Business leaders</option>
+        <option value="technical" {% if audience == "technical" %}selected{% endif %}>Developers/CTOs</option>
+        <option value="operators" {% if audience == "operators" %}selected{% endif %}>Operators</option>
+      </select>
+    </div>
+
+    <div class="col-12 col-md-3">
+      <label class="text-soft small mb-1">Primary keyword</label>
+      <input name="keyword" class="input-glass" value="{{ keyword|default:'' }}" placeholder="optional">
+    </div>
+
+    <div class="col-12 col-md-3">
+      <label class="text-soft small mb-1">Length</label>
+      <select name="length" class="input-glass">
+        <option value="short" {% if length == "short" %}selected{% endif %}>Short (600-900)</option>
+        <option value="medium" {% if length == "medium" or not length %}selected{% endif %}>Medium (900-1400)</option>
+        <option value="long" {% if length == "long" %}selected{% endif %}>Long (1400-2200)</option>
+      </select>
+    </div>
+
+    <div class="col-12">
+      <button class="btn-glass" type="submit">Refresh suggestions</button>
+    </div>
+  </form>
+</div>
+
+  <div class="neon-glass-card p-0">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0" style="color: var(--fg);">
+        <thead>
+          <tr>
+            <th style="color: var(--fg);">Suggested title</th>
+            <th style="color: var(--fg); width: 240px;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in titles %}
+          <tr>
+            <td>{{ t }}</td>
+            <td>
+              <form method="post" action="{% url 'sites_builder:article_ai_generate' site.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="title" value="{{ t }}">
+                <button class="btn-glass btn-sm" type="submit">Generate with AI</button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="2" class="text-center text-soft small">
+              No suggestions yet. Refresh to try again.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

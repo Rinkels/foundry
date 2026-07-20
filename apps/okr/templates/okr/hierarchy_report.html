@@ -1,0 +1,53 @@
+{% extends "common/base.html" %}
+{% block content %}
+<div class="flex justify-between items-center mb-4">
+  <h2 class="text-2xl font-bold text-white">{{ entity.name }} - OKR Hierarchy Report</h2>
+
+  <a href="{% url 'okr:entity-hierarchy-pdf' entity.id %}" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded">
+    📄 Download PDF
+  </a>
+</div>
+<style>
+  .indent { margin-left: 1.5rem; }
+  .heading { font-weight: bold; margin-top: 1rem; }
+</style>
+
+{% for strategy in strategies %}
+  <div class="heading">🌱 Strategy: {{ strategy.name }}</div>
+  <div class="indent">{{ strategy.description }}</div>
+
+  {% for objective in strategy.objectives.all %}
+    <div class="indent heading">🎯 Objective: {{ objective.name }}</div>
+    <div class="indent indent">{{ objective.description }}</div>
+
+    {% for kr in objective.key_results.all %}
+      <div class="indent indent heading">📌 Key Result: {{ kr.name }}</div>
+      <div class="indent indent indent">Target: {{ kr.target_value }} {{ kr.unit }} — Current: {{ kr.current_value }}</div>
+
+      {% for epic in kr.epics.all %}
+        <div class="indent indent indent heading">🧩 Epic: {{ epic.title }}</div>
+        <div class="indent indent indent indent">{{ epic.description }}</div>
+
+        {% for story in epic.stories.all %}
+          <div class="indent indent indent indent heading">📘 Story: {{ story.title }}</div>
+          <div class="indent indent indent indent indent">
+            As a {{ story.role }}, I want to {{ story.goal }} so that {{ story.reason }}
+          </div>
+
+          {% for task in story.tasks.all %}
+            <div class="indent indent indent indent indent">✅ Task: {{ task.title }}
+              {% if task.status == "Done" %}
+                <span style="color: lime;">(Done)</span>
+              {% elif task.status == "In Progress" %}
+                <span style="color: deepskyblue;">(In Progress)</span>
+              {% else %}
+                <span style="color: gold;">(Pending)</span>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% endfor %}
+      {% endfor %}
+    {% endfor %}
+  {% endfor %}
+{% endfor %}
+{% endblock %}

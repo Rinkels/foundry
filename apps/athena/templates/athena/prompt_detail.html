@@ -1,0 +1,102 @@
+{# apps/athena/templates/athena/prompt_detail.html #}
+{% extends "athena/base.html" %}
+{% block athena_content %}
+
+<div class="neon-glass-card p-3 mb-3">
+  <div class="d-flex justify-content-between align-items-start">
+    <div>
+      <h3 class="mb-1">{{ prompt.name }}</h3>
+      <div class="text-muted">{{ prompt.key }} • <span class="pill">{{ prompt.status }}</span></div>
+    </div>
+    <a class="btn btn-sm btn-outline-light" href="{% url 'athena:prompt_new_version' prompt.pk %}">+ New Version</a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="neon-glass-card p-3">
+      <div class="fw-semibold mb-2">Versions</div>
+      <ul class="list-unstyled mb-0">
+        {% for v in versions %}
+        <li class="mb-2">
+          <div class="d-flex justify-content-between">
+            <div>
+              <span class="pill">v{{ v.version }}</span>
+              <span class="small text-muted ms-2">{{ v.created_at }}</span>
+              <div class="small text-muted">{{ v.changelog|default:"" }}</div>
+            </div>
+          </div>
+        </li>
+        {% empty %}
+        <li class="text-muted">No versions yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="neon-glass-card p-3">
+      <div class="fw-semibold mb-2">Test cases</div>
+      <ul class="list-unstyled mb-0">
+        {% for tc in test_cases %}
+        <li class="mb-2 d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fw-semibold">{{ tc.name }}</div>
+            <div class="small text-muted">checks: substr={{ tc.require_substrings|length }} json={{ tc.require_json }}</div>
+          </div>
+          <a class="btn btn-sm btn-light" href="{% url 'athena:run_test_case' prompt.pk tc.pk %}">Run</a>
+        </li>
+        {% empty %}
+        <li class="text-muted">No test cases yet (add via admin for MVP).</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="neon-glass-card p-3">
+      <div class="fw-semibold mb-2">Recent runs</div>
+      <div class="table-responsive">
+        <table class="table table-sm table-dark table-borderless align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Version</th>
+              <th>Test</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in runs %}
+            <tr>
+              <td class="small text-muted">{{ r.created_at }}</td>
+              <td>v{{ r.version.version }}</td>
+              <td>{{ r.test_case.name|default:"(manual)" }}</td>
+              <td><span class="pill">{{ r.status }}</span></td>
+              <td><a class="btn btn-sm btn-outline-light" href="{% url 'athena:run_detail' r.pk %}">View</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-muted">No runs yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+    <div class="neon-glass-card p-3 mb-3">
+  <div class="fw-semibold mb-2">Lint</div>
+  {% if lint_issues %}
+    <ul class="mb-0">
+      {% for i in lint_issues %}
+        <li><span class="pill">{{ i.level }}</span> <span class="small text-muted">{{ i.code }}</span> {{ i.message }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="text-muted">No issues detected.</div>
+  {% endif %}
+</div>
+
+</div>
+
+{% endblock %}

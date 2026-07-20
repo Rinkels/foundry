@@ -1,0 +1,61 @@
+{% load static %}
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}OKR Dashboard{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/card.css' %}">
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/menu.css' %}"> <!-- ✅ add this -->
+  <link rel="icon" href="{% static 'img/favicon.ico' %}" type="image/x-icon" />
+  <style>
+    .theme-toggle {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      cursor: pointer;
+      padding: 5px 10px;
+      border: none;
+      background: #1db954;
+      color: white;
+      font-weight: bold;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body id="theme-root" style="padding: 2rem; font-family: sans-serif;">
+
+  <header>
+    <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
+    <h1>🌱 Indoor Farming OKRs</h1>
+    <hr>
+  </header>
+  {% include 'menu.html' %}
+  <main>
+    {% block content %}
+    {% endblock %}
+  </main>
+
+  <footer style="margin-top: 2rem;">
+    <hr>
+    <p>&copy; 2025 Mindsgate Ltd.</p>
+  </footer>
+
+<script>
+  function toggleTheme() {
+    const body = document.getElementById("theme-root");
+    const current = body.classList.contains('dark-theme') ? 'dark-theme' : 'light-theme';
+    const next = current === 'dark-theme' ? 'light-theme' : 'dark-theme';
+    body.classList.remove(current);
+    body.classList.add(next);
+    localStorage.setItem('theme', next);
+  }
+
+  (function initTheme() {
+    const saved = localStorage.getItem('theme') || 'dark-theme';
+    document.getElementById("theme-root").classList.add(saved);
+  })();
+</script>
+{% block extra_scripts %}
+{% endblock %}
+</body>
+</html>

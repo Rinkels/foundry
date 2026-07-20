@@ -1,0 +1,57 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div class="glass-header mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="mb-0">Atlas</h1>
+      <div class="text-soft">Cloud projects &amp; migrations</div>
+    </div>
+    <a class="btn-glass" href="/">← Home</a>
+  </div>
+</div>
+
+<div class="neon-glass-card p-0 overflow-hidden">
+  <table class="table table-dark mb-0">
+    <thead>
+      <tr>
+        <th>Project</th>
+        <th>Origin</th>
+        <th>Status</th>
+        <th>Hardened</th>
+        <th>GCP project</th>
+        <th>Resources</th>
+        <th>Last run</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for project in projects %}
+        <tr>
+          <td><strong>{{ project.name }}</strong></td>
+          <td class="text-soft">{{ project.get_origin_display }}</td>
+          <td class="text-soft">{{ project.get_status_display }}</td>
+          <td>{% if project.hardened %}<span class="badge bg-success">🔒</span>{% else %}<span class="badge bg-danger">⚠</span>{% endif %}</td>
+          <td class="text-soft">{{ project.gcp_project_id|default:"—" }}</td>
+          <td class="text-soft">{{ project.resources.count }}</td>
+          <td class="text-soft">
+            {% with last_run=project.runs.first %}
+              {% if last_run %}
+                {{ last_run.get_action_display }} — {{ last_run.status }}
+              {% else %}
+                —
+              {% endif %}
+            {% endwith %}
+          </td>
+          <td class="text-end">
+            <a class="btn-glass" href="{% url 'atlas:project_detail' project.slug %}">Open</a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8" class="text-soft p-3">No cloud projects tracked yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{{ entity.name }} - OKR Hierarchy Report</title>
+    <style>
+      body { font-family: Arial, sans-serif; }
+      .indent { margin-left: 1.5rem; }
+      .heading { font-weight: bold; margin-top: 1rem; }
+    </style>
+</head>
+<body>
+<h1>{{ entity.name }} - OKR Hierarchy Report</h1>
+
+{% for strategy in strategies %}
+  <div class="heading">🌱 Strategy: {{ strategy.name }}</div>
+  <div class="indent">{{ strategy.description }}</div>
+
+  {% for objective in strategy.objectives.all %}
+    <div class="indent heading">🎯 Objective: {{ objective.name }}</div>
+    <div class="indent indent">{{ objective.description }}</div>
+
+    {% for kr in objective.key_results.all %}
+      <div class="indent indent heading">📌 Key Result: {{ kr.name }}</div>
+      <div class="indent indent indent">Target: {{ kr.target_value }} {{ kr.unit }} — Current: {{ kr.current_value }}</div>
+
+      {% for epic in kr.epics.all %}
+        <div class="indent indent indent heading">🧩 Epic: {{ epic.title }}</div>
+        <div class="indent indent indent indent">{{ epic.description }}</div>
+
+        {% for story in epic.stories.all %}
+          <div class="indent indent indent indent heading">📘 Story: {{ story.title }}</div>
+          <div class="indent indent indent indent indent">
+            As a {{ story.role }}, I want to {{ story.goal }} so that {{ story.reason }}.
+          </div>
+
+          {% for task in story.tasks.all %}
+            <div class="indent indent indent indent indent">✅ Task: {{ task.title }}</div>
+          {% endfor %}
+        {% endfor %}
+      {% endfor %}
+    {% endfor %}
+  {% endfor %}
+{% endfor %}
+</body>
+</html>

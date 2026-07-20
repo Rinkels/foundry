@@ -1,0 +1,90 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div class="glass-header mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="mb-0">Tasks</h1>
+      <div class="text-soft">Browse, search, and open task details</div>
+    </div>
+  </div>
+</div>
+
+<div class="neon-glass-card p-3 mb-3">
+  <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+    <div>
+      <label class="text-soft">Search</label>
+      <input type="text" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Title, notes, story...">
+    </div>
+
+    <div>
+      <label class="text-soft">Status</label>
+      <select name="status" class="form-control">
+        <option value="">All</option>
+        <option value="Pending" {% if request.GET.status == "Pending" %}selected{% endif %}>Pending</option>
+        <option value="In Progress" {% if request.GET.status == "In Progress" %}selected{% endif %}>In Progress</option>
+        <option value="Done" {% if request.GET.status == "Done" %}selected{% endif %}>Done</option>
+      </select>
+    </div>
+
+    <button class="btn-glass" type="submit">🔎 Filter</button>
+    <a class="btn-glass" href="{% url 'okr:task-list' %}">♻ Clear</a>
+    <a class="btn-glass" href="{% url 'okr:task-create' %}">➕ New Task</a>
+  </form>
+</div>
+
+<div class="neon-glass-card p-0 overflow-hidden">
+  <table class="table table-dark mb-0">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Story</th>
+        <th>Status</th>
+        <th>Due</th>
+        <th>Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in tasks %}
+        <tr>
+          <td>
+            <a href="{% url 'okr:task-detail' t.pk %}">
+              {{ t.title }}
+            </a>
+            {% if t.completed %}
+              <span class="badge bg-success ms-2">Done</span>
+            {% endif %}
+          </td>
+          <td class="text-soft">
+            {% if t.story %}
+              <a href="{% url 'okr:story-detail' t.story.pk %}">{{ t.story.title }}</a>
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td>{{ t.status }}</td>
+          <td>{% if t.due_date %}{{ t.due_date }}{% else %}<span class="text-soft">—</span>{% endif %}</td>
+          <td class="text-soft">{{ t.updated_at }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="text-soft p-3">No tasks found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if is_paginated %}
+  <div class="d-flex justify-content-center gap-2 mt-3">
+    {% if page_obj.has_previous %}
+      <a class="btn-glass" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}&status={{ request.GET.status }}">← Prev</a>
+    {% endif %}
+    <div class="text-soft align-self-center">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </div>
+    {% if page_obj.has_next %}
+      <a class="btn-glass" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}&status={{ request.GET.status }}">Next →</a>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% endblock %}

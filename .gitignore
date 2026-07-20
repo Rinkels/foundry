@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets / credentials
+.env
+.env.*
+*.pem
+*.key
+*-private-key.pem
+
+# Django local data
+db.sqlite3
+*.sqlite3
+*.sqlite3-journal
+
+# Runtime media (MEDIA_ROOT) and generated output
+uploads/
+output/
+
+# Editors / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# --- recovery-hardening (2026-07-20) ---
+db.sqlite3
+*.sqlite3
+/output/
+__pycache__/
+*.pyc
+*.key
+.env
+/node_modules/
+/venv/
+# secrets — never commit/push
+*.pem
+*.p12
+/secrets/
+*service-account*.json
+*google_oauth*.json
+*-credentials.json

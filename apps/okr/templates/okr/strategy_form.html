@@ -1,0 +1,82 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div style="max-width: 920px; margin: 0 auto;">
+  <div class="d-flex align-items-end justify-content-between gap-3 mb-3">
+    <div>
+      <h2 class="mb-0">{% if object %}Edit{% else %}Create{% endif %} Strategy</h2>
+      <div class="text-soft mt-1">Set the theme, keep the intent clear, and let AI polish the description.</div>
+    </div>
+
+    <a href="{% url 'okr:strategy-list' %}" class="text-strong" style="text-decoration: underline;">
+      ← Back to Strategies
+    </a>
+  </div>
+
+  <form method="post" class="neon-glass-card p-4">
+    {% csrf_token %}
+
+    <div class="form-grid">
+      <label for="{{ form.entity.id_for_label }}" class="text-soft">Entity</label>
+      {{ form.entity }}
+
+      <label for="{{ form.name.id_for_label }}" class="text-soft">Name</label>
+      {{ form.name }}
+
+      <label for="{{ form.description.id_for_label }}" class="text-soft">Description</label>
+      {{ form.description }}
+
+      <label for="{{ form.theme.id_for_label }}" class="text-soft">Theme</label>
+      {{ form.theme }}
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap mt-4">
+      <button type="submit" class="btn-glass">Save</button>
+      <button type="button" class="btn-glass" onclick="rewriteStrategyDescription()">✨ Write with AI</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function rewriteStrategyDescription() {
+    const name = document.getElementById("id_name")?.value || "";
+    const entitySelect = document.getElementById("id_entity");
+    let entityId = entitySelect ? entitySelect.value : null;
+
+    if (!entityId) {
+      const hiddenEntity = document.querySelector("input[name='entity']");
+      if (hiddenEntity) entityId = hiddenEntity.value;
+    }
+
+    if (!name || !entityId) {
+      alert("Please enter a strategy name and select an entity first.");
+      return;
+    }
+
+    const url = "{% url 'okr:rewrite-strategy-description' %}";
+
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}",
+      },
+      body: JSON.stringify({ name, entity_id: entityId })
+    })
+    .then(r => r.json())
+    .then(data => { document.getElementById("id_description").value = data.rewritten; })
+    .catch(err => console.error("AI Rewrite Error:", err));
+  }
+
+  // Safety: if any widgets didn't pick up attrs, force them
+  (function () {
+    ["id_entity","id_name","id_theme"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add("input-glass");
+    });
+    const desc = document.getElementById("id_description");
+    if (desc) desc.classList.add("textarea-glass");
+  })();
+</script>
+
+{% endblock %}

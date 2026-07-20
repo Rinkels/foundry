@@ -1,0 +1,56 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<h2 class="text-xl font-bold mb-4">{% if object %}Edit{% else %}Create{% endif %} Task</h2>
+
+<form method="post" class="space-y-6 max-w-3xl">
+  {% csrf_token %}
+
+  <div class="flex items-start gap-4">
+    <label for="id_title" class="w-32 font-medium">Title:</label>
+    {{ form.title }}
+  </div>
+
+  <div class="flex items-start gap-4">
+    <label for="id_assigned_to" class="w-32 font-medium">Assigned To:</label>
+    {{ form.assigned_to }}
+  </div>
+
+  <div class="flex items-start gap-4">
+    <label for="id_completed" class="w-32 font-medium">Completed:</label>
+    {{ form.completed }}
+  </div>
+
+  <div class="flex items-center gap-4 mt-4">
+    <button type="submit"
+      class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded">Save Task</button>
+  </div>
+</form>
+<div class="flex items-center gap-4 mt-4">
+  <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded">Save Task</button>
+  <button type="button" onclick="generateTaskTitle()" class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-4 rounded">✨ Suggest Task</button>
+</div>
+
+<script>
+function generateTaskTitle() {
+  const taskField = document.getElementById("id_title");
+  const story = document.querySelector("textarea[name='story']") || { value: "" };
+
+  fetch("/api/suggest-task-title/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": "{{ csrf_token }}"
+    },
+    body: JSON.stringify({ story: story.value })
+  })
+  .then(res => res.json())
+  .then(data => {
+    taskField.value = data.rewritten;
+  });
+}
+</script>
+
+<a href="{% url 'okr:task-list' %}" class="block mt-6 underline text-blue-300">← Back to Tasks</a>
+
+{% endblock %}

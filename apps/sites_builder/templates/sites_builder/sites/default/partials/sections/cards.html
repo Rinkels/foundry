@@ -1,0 +1,21 @@
+<section class="lp-section lp-cards-band">
+  <div class="lp-container">
+    {% if s.eyebrow %}<div class="lp-section__eyebrow">{{ s.eyebrow }}</div>{% endif %}
+    {% if s.heading %}<h2 class="lp-section__heading">{{ s.heading }}</h2>{% endif %}
+    {% if s.subhead %}<p class="lp-section__subhead">{{ s.subhead }}</p>{% endif %}
+    <div class="lp-cards">
+      {% for item in s.items %}
+        <div class="lp-card">
+          {% if item.image %}<img class="lp-card__image" src="{{ item.image }}" alt="{{ item.title }}" loading="lazy">{% endif %}
+          <div class="lp-card__body">
+            {% if item.icon %}<div class="lp-card__icon">{{ item.icon }}</div>{% endif %}
+            {% if item.badge %}<span class="lp-card__badge lp-card__badge--{{ item.badge_color|default:'accent' }}">{{ item.badge }}</span>{% endif %}
+            <h3 class="lp-card__title">{{ item.title }}</h3>
+            {% if item.text %}<p class="lp-card__text">{{ item.text }}</p>{% endif %}
+            {% if item.href %}<a class="lp-card__link" href="{{ item.href }}">{{ item.link_label|default:"Learn more" }} &rarr;</a>{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

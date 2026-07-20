@@ -1,0 +1,7 @@
+<section class="lp-section lp-cta-band">
+  <div class="lp-container lp-cta">
+    {% if s.heading %}<h2 class="lp-cta__heading">{{ s.heading }}</h2>{% endif %}
+    {% if s.text %}<p class="lp-cta__text">{{ s.text }}</p>{% endif %}
+    {% if s.button %}<a class="btn btn-primary" href="{{ s.button.href|default:'#' }}">{{ s.button.label }}</a>{% endif %}
+  </div>
+</section>

@@ -1,0 +1,75 @@
+{% extends "common/base.html" %}
+{% block title %}Article Clusters - {{ site.name }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 0 auto;">
+  <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
+    <div>
+      <h1 class="mb-1">Article Clusters</h1>
+      <div class="text-soft small">{{ site.name }}</div>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn-glass" href="{% url 'sites_builder:article_list' site.pk %}">Back to articles</a>
+      <a class="btn-glass" href="{% url 'sites_builder:site_detail' site.pk %}">Back to site</a>
+    </div>
+  </div>
+
+  <div class="neon-glass-card p-4 mb-3">
+    <div class="text-soft">
+      Cornerstones are the “hub” pages. Supporting articles are the spokes that link back to the hub.
+      Use the buttons to generate supporting drafts or publish an entire cluster.
+    </div>
+  </div>
+
+  <div class="neon-glass-card p-0">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0" style="color: var(--fg);">
+        <thead>
+          <tr>
+            <th style="color: var(--fg);">Cornerstone</th>
+            <th style="color: var(--fg); width: 130px;">Total</th>
+            <th style="color: var(--fg); width: 130px;">Published</th>
+            <th style="color: var(--fg); width: 130px;">Drafts</th>
+            <th style="color: var(--fg); width: 420px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td>
+              <div class="d-flex flex-column">
+                <div><b>{{ row.cornerstone.title }}</b></div>
+                <div class="text-soft small"><code>{{ row.cornerstone.slug }}</code></div>
+              </div>
+            </td>
+            <td>{{ row.supporting_total }}</td>
+            <td>{{ row.supporting_published }}</td>
+            <td>{{ row.supporting_drafts }}</td>
+            <td class="d-flex gap-2 flex-wrap">
+              <a class="btn-glass btn-sm" href="{% url 'sites_builder:article_edit' site.pk row.cornerstone.pk %}">Edit</a>
+
+              <form method="post" action="{% url 'sites_builder:cluster_generate_supporting' site.pk row.cornerstone.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="tone" value="friendly">
+                <input type="hidden" name="audience" value="general">
+                <input type="hidden" name="length" value="medium">
+                <button class="btn-glass btn-sm" type="submit">Generate 4 supporting (AI)</button>
+              </form>
+
+              <form method="post" action="{% url 'sites_builder:cluster_publish_all' site.pk row.cornerstone.pk %}">
+                {% csrf_token %}
+                <button class="btn-glass btn-sm" type="submit">Publish all</button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-soft small">No cornerstone articles yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

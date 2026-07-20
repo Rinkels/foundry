@@ -1,0 +1,534 @@
+{% extends "sites_builder/ui/base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'neon_glass.css' %}">
+
+<style>
+  .code-tree {
+    text-align: left;
+    max-height: 70vh;
+    overflow-y: auto;
+    font-size: 0.9rem;
+  }
+  .code-tree ul {
+    list-style: none;
+    padding-left: 1.2rem;
+    margin-bottom: 0.2rem;
+  }
+  .code-tree li {
+    margin: 0.05rem 0;
+  }
+
+  .code-tree li.collapsed > ul {
+    display: none;
+  }
+
+  .tree-toggle {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-left: 1.1rem;
+  }
+  .tree-toggle::before {
+    content: "▾";
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-size: 0.8rem;
+    transform-origin: center;
+    transition: transform 0.15s ease;
+    opacity: 0.7;
+  }
+  .code-tree li.collapsed > .tree-toggle::before {
+    transform: rotate(-90deg);
+  }
+
+  .code-project-title { font-weight: 600; }
+  .code-bucket-title { font-weight: 500; opacity: 0.9; }
+  .code-component { font-family: "Consolas", "Fira Code", monospace; }
+
+  .code-search-input {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #fff;
+  }
+  .code-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .toolbar-btn { min-width: 9rem; }
+
+  .highlight-duplicate { background-color: rgba(255, 193, 7, 0.18); }
+  .highlight-large { background-color: rgba(220, 53, 69, 0.18); }
+  .highlight-security { background-color: rgba(13, 110, 253, 0.16); }
+  .highlight-security-high { background-color: rgba(220, 53, 69, 0.20); }
+  .highlight-warning { background-color: rgba(255, 193, 7, 0.16); }
+
+  .security-badge {
+    display: inline-block;
+    padding: .1rem .45rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.18);
+    background: rgba(255,255,255,.06);
+    font-size: .75rem;
+    margin-right: .35rem;
+    opacity: .95;
+  }
+
+  .stat-chip {
+    cursor: pointer;
+    user-select: none;
+    padding: .2rem .45rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.18);
+    background: rgba(255,255,255,.06);
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .stat-chip:hover {
+    background: rgba(255,255,255,.10);
+    border-color: rgba(255,255,255,.30);
+  }
+  .stat-chip.active {
+    background: rgba(255,255,255,.14);
+    border-color: rgba(255,255,255,.45);
+  }
+  .stat-chip.clear {
+    background: rgba(25,135,84,.12);
+    border-color: rgba(25,135,84,.35);
+  }
+</style>
+
+<div class="container py-4">
+  <div class="row mb-2">
+    <div class="col-12 col-md-8">
+      <h1 class="text-white mb-2">{% trans "Code Analyzer" %}</h1>
+      <p class="text-white-50 mb-0">
+        {% trans "Explore your Python, TypeScript, and Supabase projects under" %} <code>{{ code_root }}</code>,
+        {% trans "grouped by framework-aware components." %}
+      </p>
+    </div>
+    <div class="col-12 col-md-4 text-md-end mt-3 mt-md-0">
+      <form method="post" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success mb-2 mb-md-0">
+          ⚡ {% trans "Scan Projects" %}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {% if stats %}
+    <div class="row mb-3">
+      <div class="col-12">
+        <div class="neon-glass-card p-2 d-flex flex-wrap gap-3 align-items-center">
+          <span class="text-white-50 small stat-chip clear" data-filter="all">
+            ✅ {% trans "Clear filter" %}
+          </span>
+
+          <span class="text-white-50 small stat-chip" data-filter="all">
+            {% trans "Projects" %}:
+            <strong class="text-white">{{ stats.total_projects }}</strong>
+          </span>
+
+          <span class="text-white-50 small stat-chip" data-filter="all">
+            {% trans "Components" %}:
+            <strong class="text-white">{{ stats.total_components }}</strong>
+          </span>
+
+          <span class="text-white-50 small stat-chip" data-filter="duplicates">
+            {% trans "Duplicates (by name)" %}:
+            <strong class="text-warning">{{ stats.duplicate_names_count }}</strong>
+          </span>
+
+          <span class="text-white-50 small stat-chip" data-filter="large">
+            {% blocktrans with n=large_loc %}
+              Large (≥ {{ n }} LOC)
+            {% endblocktrans %}:
+            <strong class="text-danger">{{ stats.large_components_count }}</strong>
+          </span>
+
+          <span class="text-white-50 small stat-chip" data-filter="security">
+            {% trans "Security findings" %}:
+            <strong class="text-info">{{ stats.security_findings_count|default:0 }}</strong>
+          </span>
+
+          <span class="text-white-50 small stat-chip" data-filter="security-high">
+            {% trans "High severity" %}:
+            <strong class="text-danger">{{ stats.security_high_count|default:0 }}</strong>
+          </span>
+
+          <span class="text-white-50 small stat-chip" data-filter="warnings">
+            {% trans "Warnings" %}:
+            <strong class="text-warning">{{ stats.warnings_count|default:0 }}</strong>
+          </span>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="row mb-3 g-2 align-items-center">
+    <div class="col-12 col-md-5">
+      <input
+        type="search"
+        id="code-search"
+        class="form-control code-search-input"
+        placeholder="{% trans 'Search (project, bucket, component...)' %}"
+        autocomplete="off"
+      >
+    </div>
+    <div class="col-12 col-md-7 text-md-end">
+      <div class="btn-group flex-wrap" role="group">
+        <button type="button" class="btn btn-outline-light btn-sm toolbar-btn" id="btn-show-all">
+          {% trans "Show all" %}
+        </button>
+        <button type="button" class="btn btn-outline-warning btn-sm toolbar-btn" id="btn-duplicates">
+          {% trans "Duplicates" %}
+        </button>
+        <button type="button" class="btn btn-outline-danger btn-sm toolbar-btn" id="btn-large">
+          {% blocktrans with n=large_loc %}Large (≥ {{ n }} LOC){% endblocktrans %}
+        </button>
+        <button type="button" class="btn btn-outline-info btn-sm toolbar-btn" id="btn-security">
+          🛡 {% trans "Security" %}
+        </button>
+        <button type="button" class="btn btn-outline-danger btn-sm toolbar-btn" id="btn-security-high">
+          🔥 {% trans "High Only" %}
+        </button>
+        <button type="button" class="btn btn-outline-warning btn-sm toolbar-btn" id="btn-warnings">
+          ⚠ {% trans "Warnings" %}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="neon-glass-card p-3 code-tree">
+    {% if projects %}
+      <ul class="code-tree-root">
+        <li class="code-tree-node">
+          <span class="code-project-title text-info tree-toggle">Code Base</span>
+          <ul>
+            {% for project in projects %}
+              <li class="code-tree-node">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                  <span class="code-project-title tree-toggle">{{ project.name }}</span>
+                  <span class="text-white-50">({{ project.type }})</span>
+
+                  <form method="post" action="{% url 'code_analyzer:send_to_athena' %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="target_path" value="{{ project.path }}">
+                    <input type="hidden" name="title" value="Canonical App Context: {{ project.name }}">
+                    <button type="submit" class="btn btn-outline-info btn-sm py-0">
+                      🦉 Send to Athena
+                    </button>
+                  </form>
+                </div>
+
+                <small class="text-white-50 d-block">{{ project.path }}</small>
+
+                {% if project.targets and project.targets|length > 1 %}
+                  <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+                    <span class="text-white-50 small">Target:</span>
+
+                    <select class="form-select form-select-sm"
+                            style="width: 340px;"
+                            id="target_select_{{ forloop.counter }}">
+                      <option value="">(select a target…)</option>
+                      {% for t in project.targets %}
+                        <option value="{{ t.path }}">{{ t.kind|title }}: {{ t.name }}</option>
+                      {% endfor %}
+                    </select>
+
+                    <form method="post" action="{% url 'code_analyzer:send_to_athena' %}" class="d-inline">
+                      {% csrf_token %}
+                      <input type="hidden" name="target_path" id="target_path_{{ forloop.counter }}" value="">
+                      <input type="hidden" name="title" value="Canonical App Context: {{ project.name }}">
+                      <button type="submit" class="btn btn-outline-info btn-sm">
+                        🦉 Send selected target to Athena
+                      </button>
+                    </form>
+
+                    <small class="text-white-50">Path: <span id="target_path_label_{{ forloop.counter }}"></span></small>
+                  </div>
+
+                  <script>
+                    (function(){
+                      const sel = document.getElementById("target_select_{{ forloop.counter }}");
+                      const hid = document.getElementById("target_path_{{ forloop.counter }}");
+                      const lab = document.getElementById("target_path_label_{{ forloop.counter }}");
+                      if (!sel || !hid) return;
+                      sel.addEventListener("change", () => {
+                        hid.value = sel.value;
+                        if (lab) lab.textContent = sel.value || "";
+                      });
+                    })();
+                  </script>
+                {% elif project.is_frontendish %}
+                  <div class="mt-2 text-white-50 small">
+                    Frontend / Supabase project detected. Use the project-level “Send to Athena” button above.
+                  </div>
+                {% else %}
+                  <div class="mt-2 text-white-50 small">
+                    Project-level scan available. Use the “Send to Athena” button above.
+                  </div>
+                {% endif %}
+
+                <ul>
+                  {% for group in project.component_groups %}
+                    <li class="code-tree-node">
+                      <span class="code-bucket-title text-primary tree-toggle">{{ group.label }}</span>
+                      <ul>
+                        {% for c in group.items %}
+                          <li class="code-tree-node"
+                              data-name="{{ c.name }}"
+                              data-loc="{{ c.loc|default:'' }}"
+                              data-kind="{{ c.kind|default:'' }}">
+                            <span class="code-component">
+                              {% if c.kind == "security" %}
+                                {% if c.name|slice:":6" == "[HIGH]" %}
+                                  <span class="security-badge text-danger">HIGH</span>
+                                {% else %}
+                                  <span class="security-badge text-info">MED</span>
+                                {% endif %}
+                              {% endif %}
+                              {{ c.name }}
+                            </span>
+                            <span class="text-white-50">
+                              ({{ c.file }}{% if c.lineno %}:{{ c.lineno }}{% endif %})
+                              {% if c.loc %}
+                                · {{ c.loc }} {% trans "LOC" %}
+                              {% endif %}
+                            </span>
+                          </li>
+                        {% endfor %}
+                      </ul>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </li>
+            {% endfor %}
+          </ul>
+        </li>
+      </ul>
+    {% else %}
+      <p class="text-white-50 mb-0">
+        {% trans "Click “Scan Projects” to build a global view of your codebase." %}
+      </p>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const largeThreshold = {{ large_loc|default:50 }};
+  const root = document.querySelector(".code-tree-root");
+  const searchInput = document.getElementById("code-search");
+
+  document.querySelectorAll(".tree-toggle").forEach(function (label) {
+    label.addEventListener("click", function () {
+      const li = label.closest("li");
+      if (!li) return;
+      const childUl = li.querySelector(":scope > ul");
+      if (childUl) li.classList.toggle("collapsed");
+    });
+  });
+
+  function filterTree(query) {
+    if (!root) return;
+    const q = query.trim().toLowerCase();
+
+    function visit(li) {
+      const labelSpan = li.querySelector(":scope > span");
+      const labelText = labelSpan ? labelSpan.textContent.toLowerCase() : "";
+
+      let matchesSelf = !q || labelText.includes(q);
+      let matchesChild = false;
+
+      const childUls = li.querySelectorAll(":scope > ul");
+      childUls.forEach(function (ul) {
+        ul.querySelectorAll(":scope > li").forEach(function (childLi) {
+          if (visit(childLi)) matchesChild = true;
+        });
+      });
+
+      const shouldShow = matchesSelf || matchesChild;
+      li.style.display = shouldShow ? "" : "none";
+
+      if (q && shouldShow && childUls.length > 0) {
+        li.classList.remove("collapsed");
+      }
+      return shouldShow;
+    }
+
+    root.querySelectorAll(":scope > li").forEach(visit);
+  }
+
+  if (searchInput && root) {
+    searchInput.addEventListener("input", function (e) {
+      filterTree(e.target.value);
+    });
+  }
+
+  function clearHighlights() {
+    document.querySelectorAll(
+      ".highlight-duplicate, .highlight-large, .highlight-security, .highlight-security-high, .highlight-warning"
+    ).forEach(function (el) {
+      el.classList.remove(
+        "highlight-duplicate", "highlight-large",
+        "highlight-security", "highlight-security-high",
+        "highlight-warning"
+      );
+    });
+  }
+
+  function setActiveChip(filterName) {
+    document.querySelectorAll(".stat-chip").forEach(function (chip) {
+      chip.classList.remove("active");
+    });
+    const active = document.querySelector(`.stat-chip[data-filter="${filterName}"]`);
+    if (active) active.classList.add("active");
+  }
+
+  function resetView() {
+    clearHighlights();
+
+    if (searchInput) {
+      searchInput.value = "";
+      filterTree("");
+    }
+
+    if (!root) return;
+    root.querySelectorAll("li").forEach(function (li) {
+      li.classList.remove("collapsed");
+      li.style.display = "";
+    });
+
+    setActiveChip("all");
+  }
+
+  function revealNode(li) {
+    li.style.display = "";
+    let parent = li.parentElement;
+    while (parent) {
+      const pli = parent.closest("li");
+      if (pli) {
+        pli.style.display = "";
+        pli.classList.remove("collapsed");
+      }
+      parent = pli ? pli.parentElement : null;
+    }
+  }
+
+  function applyFilter(filterName) {
+    resetView();
+    setActiveChip(filterName);
+
+    if (!root) return;
+
+    const leaves = root.querySelectorAll("li[data-name], li[data-kind], li[data-loc]");
+    leaves.forEach(function (li) {
+      li.style.display = "none";
+    });
+
+    if (filterName === "all") {
+      resetView();
+      return;
+    }
+
+    if (filterName === "duplicates") {
+      const map = {};
+      root.querySelectorAll("li[data-name]").forEach(function (li) {
+        const name = li.getAttribute("data-name") || "";
+        if (!name) return;
+        if (!map[name]) map[name] = [];
+        map[name].push(li);
+      });
+
+      Object.keys(map).forEach(function (name) {
+        if (map[name].length > 1) {
+          map[name].forEach(function (li) {
+            li.classList.add("highlight-duplicate");
+            revealNode(li);
+          });
+        }
+      });
+      return;
+    }
+
+    if (filterName === "large") {
+      root.querySelectorAll("li[data-loc]").forEach(function (li) {
+        const locStr = li.getAttribute("data-loc");
+        if (!locStr) return;
+        const loc = parseInt(locStr, 10);
+        if (!isNaN(loc) && loc >= largeThreshold) {
+          li.classList.add("highlight-large");
+          revealNode(li);
+        }
+      });
+      return;
+    }
+
+    if (filterName === "security") {
+      root.querySelectorAll("li[data-kind='security']").forEach(function (li) {
+        const name = (li.getAttribute("data-name") || "");
+        if (name.startsWith("[HIGH]")) {
+          li.classList.add("highlight-security-high");
+        } else {
+          li.classList.add("highlight-security");
+        }
+        revealNode(li);
+      });
+      return;
+    }
+
+    if (filterName === "security-high") {
+      root.querySelectorAll("li[data-kind='security']").forEach(function (li) {
+        const name = (li.getAttribute("data-name") || "");
+        if (name.startsWith("[HIGH]")) {
+          li.classList.add("highlight-security-high");
+          revealNode(li);
+        }
+      });
+      return;
+    }
+
+    if (filterName === "warnings") {
+      root.querySelectorAll("li[data-kind='warning']").forEach(function (li) {
+        li.classList.add("highlight-warning");
+        revealNode(li);
+      });
+      return;
+    }
+
+    resetView();
+  }
+
+  const btnShowAll = document.getElementById("btn-show-all");
+  if (btnShowAll) btnShowAll.addEventListener("click", () => applyFilter("all"));
+
+  const btnDuplicates = document.getElementById("btn-duplicates");
+  if (btnDuplicates) btnDuplicates.addEventListener("click", () => applyFilter("duplicates"));
+
+  const btnLarge = document.getElementById("btn-large");
+  if (btnLarge) btnLarge.addEventListener("click", () => applyFilter("large"));
+
+  const btnSecurity = document.getElementById("btn-security");
+  if (btnSecurity) btnSecurity.addEventListener("click", () => applyFilter("security"));
+
+  const btnSecurityHigh = document.getElementById("btn-security-high");
+  if (btnSecurityHigh) btnSecurityHigh.addEventListener("click", () => applyFilter("security-high"));
+
+  const btnWarnings = document.getElementById("btn-warnings");
+  if (btnWarnings) btnWarnings.addEventListener("click", () => applyFilter("warnings"));
+
+  document.querySelectorAll(".stat-chip").forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      const filterName = chip.getAttribute("data-filter") || "all";
+      applyFilter(filterName);
+    });
+  });
+
+  setActiveChip("all");
+});
+</script>
+{% endblock %}

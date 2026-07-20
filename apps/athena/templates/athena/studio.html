@@ -1,0 +1,613 @@
+{# apps/athena/templates/athena/dashboard.html #}
+{% extends "athena/base.html" %}
+{% block athena_content %}
+<style>
+    :root{
+  --studio-trim: 48px; /* increase to shorten, decrease to fill more */
+}
+
+    body { background: radial-gradient(circle at top right, #081622, #000000); background-attachment: fixed; margin:0; }
+    * { box-sizing: border-box; }
+
+    .topbar{
+      height:64px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      position:sticky; top:0;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      background: rgba(0,0,0,.25);
+      z-index: 20;
+    }
+    .brand-pill{
+      display:inline-flex; align-items:center; gap:.5rem;
+      padding:.35rem .8rem;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color:#fff;
+      font-weight:600;
+    }
+    .brand-dot{
+      width:10px; height:10px; border-radius:50%;
+      background:#00d1ff;
+      box-shadow: 0 0 10px rgba(0,209,255,.7);
+    }
+
+    .layout {
+      width: 100%;
+      max-width: none;
+      padding: 18px 18px 24px 18px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 300px minmax(720px, 1fr) 420px;
+      gap: 18px;
+      align-items: stretch;
+      min-height: calc(100vh - 64px - var(--studio-trim));
+    }
+
+    .card{
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.05);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color:#fff;
+      overflow:hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,.3);
+    }
+    .card-h {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.18);
+    }
+    .card-h .title { font-weight:700; font-size:.95rem; opacity:.95; }
+    .card-b { padding: 12px; }
+
+    .btn{
+      cursor:pointer;
+      border-radius: 10px;
+      padding: .45rem .6rem;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.08);
+      color:#fff;
+      font-weight:600;
+      font-size:.85rem;
+    }
+    .btn:hover { background: rgba(255,255,255,.12); }
+    .btn-primary{
+      border-color: rgba(0,209,255,.35);
+      box-shadow: 0 0 0 2px rgba(0,209,255,.12) inset;
+    }
+    .btn-warn{
+      border-color: rgba(255,138,0,.35);
+      box-shadow: 0 0 0 2px rgba(255,138,0,.12) inset;
+    }
+    .btn-ghost{
+      background: transparent;
+    }
+
+    .thread-list { display:flex; flex-direction:column; gap:8px; }
+    .thread-item{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px;
+      border-radius: 12px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.12);
+      text-decoration:none;
+      color:#fff;
+    }
+    .thread-item:hover{ background: rgba(255,255,255,.06); }
+    .thread-item.active{
+      border-color: rgba(0,209,255,.45);
+      box-shadow: 0 0 0 2px rgba(0,209,255,.10) inset;
+    }
+    .thread-meta{ opacity:.75; font-size:.78rem; margin-top:4px; }
+    .thread-actions{ display:flex; flex-direction:column; gap:6px; }
+    .icon-btn{
+      width:28px; height:28px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius: 8px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color:#fff;
+      cursor:pointer;
+      font-size: .9rem;
+    }
+    .icon-btn:hover{ background: rgba(255,255,255,.10); }
+
+    .messages {
+      height: calc(100vh - 64px - 42px - 50px);
+      overflow:auto;
+      padding: 12px;
+    }
+    .msg {
+      padding: 10px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.12);
+      margin-bottom: 10px;
+      white-space: pre-wrap;
+    }
+    .msg .meta { opacity:.70; font-size:.78rem; margin-bottom:6px; }
+
+    label { display:block; font-size:.82rem; opacity:.85; margin:10px 0 6px; }
+    select, textarea, input[type="text"]{
+      width:100%;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(0,0,0,.18);
+      color:#fff;
+      padding: .55rem .6rem;
+      outline:none;
+    }
+    textarea { min-height: 180px; resize: vertical; } /* ✅ bigger User Message */
+    .tiny { font-size:.78rem; opacity:.7; margin-top:8px; line-height:1.3; }
+
+    .workflow {
+      display:flex;
+      gap:8px;
+      margin: 10px 0 12px;
+    }
+    .pill {
+      flex:1;
+      text-align:center;
+      padding:.45rem .5rem;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      cursor:pointer;
+      font-weight:700;
+      font-size:.83rem;
+      opacity:.85;
+    }
+    .pill.active{
+      opacity:1;
+      border-color: rgba(0,209,255,.45);
+      box-shadow: 0 0 0 2px rgba(0,209,255,.10) inset;
+    }
+
+    .step {
+      border:1px dashed rgba(255,255,255,.18);
+      border-radius: 14px;
+      padding: 10px;
+      margin-top: 10px;
+      background: rgba(0,0,0,.10);
+    }
+    .step h4{
+      margin:0 0 8px 0;
+      font-size:.9rem;
+      opacity:.95;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .badge {
+      font-size:.75rem;
+      padding:.18rem .5rem;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      opacity:.9;
+    }
+
+    @media (max-width: 1200px){
+      .grid { grid-template-columns: 260px 1fr; }
+      .right { grid-column: 2 / 3; }
+    }
+    @media (max-width: 900px){
+      .grid { grid-template-columns: 1fr; }
+      .right { grid-column: 1 / 2; }
+      .messages { height: auto; max-height: 55vh; }
+    }
+</style>
+<div class="studio-fullscreen">
+  <div class="layout">
+    <div class="grid">
+
+      <!-- Left: Threads -->
+      <div class="card">
+        <div class="card-h">
+          <div class="title">Threads</div>
+          <div style="display:flex; gap:8px;">
+            <a class="btn btn-primary" href="{% url 'athena:studio' %}">+ New</a>
+            {% if thread %}
+              <button class="btn btn-ghost" type="button" onclick="renameThread({{ thread.id }}, '{{ thread.title|escapejs }}')">✏ Rename</button>
+            {% endif %}
+          </div>
+        </div>
+        <div class="card-b">
+          <div class="thread-list">
+            {% for t in threads %}
+              <a class="thread-item {% if thread and t.id == thread.id %}active{% endif %}"
+                 href="{% url 'athena:studio_thread' t.id %}">
+                <div>
+                  <div style="font-weight:700; font-size:.9rem;">{{ t.title }}</div>
+                  <div class="thread-meta">{{ t.updated_at|date:"M j, Y, P" }}</div>
+                </div>
+                <div class="thread-actions">
+                  <button class="icon-btn" type="button" title="Rename"
+                          onclick="event.preventDefault(); renameThread({{ t.id }}, '{{ t.title|escapejs }}')">✏</button>
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Middle: Messages -->
+      <div class="card">
+        <div class="card-h">
+          <div class="title">
+            {% if thread %} 🧵 {{ thread.title }} <span style="opacity:.65; font-weight:500;">Thread #{{ thread.id }}
+              <small class="text-muted">
+                Design doc chars: {{ thread.last_design_doc|length }}
+              </small></span>
+            {% else %} Select a thread {% endif %}
+          </div>
+          {% if thread %}
+            <div style="display:flex; gap:8px;">
+              <span class="badge" id="designBadge">{% if thread.last_design_doc %}Design saved{% else %}No design saved{% endif %}</span>
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="messages" id="messages">
+          {% if not thread %}
+            <div class="msg">
+              <div class="meta">system</div>
+              Pick a thread on the left. Then use the workflow on the right.
+            </div>
+          {% else %}
+            {% for m in messages %}
+              <div class="msg">
+                <div class="meta">{{ m.role }} • {{ m.created_at|date:"M j, Y, P" }}</div>
+                {{ m.content }}
+              </div>
+            {% empty %}
+              <div class="msg"><div class="meta">system</div>No messages yet.</div>
+            {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Right: Studio Run -->
+      <div class="card right">
+        <div class="card-h">
+          <div class="title">Studio Run</div>
+        </div>
+        <div class="card-b">
+          {% if not thread %}
+            <div class="msg">
+              <div class="meta">system</div>
+              Select a thread first.
+            </div>
+          {% else %}
+
+            <div class="workflow">
+              <div class="pill {% if mode == 'enhancement' %}active{% endif %}" onclick="setMode('enhancement')">Enhancement</div>
+              <div class="pill {% if mode == 'new_app' %}active{% endif %}" onclick="setMode('new_app')">New App</div>
+            </div>
+
+            <label>Prompt</label>
+            <select id="promptSelect" onchange="saveUiState()">
+              <option value="0">Select a prompt…</option>
+              {% for p in prompts %}
+                <option value="{{ p.id }}" {% if p.id == selected_prompt_id %}selected{% endif %}>
+                  {{ p.name }} ({{ p.key }})
+                </option>
+              {% endfor %}
+            </select>
+
+            <div class="step" id="enhancementSteps" style="{% if mode != 'enhancement' %}display:none;{% endif %}">
+              <h4>Step 1: Select App Context <span class="badge">Required</span></h4>
+              <label>App Context (approved)</label>
+              <select id="snapshotSelect" onchange="saveUiState()">
+                <option value="0">(none)</option>
+                {% for s in snapshots %}
+                  <option value="{{ s.id }}" {% if s.id == selected_snapshot_id %}selected{% endif %}>{{ s.title }}</option>
+                {% endfor %}
+              </select>
+
+              <div style="display:flex; gap:8px; margin-top:10px;">
+                <button class="btn btn-primary" type="button" onclick="runFeatureDesigner()">🧠 Run Feature Designer</button>
+                <button class="btn btn-warn" type="button" onclick="createImplementationGenerator()">🛠 Create Implementation Generator</button>
+              </div>
+
+              <div class="tiny">
+                Flow: App Context → Feature Designer (saves design_doc) → Implementation Generator uses that design_doc.
+              </div>
+            </div>
+
+            <div class="step" id="newAppSteps" style="{% if mode != 'new_app' %}display:none;{% endif %}">
+              <h4>Step 1: Design the New App <span class="badge">Required</span></h4>
+              <div style="display:flex; gap:8px;">
+                <input type="hidden" id="activeThreadId" value="{{ thread.id }}">
+                <button class="btn btn-warn" type="button" onclick="runAppBuilderFromUI()">🧱 Run App Builder</button>
+                <button class="btn btn-warn" type="button" onclick="createImplementationGenerator()">🛠 Create Implementation Generator</button>
+              </div>
+              <div class="tiny">
+                Flow: App Builder output is treated as the design_doc for the thread (no App Context needed).
+              </div>
+            </div>
+
+            <label>Model Settings</label>
+            <select id="settingsSelect" onchange="saveUiState()">
+              {% for s in settings_list %}
+                <option value="{{ s.id }}" {% if active_settings and s.id == active_settings.id %}selected{% endif %}>{{ s.name }}</option>
+              {% endfor %}
+            </select>
+
+            <label style="margin-top:10px;">
+              <input type="checkbox" id="approvedOnly" {% if approved_only %}checked{% endif %} onchange="saveUiState()"> Approved only
+            </label>
+
+            <label>User message (optional)</label>
+            <textarea id="userMessage" placeholder="Describe what you want (feature, output, constraints, file targets, etc)."></textarea>
+
+            <label>Input Template</label>
+            <select id="inputTemplate">
+              <option value="">(choose a template…)</option>
+            </select>
+
+            <label>Inputs JSON</label>
+            <textarea id="inputsJson">{ "idea": "", "evidence": "" }</textarea>
+
+            <div style="margin-top:10px;">
+              <button class="btn btn-primary" type="button" onclick="runMain()">Run</button>
+            </div>
+
+            <div class="tiny" id="hintText">
+              Tip: Pick Enhancement vs New App. Your selections are saved per thread automatically.
+            </div>
+
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+  <script>
+    const threadId = {% if thread %}{{ thread.id }}{% else %}null{% endif %};
+
+    function toast(msg){
+      alert(msg);
+    }
+
+    async function postForm(url, data){
+      const resp = await fetch(url, { method:'POST', body: data, headers: { 'X-CSRFToken': '{{ csrf_token }}' }});
+      return resp.json();
+    }
+
+    async function postJson(url, obj){
+      const resp = await fetch(url, {
+        method:'POST',
+        headers: { 'Content-Type':'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify(obj)
+      });
+      return resp.json();
+    }
+
+    // Gather the Studio selections the run endpoints expect, as FormData.
+    function collectStudioForm(){
+      const fd = new FormData();
+      const promptId = parseInt(document.getElementById('promptSelect')?.value || '0', 10);
+      const settingsId = parseInt(document.getElementById('settingsSelect')?.value || '0', 10);
+      const approvedOnly = document.getElementById('approvedOnly')?.checked;
+      const userMessage = (document.getElementById('userMessage')?.value || "").trim();
+      const inputsJson = (document.getElementById('inputsJson')?.value || "{}").trim() || "{}";
+      const snapEl = document.getElementById('snapshotSelect');
+      const snapshotId = snapEl ? parseInt(snapEl.value || '0', 10) : 0;
+
+      fd.append("prompt_id", promptId);
+      fd.append("settings_id", settingsId);
+      fd.append("approved_only", approvedOnly ? "1" : "");
+      fd.append("user_message", userMessage);
+      fd.append("inputs_json", inputsJson);
+      if(snapshotId) fd.append("snapshot_id", snapshotId);
+      return fd;
+    }
+
+    function setMode(mode){
+      document.getElementById('enhancementSteps').style.display = (mode === 'enhancement') ? '' : 'none';
+      document.getElementById('newAppSteps').style.display = (mode === 'new_app') ? '' : 'none';
+      saveUiState({mode});
+      // update pill styles
+      document.querySelectorAll('.workflow .pill').forEach(p => p.classList.remove('active'));
+      if(mode === 'enhancement') document.querySelectorAll('.workflow .pill')[0].classList.add('active');
+      if(mode === 'new_app') document.querySelectorAll('.workflow .pill')[1].classList.add('active');
+    }
+
+    async function saveUiState(extra){
+      if(!threadId) return;
+
+      const payload = Object.assign({
+        prompt_id: parseInt(document.getElementById('promptSelect').value || '0', 10),
+        snapshot_id: parseInt(document.getElementById('snapshotSelect') ? document.getElementById('snapshotSelect').value : '0', 10),
+        settings_id: parseInt(document.getElementById('settingsSelect').value || '0', 10),
+        approved_only: document.getElementById('approvedOnly').checked,
+      }, (extra || {}));
+
+      await postJson(`/athena/thread/${threadId}/ui-state/`, payload);
+    }
+
+    async function renameThread(id, currentTitle){
+      const title = prompt("Rename thread:", currentTitle || "");
+      if(!title) return;
+      const fd = new FormData();
+      fd.append("title", title);
+      const out = await postForm(`/athena/thread/${id}/rename/`, fd);
+      if(out.ok){
+        location.reload();
+      }else{
+        toast(out.error || "Rename failed");
+      }
+    }
+
+    async function runMain(){
+      localStorage.setItem("athena_scroll_bottom", "1");
+      if(!threadId){
+        toast("Select a thread first.");
+        return;
+      }
+      await saveUiState();
+
+      const fd = collectStudioForm();
+
+      const resp = await fetch(`/athena/studio/${threadId}/run-stream/`, {
+        method: "POST",
+        body: fd,
+        headers: { "X-CSRFToken": "{{ csrf_token }}" }
+      });
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let all = "";
+      while(true){
+        const { value, done } = await reader.read();
+        if(done) break;
+        const chunk = decoder.decode(value, {stream:true});
+        all += chunk;
+      }
+      // naive refresh
+      location.reload();
+    }
+
+    // These buttons assume you already have endpoints in your project.
+    async function runFeatureDesigner(){
+      localStorage.setItem("athena_scroll_bottom", "1");
+      const snapEl = document.getElementById('snapshotSelect');
+      const snapshotId = snapEl ? parseInt(snapEl.value || '0', 10) : 0;
+      if(!snapshotId){
+        toast("Select an App Context (approved) first, then run Feature Designer.");
+        return;
+      }
+      await saveUiState();
+      const fd = collectStudioForm();
+      const resp = await fetch(`/athena/studio/${threadId}/run-feature-designer/`, {
+        method:"POST",
+        body: fd,
+        headers:{ "X-CSRFToken":"{{ csrf_token }}" }
+      });
+      const data = await resp.json().catch(() => ({}));
+      if(!resp.ok || data.ok === false){
+        toast(data.error || `Feature Designer failed (${resp.status})`);
+        return;
+      }
+      toast("✅ Feature Designer ran.");
+      location.reload();
+    }
+
+    function runAppBuilderFromUI() {
+      const threadId = parseInt(document.querySelector("#activeThreadId")?.value || "0", 10);
+      return runAppBuilder(threadId);
+    }
+
+    async function createImplementationGenerator(){
+      await saveUiState();
+      const fd = collectStudioForm();
+      const resp = await fetch(`/athena/studio/${threadId}/create-impl-prompt/`, {
+        method:"POST",
+        body: fd,
+        headers:{ "X-CSRFToken":"{{ csrf_token }}" }
+      });
+      // The view redirects to Studio with the impl prompt preselected; follow it.
+      if(resp.redirected && resp.url){
+        window.location.href = resp.url;
+      }else{
+        window.location.reload();
+      }
+    }
+  </script>
+<script>
+  window.addEventListener("load", () => {
+    const box = document.getElementById("messages");
+    if (!box) return;
+    if (localStorage.getItem("athena_scroll_bottom") === "1") {
+      box.scrollTop = box.scrollHeight;
+      localStorage.removeItem("athena_scroll_bottom");
+    }
+  });
+</script>
+<script>
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== "") {
+    const cookies = document.cookie.split(";");
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + "=")) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+async function runAppBuilder(threadId) {
+  if (!threadId) {
+    alert("Select a thread first.");
+    return;
+  }
+
+  // IMPORTANT: Make sure this selector matches your actual textarea id/name
+  const userMessageEl = document.querySelector("#userMessage");
+  const user_message = (userMessageEl?.value || "").trim();
+
+  if (!user_message) {
+    alert("Please enter what you want to build (app name + requirements) in User message, then run App Builder.");
+    userMessageEl?.focus();
+    return;
+  }
+
+  const inputsJsonEl = document.querySelector("#inputsJson");
+  const inputs_json = (inputsJsonEl?.value || "{}").trim() || "{}";
+
+  const settingsEl = document.querySelector("#settingsSelect");
+  const settings_id = settingsEl?.value || "";
+
+  const approvedOnlyEl = document.querySelector("#approvedOnly");
+  const approved_only = approvedOnlyEl?.checked ? "1" : "0";
+
+  const fd = new FormData();
+  fd.append("user_message", user_message);
+  fd.append("inputs_json", inputs_json);
+  if (settings_id) fd.append("settings_id", settings_id);
+  fd.append("approved_only", approved_only);
+
+  const url = `/athena/studio/${threadId}/run-app-builder/`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "X-CSRFToken": getCookie("csrftoken") },
+    body: fd
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) {
+    alert(data.error || `Run failed (${res.status})`);
+    console.error("Run App Builder error:", data);
+    return;
+  }
+
+  // Optional: refresh the page so you see the new assistant message + design badge updates
+  window.location.reload();
+}
+</script>
+
+{% endblock %}

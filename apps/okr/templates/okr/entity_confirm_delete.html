@@ -1,0 +1,61 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div style="max-width: 920px; margin: 0 auto;">
+  <div class="d-flex align-items-end justify-content-between gap-3 mb-3">
+    <div>
+      <h2 class="mb-0">Create New Entity</h2>
+      <div class="text-soft mt-1">This will auto-generate the OKR structure after creation.</div>
+    </div>
+
+    <a href="{% url 'okr:entity-list' %}" class="text-strong" style="text-decoration: underline;">
+      ← Back to Entities
+    </a>
+  </div>
+
+  <form method="post" class="neon-glass-card p-4">
+    {% csrf_token %}
+
+    {# If your form has name/description fields (typical), style them explicitly #}
+    <div class="form-grid">
+      <label for="{{ form.name.id_for_label }}" class="text-soft">Name</label>
+      {{ form.name.as_widget|safe }}
+
+      {% if form.description %}
+        <label for="{{ form.description.id_for_label }}" class="text-soft">Description</label>
+        {{ form.description.as_widget|safe }}
+      {% endif %}
+    </div>
+
+    {# If there are extra fields beyond name/description, render them nicely #}
+    {% for field in form %}
+      {% if field.name != "name" and field.name != "description" %}
+        <div class="mt-3">
+          <label for="{{ field.id_for_label }}" class="text-soft">{{ field.label }}</label>
+          <div class="mt-1">{{ field }}</div>
+          {% if field.errors %}
+            <div class="mt-1" style="color: var(--danger, #ff5b7a);">{{ field.errors }}</div>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% endfor %}
+
+    <div class="d-flex gap-2 flex-wrap mt-4">
+      <button type="submit" class="btn-glass">Create and Auto-Generate OKRs</button>
+      <a href="{% url 'okr:entity-list' %}" class="btn-glass">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  // Apply neon input classes to Django widgets without touching Python forms
+  (function () {
+    const nameEl = document.getElementById("id_name");
+    if (nameEl) nameEl.classList.add("input-glass");
+
+    const descEl = document.getElementById("id_description");
+    if (descEl) descEl.classList.add("textarea-glass");
+  })();
+</script>
+
+{% endblock %}

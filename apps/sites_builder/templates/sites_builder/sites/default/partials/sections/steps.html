@@ -1,0 +1,16 @@
+<section class="lp-section lp-steps-band">
+  <div class="lp-container">
+    {% if s.eyebrow %}<div class="lp-section__eyebrow">{{ s.eyebrow }}</div>{% endif %}
+    {% if s.heading %}<h2 class="lp-section__heading">{{ s.heading }}</h2>{% endif %}
+    {% if s.subhead %}<p class="lp-section__subhead">{{ s.subhead }}</p>{% endif %}
+    <div class="lp-steps">
+      {% for item in s.items %}
+        <div class="lp-step">
+          <div class="lp-step__dot">{{ forloop.counter }}</div>
+          <h3 class="lp-step__title">{{ item.title }}</h3>
+          {% if item.text %}<p class="lp-step__text">{{ item.text }}</p>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

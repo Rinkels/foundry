@@ -1,0 +1,21 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div style="max-width: 820px; margin: 0 auto;">
+  <div class="neon-glass-card p-4">
+    <h2 class="mb-2" style="color: var(--danger, #ff5b7a);">Delete Strategy</h2>
+    <div class="text-soft mb-3">
+      Are you sure you want to delete <span class="text-strong"><strong>{{ object.name }}</strong></span>?
+    </div>
+
+    <form method="post" class="d-flex gap-2 flex-wrap">
+      {% csrf_token %}
+      <button type="submit" class="btn-glass" style="border-color: rgba(255,91,122,.45);">
+        Confirm Delete
+      </button>
+      <a href="{% url 'okr:strategy-detail' object.pk %}" class="btn-glass">Cancel</a>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

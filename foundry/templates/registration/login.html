@@ -1,0 +1,32 @@
+{% extends "common/base.html" %}
+{% block title %}Log In{% endblock %}
+
+{% block content %}
+<div style="max-width: 520px; margin: 0 auto;">
+  <div class="neon-glass-card p-4">
+    <h2 class="mb-3">Log In</h2>
+
+    {% if form.errors %}
+      <div class="text-soft mb-3" style="color: var(--danger, #ff5b7a);">
+        Please check your username and password.
+      </div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="mb-3">
+        <label class="text-soft mb-1" for="id_username">Username</label>
+        <input type="text" name="username" autofocus required id="id_username" class="input-glass">
+      </div>
+
+      <div class="mb-3">
+        <label class="text-soft mb-1" for="id_password">Password</label>
+        <input type="password" name="password" required id="id_password" class="input-glass">
+      </div>
+
+      <button class="btn-glass" type="submit">Sign in</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "sites_builder/base.html" %}
+{% block title %}{{ article.meta_title|default:article.title }}{% endblock %}
+
+{% block meta %}
+  {% if article.meta_description %}
+    <meta name="description" content="{{ article.meta_description }}">
+  {% endif %}
+  {% if canonical_url %}
+    <link rel="canonical" href="{{ canonical_url }}">
+    <meta property="og:url" content="{{ canonical_url }}">
+  {% endif %}
+  <meta property="og:title" content="{{ article.meta_title|default:article.title }}">
+  {% if article.meta_description %}
+    <meta property="og:description" content="{{ article.meta_description }}">
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<section class="container py-5">
+  <div class="neon-glass-card p-4 p-md-5">
+    <div class="text-soft small mb-2">
+      {% if article.published_at %}Published {{ article.published_at|date:"F j, Y" }}{% endif %}
+    </div>
+
+    <h1 class="mb-3">{{ article.title }}</h1>
+
+    {% if article.excerpt %}
+      <p class="text-soft">{{ article.excerpt }}</p>
+      <hr style="border-color: rgba(255,255,255,.12);">
+    {% endif %}
+
+    {% if article.hero_image_url %}
+      <img src="{{ article.hero_image_url }}" alt="{{ article.title }}" style="width:100%; border-radius: 16px; margin: 12px 0 20px 0;">
+    {% endif %}
+
+    <div class="article-body">
+      {{ article_body_html|safe }}
+    </div>
+  </div>
+</section>
+{% endblock %}

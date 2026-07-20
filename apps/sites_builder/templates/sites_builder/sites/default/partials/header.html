@@ -1,0 +1,18 @@
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="site-brand" href="{{ rel_root }}index.html">
+      {% if site.logo_url %}<img class="site-brand__logo" src="{{ site.logo_url }}" alt="{{ site.name }}">{% else %}<span class="site-brand__name">{{ site.name }}</span>{% endif %}
+    </a>
+
+    <nav class="site-nav">
+      {% with menu_items=site.top_nav_items.all %}
+        {% if menu_items|length %}
+          {% for item in menu_items %}{% if item.is_enabled %}<a class="site-nav__link" href="{{ rel_root }}{{ item.url }}"{% if item.open_in_new_tab %} target="_blank" rel="noopener"{% endif %}>{{ item.label }}</a>{% endif %}{% endfor %}
+        {% else %}
+          {% for p in site.pages.all %}{% if not p.is_root %}{% if p.parent_id == None or p.parent.is_root %}<a class="site-nav__link" href="{{ rel_root }}{{ p.slug }}.html">{{ p.title }}</a>{% endif %}{% endif %}{% endfor %}
+        {% endif %}
+      {% endwith %}
+      {% if site.nav_cta_label %}<a class="site-cta" href="{{ rel_root }}{{ site.nav_cta_url|default:'#' }}">{{ site.nav_cta_label }}</a>{% endif %}
+    </nav>
+  </div>
+</header>

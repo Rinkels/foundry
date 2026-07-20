@@ -1,0 +1,779 @@
+{% extends "common/base.html" %}
+{% block content %}
+{% load humanize %}
+<style>
+  .info-icon {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    margin-left: 6px;
+    cursor: help;
+    border: 1px solid rgba(255,255,255,.16);
+    background: rgba(255,255,255,.06);
+    color: rgba(255,255,255,.85);
+    user-select: none;
+  }
+  /* Ensure tooltips appear above your glass layers */
+  .tooltip { z-index: 99999 !important; }
+</style>
+
+<div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+  <div>
+    <div class="text-soft small">
+      <a href="{% url 'janus:dd-cockpit' %}">← Back to cockpit</a>
+    </div>
+    <h1 class="mb-0">{{ run.target_company.name }}</h1>
+    <div class="text-soft mt-1">
+      {{ run.template }} • Round {{ run.round_number }} •
+      <span class="badge {% if run.status == 'blocked' %}bg-danger{% elif run.status == 'in_progress' %}bg-primary{% elif run.status == 'complete' %}bg-success{% else %}bg-secondary{% endif %}">
+        {{ run.status|cut:"_"|title }}
+      </span>
+      {% if run.verdict %}
+        <span class="badge bg-secondary">{{ run.verdict|cut:"_"|title }}</span>
+      {% endif %}
+      {% if run.target_company.website %}
+        • <a href="{{ run.target_company.website }}" target="_blank" rel="noopener">Open website</a>
+      {% endif %}
+
+      <form method="post" action="{% url 'janus:dd-run-promote' run.id %}" style="display:inline;">
+        {% csrf_token %}
+        <button class="btn-glass" type="submit">Promote to OKR Drafts</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="text-soft small">
+    Responses: {{ completion.completed }}/{{ completion.total }} ({{ completion.pct }}%)
+  </div>
+  <div style="height:10px; border-radius:999px; background: rgba(255,255,255,0.08); overflow:hidden; max-width: 220px; margin-left:auto;">
+    <div style="height:10px; width: {{ completion.pct }}%; background: rgba(255,255,255,0.35);"></div>
+  </div>
+
+  <div class="text-end">
+    <div class="text-soft small">Overall score</div>
+    <div style="font-size: 44px; font-weight: 800; line-height: 1;">{{ run.overall_score|floatformat:0 }}</div>
+    <div class="text-soft small">Blockers: {{ blockers }}</div>
+    <div class="mt-2 d-flex justify-content-end gap-2 flex-wrap">
+      <a class="btn-glass" href="/admin/janus/duediligencerun/{{ run.id }}/change/">Edit run</a>
+      <a class="btn-glass" href="/admin/janus/ddresponse/?run__id__exact={{ run.id }}">Scores</a>
+      <a class="btn-glass" href="/admin/janus/ddrisk/?run__id__exact={{ run.id }}">Risks</a>
+      <a class="btn-glass" href="/admin/janus/ddevidence/?run__id__exact={{ run.id }}">Evidence</a>
+      <a class="btn-glass"
+           href="{% url 'janus:dd-run-detail-pdf' run.id %}"
+           target="_blank" rel="noopener">
+          🖨️ Printable Summary (PDF)
+      </a>
+
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  {% if snapshot %}
+  <div class="neon-glass-card p-4 mb-3">
+    <div class="d-flex justify-content-between align-items-start gap-3">
+      <div>
+        <h3 class="mb-1">Deal Snapshot</h3>
+        <div class="text-soft small">
+          As-of: {% if snapshot.metrics_as_of_date %}{{ snapshot.metrics_as_of_date }}{% else %}-{% endif %}
+          • Confidence: {{ snapshot.confidence|title }}
+        </div>
+      </div>
+      <div>
+        <button
+          type="button"
+          class="btn-glass"
+          data-bs-toggle="offcanvas"
+          data-bs-target="#snapshotEditor"
+          data-snap-id="{{ snapshot.id }}"
+          data-metrics-as-of="{% if snapshot.metrics_as_of_date %}{{ snapshot.metrics_as_of_date }}{% endif %}"
+          data-confidence="{{ snapshot.confidence }}"
+          data-source-notes="{{ snapshot.source_notes|default_if_none:''|escape }}"
+
+          data-total-customers="{% if snapshot.total_customers is not None %}{{ snapshot.total_customers }}{% endif %}"
+          data-active-customers="{% if snapshot.active_customers is not None %}{{ snapshot.active_customers }}{% endif %}"
+          data-top1="{% if snapshot.top_1_customer_pct_revenue is not None %}{{ snapshot.top_1_customer_pct_revenue }}{% endif %}"
+          data-top3="{% if snapshot.top_3_customer_pct_revenue is not None %}{{ snapshot.top_3_customer_pct_revenue }}{% endif %}"
+          data-acv="{% if snapshot.avg_contract_value is not None %}{{ snapshot.avg_contract_value }}{% endif %}"
+
+          data-churn="{% if snapshot.churn_rate_pct is not None %}{{ snapshot.churn_rate_pct }}{% endif %}"
+          data-nrr="{% if snapshot.net_revenue_retention_pct is not None %}{{ snapshot.net_revenue_retention_pct }}{% endif %}"
+          data-winrate="{% if snapshot.win_rate_pct is not None %}{{ snapshot.win_rate_pct }}{% endif %}"
+          data-salescycle="{% if snapshot.sales_cycle_days is not None %}{{ snapshot.sales_cycle_days }}{% endif %}"
+          data-pipeline="{% if snapshot.pipeline_value is not None %}{{ snapshot.pipeline_value }}{% endif %}"
+
+          data-revttm="{% if snapshot.revenue_ttm is not None %}{{ snapshot.revenue_ttm }}{% endif %}"
+          data-mrr="{% if snapshot.mrr is not None %}{{ snapshot.mrr }}{% endif %}"
+          data-arr="{% if snapshot.arr is not None %}{{ snapshot.arr }}{% endif %}"
+
+          data-gm="{% if snapshot.gross_margin_pct is not None %}{{ snapshot.gross_margin_pct }}{% endif %}"
+          data-opinc="{% if snapshot.operating_income_ttm is not None %}{{ snapshot.operating_income_ttm }}{% endif %}"
+          data-burn="{% if snapshot.burn_rate_monthly is not None %}{{ snapshot.burn_rate_monthly }}{% endif %}"
+          data-runway="{% if snapshot.runway_months is not None %}{{ snapshot.runway_months }}{% endif %}"
+        >
+          Edit
+        </button>
+      </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <div class="col-12 col-md-6">
+        <div class="text-soft small">
+          Customers
+          <span class="info-icon"
+                data-bs-toggle="tooltip"
+                data-bs-container="body"
+                data-bs-placement="top"
+                title="Total customers (logos) served. If possible, specify whether this is paying customers vs all accounts.">i</span>
+        </div>
+        <div style="font-size:28px; font-weight:800;">
+          {% if snapshot.total_customers is not None %}{{ snapshot.total_customers }}{% else %}-{% endif %}
+        </div>
+        <div class="text-soft small">
+          <span>
+            Active
+            <span class="info-icon"
+                  data-bs-toggle="tooltip"
+                  data-bs-container="body"
+                  data-bs-placement="top"
+                  title="Customers considered active in the last 30–90 days (define the window).">i</span>:
+            {% if snapshot.active_customers is not None %}{{ snapshot.active_customers }}{% else %}-{% endif %}
+          </span>
+          &nbsp;•&nbsp;
+          <span>
+            Top 3 rev
+            <span class="info-icon"
+                  data-bs-toggle="tooltip"
+                  data-bs-container="body"
+                  data-bs-placement="top"
+                  title="Revenue concentration: % of total revenue from the top 3 customers. Higher concentration increases risk.">i</span>:
+            {% if snapshot.top_3_customer_pct_revenue is not None %}{{ snapshot.top_3_customer_pct_revenue }}%{% else %}-{% endif %}
+          </span>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <div class="text-soft small">
+          ARR / MRR
+          <span class="info-icon"
+                data-bs-toggle="tooltip"
+                data-bs-container="body"
+                data-bs-placement="top"
+                title="ARR = Annual Recurring Revenue (run-rate). MRR = Monthly Recurring Revenue. Run-rate metrics, not necessarily recognized revenue.">i</span>
+        </div>
+        <div style="font-size:28px; font-weight:800;">
+          {% if snapshot.arr is not None %}${{ snapshot.arr|floatformat:0|intcomma }}{% else %}-{% endif %}
+        </div>
+        <div class="text-soft small">
+          MRR: {% if snapshot.mrr is not None %}${{ snapshot.mrr|floatformat:0|intcomma }}{% else %}-{% endif %}
+          &nbsp;•&nbsp;
+          Rev TTM
+          <span class="info-icon"
+                data-bs-toggle="tooltip"
+                data-bs-container="body"
+                data-bs-placement="top"
+                title="TTM = Trailing Twelve Months: actual revenue over the most recent rolling 12-month period.">i</span>:
+          {% if snapshot.revenue_ttm is not None %}${{ snapshot.revenue_ttm|floatformat:0|intcomma }}{% else %}-{% endif %}
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <div class="text-soft small">
+          Margin / Retention
+          <span class="info-icon"
+                data-bs-toggle="tooltip"
+                data-bs-container="body"
+                data-bs-placement="top"
+                title="Margin and retention are leading signals of durability. Validate definitions across sources.">i</span>
+        </div>
+        <div style="font-size:22px; font-weight:800;">
+          GM
+          <span class="info-icon"
+                data-bs-toggle="tooltip"
+                data-bs-container="body"
+                data-bs-placement="top"
+                title="Gross Margin %. (Revenue - COGS) / Revenue. Ensure COGS includes hosting, support labor, and direct delivery costs.">i</span>:
+          {% if snapshot.gross_margin_pct is not None %}{{ snapshot.gross_margin_pct }}%{% else %}-{% endif %}
+          &nbsp;•&nbsp;
+          NRR
+          <span class="info-icon"
+                data-bs-toggle="tooltip"
+                data-bs-container="body"
+                data-bs-placement="top"
+                title="NRR = Net Revenue Retention. Revenue from the same customer cohort after churn/contraction/expansion. 100% means flat. >100% means expansion outpaces churn.">i</span>:
+          {% if snapshot.net_revenue_retention_pct is not None %}{{ snapshot.net_revenue_retention_pct }}%{% else %}-{% endif %}
+        </div>
+        <div class="text-soft small">
+          Churn
+          <span class="info-icon"
+                data-bs-toggle="tooltip"
+                data-bs-container="body"
+                data-bs-placement="top"
+                title="Customer or revenue churn % over a defined period (monthly/annual). Specify which.">i</span>:
+          {% if snapshot.churn_rate_pct is not None %}{{ snapshot.churn_rate_pct }}%{% else %}-{% endif %}
+          &nbsp;•&nbsp;
+          ACV
+          <span class="info-icon"
+                data-bs-toggle="tooltip"
+                data-bs-container="body"
+                data-bs-placement="top"
+                title="ACV = Average Contract Value. Typically annualized contract value per customer (define whether average or median).">i</span>:
+          {% if snapshot.avg_contract_value is not None %}${{ snapshot.avg_contract_value|floatformat:0 }}{% else %}-{% endif %}
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <div class="text-soft small">
+          Burn / Runway
+          <span class="info-icon"
+                data-bs-toggle="tooltip"
+                data-bs-container="body"
+                data-bs-placement="top"
+                title="Burn = net cash outflow per month (or operating loss proxy). Runway = months of cash remaining at current burn.">i</span>
+        </div>
+        <div style="font-size:22px; font-weight:800;">
+          Burn: {% if snapshot.burn_rate_monthly is not None %}${{ snapshot.burn_rate_monthly|floatformat:0|intcomma }}{% else %}-{% endif %}
+          &nbsp;•&nbsp;
+          Runway: {% if snapshot.runway_months is not None %}{{ snapshot.runway_months }} mo{% else %}-{% endif %}
+        </div>
+        <div class="text-soft small">
+          Op Inc TTM
+          <span class="info-icon"
+                data-bs-toggle="tooltip"
+                data-bs-container="body"
+                data-bs-placement="top"
+                title="Operating Income TTM: operating profit (or loss) over trailing twelve months, before financing/taxes (depends on reporting).">i</span>:
+          {% if snapshot.operating_income_ttm is not None %}${{ snapshot.operating_income_ttm|floatformat:0 }}{% else %}-{% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if snapshot.source_notes %}
+      <div class="text-soft small mt-3">Source: {{ snapshot.source_notes }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Left column -->
+  <div class="col-12 col-xl-8">
+    <div class="neon-glass-card p-4 mb-3">
+      <h3 class="mb-1">Section performance</h3>
+      <div class="text-soft small mb-3">Weighted scores by section. Click-through drilldown can come next.</div>
+
+      {% for s in section_scores %}
+        <div class="mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div style="font-weight: 700;">{{ s.section_title }}</div>
+              <div class="text-soft small">Weight {{ s.section_weight }} • Responses {{ s.responded }}/{{ s.total_criteria }}</div>
+            </div>
+            <div style="font-weight: 800;">{{ s.section_score_0_100|floatformat:0 }}</div>
+          </div>
+          <div style="height:10px; border-radius:999px; background: rgba(255,255,255,0.08); overflow:hidden;">
+            <div style="height:10px; width: {{ s.section_score_0_100 }}%; background: rgba(255,255,255,0.35);"></div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="neon-glass-card p-4 mb-3">
+      <h3 class="mb-1">Risks</h3>
+      <div class="text-soft small mb-3">Sorted by blocking and risk score.</div>
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Risk</th>
+              <th>Category</th>
+              <th class="text-center">S</th>
+              <th class="text-center">L</th>
+              <th class="text-center">Score</th>
+              <th>Status</th>
+              <th>Block</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for r in risks %}
+            <tr>
+              <td>
+                <a href="/admin/janus/ddrisk/{{ r.id }}/change/">{{ r.title }}</a>
+              </td>
+              <td class="text-soft">{{ r.category|title }}</td>
+              <td class="text-center">{{ r.severity }}</td>
+              <td class="text-center">{{ r.likelihood }}</td>
+              <td class="text-center"><span class="badge bg-dark">{{ r.risk_score }}</span></td>
+              <td>{{ r.status|title }}</td>
+              <td>{% if r.blocking %}<span class="badge bg-danger">Yes</span>{% else %}-{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="7" class="text-soft">No risks captured yet.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="neon-glass-card p-4">
+      <h3 class="mb-1">Conditions to proceed</h3>
+      <div class="text-soft small mb-3">Use this when verdict is “Proceed with conditions”.</div>
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Condition</th>
+              <th>Must complete before</th>
+              <th>Due</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for c in conditions %}
+            <tr>
+              <td><a href="/admin/janus/ddcondition/{{ c.id }}/change/">{{ c.title }}</a></td>
+              <td class="text-soft">{{ c.must_complete_before|cut:"_"|title }}</td>
+              <td>{% if c.due_by %}{{ c.due_by }}{% else %}-{% endif %}</td>
+              <td>{{ c.status|title }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4" class="text-soft">No conditions captured yet.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right column -->
+  <div class="col-12 col-xl-4">
+    <div class="neon-glass-card p-4 mb-3">
+      <h3 class="mb-1">Non-negotiables</h3>
+      <div class="text-soft small mb-2">Deal-breakers and unknowns.</div>
+
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        <span class="badge bg-danger">Fail: {{ nonneg_fail }}</span>
+        <span class="badge bg-secondary">Unknown: {{ nonneg_unknown }}</span>
+      </div>
+
+      <div class="small">
+        {% for n in nonneg %}
+          <div class="p-2 mb-2" style="border-radius: 12px; background: rgba(255,255,255,0.06);">
+            <div class="text-soft small">{{ n.section_title }}</div>
+            <div style="font-weight:700;">{{ n.title }}</div>
+            <div class="d-flex justify-content-between align-items-center mt-1">
+              <div class="text-soft">
+                {% if n.score_value is None %}
+                  Score: -
+                {% else %}
+                  Score: {{ n.score_value }}
+                {% endif %}
+                • Threshold: {{ n.threshold }}
+              </div>
+              <div>
+                {% if n.status == "pass" %}
+                  <span class="badge bg-success">Pass</span>
+                {% elif n.status == "fail" %}
+                  <span class="badge bg-danger">Fail</span>
+                {% else %}
+                  <span class="badge bg-secondary">Unknown</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <div class="text-soft">No non-negotiables configured in template.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="neon-glass-card p-4 mb-3">
+      <h3 class="mb-1">Risk Matrix</h3>
+      <div class="text-soft small mb-3">Severity (rows) × Likelihood (columns).</div>
+
+      <div style="display:grid; grid-template-columns: 70px repeat(5, 1fr); gap: 8px; align-items: stretch;">
+        <div></div>
+        {% for l in risk_matrix.col_labels %}
+          <div class="text-soft small text-center">L{{ l }}</div>
+        {% endfor %}
+
+        {% for s in risk_matrix.row_labels %}
+          <div class="text-soft small" style="display:flex; align-items:center;">S{{ s }}</div>
+
+          {% for l in risk_matrix.col_labels %}
+            <div style="border-radius: 14px; padding: 10px; background: rgba(255,255,255,0.06); min-height: 54px;">
+              {% for r in risks %}
+                {% if r.severity == s and r.likelihood == l %}
+                  <div class="d-flex justify-content-between align-items-center">
+                    <a class="small" href="/admin/janus/ddrisk/{{ r.id }}/change/" style="font-weight:700;">{{ r.title|truncatechars:22 }}</a>
+                    {% if r.blocking %}<span class="badge bg-danger">B</span>{% endif %}
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endfor %}
+        {% endfor %}
+      </div>
+
+      <div class="text-soft small mt-2">Tip: “B” means blocking.</div>
+    </div>
+
+    <div class="neon-glass-card p-4 mb-3">
+      <h3 class="mb-1">Participants</h3>
+      <div class="text-soft small mb-3">Who’s scoring and reviewing.</div>
+      <ul class="mb-0">
+        {% for p in participants %}
+          <li class="text-soft">
+            <span style="font-weight:700; color: rgba(255,255,255,0.9);">{{ p.user }}</span>
+            <span class="badge bg-dark">{{ p.role|title }}</span>
+            <span class="badge bg-secondary">{{ p.permission|title }}</span>
+          </li>
+        {% empty %}
+          <li class="text-soft">No participants assigned.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="neon-glass-card p-4">
+      <h3 class="mb-1">Recent evidence</h3>
+      <div class="text-soft small mb-3">Latest 12 items.</div>
+      <div class="small">
+        {% for e in evidence %}
+          <div class="p-2 mb-2" style="border-radius: 12px; background: rgba(255,255,255,0.06);">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <div style="font-weight:700;">
+                <a href="/admin/janus/ddevidence/{{ e.id }}/change/">{{ e.title }}</a>
+              </div>
+              <span class="badge bg-dark">{{ e.evidence_type|cut:"_"|title }}</span>
+            </div>
+            <div class="text-soft small">
+              {{ e.sensitivity|title }} • {{ e.created_at }}
+            </div>
+            {% if e.url %}
+              <div class="text-soft small"><a href="{{ e.url }}" target="_blank" rel="noopener">Open link</a></div>
+            {% elif e.file_path %}
+              <div class="text-soft small">File: {{ e.file_path }}</div>
+            {% endif %}
+          </div>
+        {% empty %}
+          <div class="text-soft">No evidence uploaded yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Snapshot Editor (Offcanvas) -->
+<div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="snapshotEditor" aria-labelledby="snapshotEditorLabel" style="width: 560px;">
+  <div class="offcanvas-header">
+    <div>
+      <div class="text-soft small">Deal Snapshot</div>
+      <h5 class="offcanvas-title" id="snapshotEditorLabel">Edit Quantitative Snapshot</h5>
+      <div class="text-soft small">{{ run.target_company.name }} • Round {{ run.round_number }}</div>
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+
+  <div class="offcanvas-body">
+    <form method="post" id="snapshotEditorForm" action="{% url 'janus:dd-snapshot-quick-update' run.id %}">
+      {% csrf_token %}
+
+      <div class="row g-2">
+  <div class="col-6">
+    <label class="form-label text-soft">
+      Metrics as-of date
+      <span class="info-icon"
+            data-bs-toggle="tooltip"
+            data-bs-container="body"
+            data-bs-placement="top"
+            title="Date that the snapshot metrics represent (not the date you entered them).">i</span>
+    </label>
+    <input class="form-control" type="date" name="metrics_as_of_date" id="snap_metrics_as_of">
+  </div>
+
+  <div class="col-6">
+    <label class="form-label text-soft">
+      Confidence
+      <span class="info-icon"
+            data-bs-toggle="tooltip"
+            data-bs-container="body"
+            data-bs-placement="top"
+            title="How confident are we in these numbers given the evidence sources?">i</span>
+    </label>
+    <select class="form-select" name="confidence" id="snap_confidence">
+      <option value="low">Low</option>
+      <option value="med">Medium</option>
+      <option value="high">High</option>
+    </select>
+  </div>
+
+  <div class="col-12">
+    <label class="form-label text-soft">
+      Source notes
+      <span class="info-icon"
+            data-bs-toggle="tooltip"
+            data-bs-container="body"
+            data-bs-placement="top"
+            title="Where did these numbers come from (P&L, Stripe, CRM, bank statements, etc.)? Include file names or links if possible.">i</span>
+    </label>
+    <textarea class="form-control" name="source_notes" id="snap_source_notes" rows="3"
+      placeholder="Where did these numbers come from (P&L, Stripe, CRM, bank statements, etc.)?"></textarea>
+  </div>
+
+  <div class="col-12"><hr class="my-2"></div>
+  <div class="col-12"><div class="text-soft small mb-1">Commercial</div></div>
+
+  <div class="col-6">
+    <label class="form-label text-soft">
+      Total customers
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="Total customers (logos) served. Specify if this is paying customers vs all accounts.">i</span>
+    </label>
+    <input class="form-control" type="number" name="total_customers" id="snap_total_customers">
+  </div>
+
+  <div class="col-6">
+    <label class="form-label text-soft">
+      Active customers
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="Customers considered active in the last 30–90 days (define the window).">i</span>
+    </label>
+    <input class="form-control" type="number" name="active_customers" id="snap_active_customers">
+  </div>
+
+  <div class="col-6">
+    <label class="form-label text-soft">
+      Top 1 customer % revenue
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="Revenue concentration: % of total revenue from the single largest customer.">i</span>
+    </label>
+    <input class="form-control" type="number" step="0.01" name="top_1_customer_pct_revenue" id="snap_top1">
+  </div>
+
+  <div class="col-6">
+    <label class="form-label text-soft">
+      Top 3 customers % revenue
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="Revenue concentration: % of total revenue from the top 3 customers. Higher concentration increases risk.">i</span>
+    </label>
+    <input class="form-control" type="number" step="0.01" name="top_3_customer_pct_revenue" id="snap_top3">
+  </div>
+
+  <div class="col-6">
+    <label class="form-label text-soft">
+      Avg contract value (ACV)
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="ACV = Average Contract Value. Typically annualized contract value per customer (define whether average or median).">i</span>
+    </label>
+    <input class="form-control" type="number" step="0.01" name="avg_contract_value" id="snap_acv">
+  </div>
+
+  <div class="col-6">
+    <label class="form-label text-soft">
+      Pipeline value
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="Total value of qualified pipeline (define stage rules and time window).">i</span>
+    </label>
+    <input class="form-control" type="number" step="0.01" name="pipeline_value" id="snap_pipeline">
+  </div>
+
+  <div class="col-6">
+    <label class="form-label text-soft">
+      Churn %
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="Customer or revenue churn % over a defined period (monthly/annual). Specify which.">i</span>
+    </label>
+    <input class="form-control" type="number" step="0.01" name="churn_rate_pct" id="snap_churn">
+  </div>
+
+  <div class="col-6">
+    <label class="form-label text-soft">
+      NRR %
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="NRR = Net Revenue Retention. Revenue from the same customer cohort after churn/contraction/expansion. 100% = flat. >100% = expansion.">i</span>
+    </label>
+    <input class="form-control" type="number" step="0.01" name="net_revenue_retention_pct" id="snap_nrr">
+  </div>
+
+  <div class="col-6">
+    <label class="form-label text-soft">
+      Win rate %
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="% of qualified opportunities that convert to closed-won (define funnel stage).">i</span>
+    </label>
+    <input class="form-control" type="number" step="0.01" name="win_rate_pct" id="snap_winrate">
+  </div>
+
+  <div class="col-6">
+    <label class="form-label text-soft">
+      Sales cycle (days)
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="Average time from qualified opportunity to closed-won (define start/end).">i</span>
+    </label>
+    <input class="form-control" type="number" name="sales_cycle_days" id="snap_salescycle">
+  </div>
+
+  <div class="col-12"><hr class="my-2"></div>
+  <div class="col-12"><div class="text-soft small mb-1">Financial</div></div>
+
+  <div class="col-6">
+    <label class="form-label text-soft">
+      Revenue TTM
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="TTM = Trailing Twelve Months: actual revenue over the most recent rolling 12-month period.">i</span>
+    </label>
+    <input class="form-control" type="number" step="0.01" name="revenue_ttm" id="snap_revttm">
+  </div>
+
+  <div class="col-6">
+    <label class="form-label text-soft">
+      Operating income TTM
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="Operating Income TTM: operating profit/loss over trailing twelve months (depends on reporting).">i</span>
+    </label>
+    <input class="form-control" type="number" step="0.01" name="operating_income_ttm" id="snap_opinc">
+  </div>
+
+  <div class="col-4">
+    <label class="form-label text-soft">
+      MRR
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="MRR = Monthly Recurring Revenue (run-rate). Not necessarily recognized revenue.">i</span>
+    </label>
+    <input class="form-control" type="number" step="0.01" name="mrr" id="snap_mrr">
+  </div>
+
+  <div class="col-4">
+    <label class="form-label text-soft">
+      ARR
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="ARR = Annual Recurring Revenue (run-rate). Often ARR ≈ MRR × 12 (confirm definition).">i</span>
+    </label>
+    <input class="form-control" type="number" step="0.01" name="arr" id="snap_arr">
+  </div>
+
+  <div class="col-4">
+    <label class="form-label text-soft">
+      Gross margin %
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="Gross Margin %. (Revenue - COGS) / Revenue. Ensure COGS includes hosting, support labor, and direct costs.">i</span>
+    </label>
+    <input class="form-control" type="number" step="0.01" name="gross_margin_pct" id="snap_gm">
+  </div>
+
+  <div class="col-6">
+    <label class="form-label text-soft">
+      Burn rate (monthly)
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="Burn = net cash outflow per month (or operating loss proxy). Confirm whether this is net burn or gross burn.">i</span>
+    </label>
+    <input class="form-control" type="number" step="0.01" name="burn_rate_monthly" id="snap_burn">
+  </div>
+
+  <div class="col-6">
+    <label class="form-label text-soft">
+      Runway (months)
+      <span class="info-icon" data-bs-toggle="tooltip" data-bs-container="body" data-bs-placement="top"
+            title="Runway = months of cash remaining at current burn rate (cash / burn).">i</span>
+    </label>
+    <input class="form-control" type="number" name="runway_months" id="snap_runway">
+  </div>
+</div>
+
+
+      <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-primary" type="submit">Save</button>
+        <button class="btn btn-outline-light" type="button" data-bs-dismiss="offcanvas">Cancel</button>
+        {% if snapshot %}
+          <a class="btn btn-outline-warning ms-auto" href="/admin/janus/ddquantitativesnapshot/{{ snapshot.id }}/change/">Open in admin</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // Offcanvas prefills
+    const editor = document.getElementById('snapshotEditor');
+    if (editor) {
+      editor.addEventListener('show.bs.offcanvas', function (event) {
+        const btn = event.relatedTarget;
+        if (!btn) return;
+        const setVal = (id, v) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.value = (v === null || v === undefined) ? "" : v;
+        };
+
+        setVal('snap_metrics_as_of', btn.getAttribute('data-metrics-as-of'));
+        setVal('snap_confidence', btn.getAttribute('data-confidence') || 'med');
+        setVal('snap_source_notes', btn.getAttribute('data-source-notes'));
+
+        setVal('snap_total_customers', btn.getAttribute('data-total-customers'));
+        setVal('snap_active_customers', btn.getAttribute('data-active-customers'));
+        setVal('snap_top1', btn.getAttribute('data-top1'));
+        setVal('snap_top3', btn.getAttribute('data-top3'));
+        setVal('snap_acv', btn.getAttribute('data-acv'));
+
+        setVal('snap_churn', btn.getAttribute('data-churn'));
+        setVal('snap_nrr', btn.getAttribute('data-nrr'));
+        setVal('snap_winrate', btn.getAttribute('data-winrate'));
+        setVal('snap_salescycle', btn.getAttribute('data-salescycle'));
+        setVal('snap_pipeline', btn.getAttribute('data-pipeline'));
+
+        setVal('snap_revttm', btn.getAttribute('data-revttm'));
+        setVal('snap_mrr', btn.getAttribute('data-mrr'));
+        setVal('snap_arr', btn.getAttribute('data-arr'));
+
+        setVal('snap_gm', btn.getAttribute('data-gm'));
+        setVal('snap_opinc', btn.getAttribute('data-opinc'));
+        setVal('snap_burn', btn.getAttribute('data-burn'));
+        setVal('snap_runway', btn.getAttribute('data-runway'));
+        initTooltips();
+      });
+    }
+
+    // Tooltips (guarded) + container body
+    const initTooltips = () => {
+      if (!window.bootstrap || !bootstrap.Tooltip) return;
+      const els = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+      els.forEach((el) => {
+        // Avoid double-initializing
+        if (bootstrap.Tooltip.getInstance(el)) return;
+        new bootstrap.Tooltip(el, {
+          trigger: 'hover focus',
+          container: 'body'
+        });
+      });
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initTooltips);
+    } else {
+      initTooltips();
+    }
+  })();
+</script>
+
+<style>
+  .offcanvas {
+    border-left: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 0 28px rgba(0,0,0,.35);
+  }
+  .offcanvas .form-control, .offcanvas .form-select, .offcanvas textarea {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.14);
+    color: #fff;
+  }
+  .offcanvas .form-control:focus, .offcanvas .form-select:focus, .offcanvas textarea:focus {
+    border-color: rgba(255,255,255,.28);
+    box-shadow: none;
+  }
+</style>
+
+{% endblock %}

@@ -1,0 +1,371 @@
+{# templates/fractals/home.html #}
+{% extends "common/base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+  body {
+    background: radial-gradient(circle at top right, #081622, #000000);
+    background-attachment: fixed;
+    background-size: cover;
+  }
+
+  .neon-glass-card {
+    position: relative;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    color: #fff;
+  }
+  .neon-glass-card:hover {
+    transform: translateY(-3px);
+  }
+
+  .neon-builder   { box-shadow: 0 0 10px #0ff, 0 0 20px #0ff; }
+  .neon-execution { box-shadow: 0 0 10px #f0f, 0 0 20px #f0f; }
+  .neon-code { box-shadow: 0 0 10px #f0f, 0 0 20px #ff0; }
+  .neon-okr { box-shadow: 0 0 10px #f0f, 0 0 20px #1ff; }
+  .neon-janus { box-shadow: 0 0 10px #ff8a00, 0 0 20px #ff3d8a; }
+  .neon-athena { box-shadow: 0 0 10px #7df9ff, 0 0 20px #b388ff; }
+  .neon-hermes { box-shadow: 0 0 10px #00ff99, 0 0 20px #00ffaa; }
+  .neon-mnemos { box-shadow: 0 0 10px #00d1ff, 0 0 20px #00ffcc; }
+
+
+
+.card-icon {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+    .card-disabled {
+  opacity: 0.35;
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+.card-disabled * {
+  pointer-events: none;
+}
+.coming-soon-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.coming-soon-badge {
+  background: rgba(214, 40, 40, 0.15);
+  border: 1px solid rgba(214, 40, 40, 0.5);
+  color: #ff6b6b;
+  backdrop-filter: blur(6px);
+}
+</style>
+
+<div class="container py-4">
+  <h1 class="mb-2 text-white">Fractals Workspace</h1>
+  <h6 class="mb-4 text-light">
+    🎯 Build once, reuse everywhere. Fractals turns your sites, sections, and components
+    into reusable building blocks — so you can go from idea to live experience in hours,
+    not weeks.
+  </h6>
+{% if ai_today or ai_7d or ai_mtd %}
+  <div class="neon-glass-card p-3 mb-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div>
+        <h3 class="mb-0">⚡ AI Spend</h3>
+        <div class="text-soft small">Token usage and estimated cost across Fractals</div>
+      </div>
+
+      <div class="d-flex flex-wrap gap-3">
+        <div class="text-center">
+          <div class="text-soft small">Today</div>
+          <div><strong>${{ ai_today.cost|floatformat:4 }}</strong></div>
+          <div class="text-soft small">{{ ai_today.tokens }} tok</div>
+        </div>
+
+        <div class="text-center">
+          <div class="text-soft small">Last 7 days</div>
+          <div><strong>${{ ai_7d.cost|floatformat:4 }}</strong></div>
+          <div class="text-soft small">{{ ai_7d.tokens }} tok</div>
+        </div>
+
+        <div class="text-center">
+          <div class="text-soft small">Month-to-date</div>
+          <div><strong>${{ ai_mtd.cost|floatformat:4 }}</strong></div>
+          <div class="text-soft small">{{ ai_mtd.tokens }} tok</div>
+        </div>
+      </div>
+    <a class="btn-glass" href="{% url 'common:ai-usage' %}">📒 AI Ledger</a>
+
+      <div class="d-flex gap-2">
+        <a class="btn-glass" href="{% url 'mnemos:file-list' %}">🗂️ Mnemos</a>
+        {# Optional later: an AI ledger page #}
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+  <div class="row row-cols-1 row-cols-md-2 g-4">
+   {# Janus (Idea Validator) #}
+    <div class="col">
+      {% if cards.janus %}
+      <a href="{% url 'janus:dashboard' %}"
+         class="text-decoration-none text-white position-relative">
+        <div class="neon-glass-card neon-janus h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+          <div class="card-icon">🧭</div>
+          <h4 class="card-title mb-2">{% trans "Janus" %}</h4>
+          <small class="text-white-50 mb-3">
+            {% trans "Validate ideas with customer proof, gates, and portfolio ranking before OKRs." %}
+          </small>
+          <span class="btn btn-outline-warning">
+            {% trans "Open Janus" %}
+          </span>
+        </div>
+      </a>
+        {% else %}
+        <div class="position-relative">
+          <div class="neon-glass-card neon-code card-disabled h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+            <div class="card-icon">🔎</div>
+            <h4 class="card-title mb-2">{% trans "Janus" %}</h4>
+            <small class="text-white-50 mb-3">{% trans "Inspect code, analyze components..." %}</small>
+            <span class="btn btn-outline-secondary disabled">{% trans "Coming soon" %}</span>
+          </div>
+          <div class="coming-soon-badge">Contact Admin for access</div>
+        </div>
+      {% endif %}
+    </div>
+    {# OKR #}
+    <div class="col">
+      {% if cards.okr %}
+          <a href="{% url 'okr:entity-list' %}"
+             class="text-decoration-none text-white position-relative">
+            <div class="neon-glass-card neon-okr h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+              <div class="card-icon">🎯</div>
+              <h4 class="card-title mb-2">{% trans "Kosmos" %}</h4>
+              <small class="text-white-50 mb-3">
+                {% trans "Objectives, Key, Results, Epics, Stories and Tasks." %}
+              </small>
+              <span class="btn btn-outline-success">
+                {% trans "Open OKR" %}
+              </span>
+            </div>
+          </a>
+      {% else %}
+        <div class="position-relative">
+          <div class="neon-glass-card neon-code card-disabled h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+            <div class="card-icon">🔎</div>
+            <h4 class="card-title mb-2">{% trans "Kosmos" %}</h4>
+            <small class="text-white-50 mb-3">{% trans "Objectives, Key, Results, Epics, Stories and Tasks." %}</small>
+            <span class="btn btn-outline-secondary disabled">{% trans "Coming soon" %}</span>
+          </div>
+          <div class="coming-soon-badge">Contact Admin for access</div>
+        </div>
+       {% endif %}
+    </div>
+    {# Site Builder card #}
+    <div class="col">
+       {% if cards.sites_builder %}
+          <a href="{% url 'sites_builder:dashboard' %}" class="text-decoration-none text-white position-relative">
+            <div class="neon-glass-card neon-builder h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+              <div class="card-icon">🧩</div>
+              <h4 class="card-title mb-2">{% trans "Site Builder" %}</h4>
+              <small class="text-white-50 mb-3">
+                {% trans "Design, assemble, and publish sites using reusable Fractals blocks." %}
+              </small>
+              <span class="btn btn-outline-info">
+                {% trans "Open Builder" %}
+              </span>
+            </div>
+          </a>
+       {% else %}
+            <div class="position-relative">
+              <div class="neon-glass-card neon-code card-disabled h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+                <div class="card-icon">🔎</div>
+                <h4 class="card-title mb-2">{% trans "Site Builder" %}</h4>
+                <small class="text-white-50 mb-3">{% trans "Design, assemble, and publish sites using reusable Fractals blocks." %}</small>
+                <span class="btn btn-outline-secondary disabled">{% trans "Coming soon" %}</span>
+              </div>
+              <div class="coming-soon-badge">Contact Admin for access</div>
+            </div>
+        {% endif %}
+    </div>
+
+    {# Code Analyzer card #}
+    <div class="col">
+        {% if cards.code_analyzer %}
+          <a href="{% url 'code_analyzer:dashboard' %}"
+             class="text-decoration-none text-white position-relative">
+            <div class="neon-glass-card neon-code h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+              <div class="card-icon">🔎</div>
+              <h4 class="card-title mb-2">{% trans "Achilles" %}</h4>
+              <small class="text-white-50 mb-3">
+                {% trans "Inspect code, analyze components, and evolve Fractals modules from real projects." %}
+              </small>
+              <span class="btn btn-outline-success">
+                {% trans "Open Code Analyzer" %}
+              </span>
+            </div>
+          </a>
+        {% else %}
+            <div class="position-relative">
+              <div class="neon-glass-card neon-code card-disabled h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+                <div class="card-icon">🔎</div>
+                <h4 class="card-title mb-2">{% trans "Achilles" %}</h4>
+                <small class="text-white-50 mb-3">{% trans "Inspect code, analyze components..." %}</small>
+                <span class="btn btn-outline-secondary disabled">{% trans "Coming soon" %}</span>
+              </div>
+              <div class="coming-soon-badge">Contact Admin for access</div>
+            </div>
+        {% endif %}
+    </div>
+    {# Athena (Prompt Designer / Studio) #}
+    <div class="col">
+        {% if cards.athena %}
+          <a href="{% url 'athena:studio' %}"
+             class="text-decoration-none text-white position-relative">
+            <div class="neon-glass-card neon-athena h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+              <div class="card-icon">🦉</div>
+              <h4 class="card-title mb-2">{% trans "Athena" %}</h4>
+              <small class="text-white-50 mb-3">
+                {% trans "Design, version, test, and run prompts in a chat-like Studio. Publish approved prompts for Janus, OKR, Builder, and Code Analyzer." %}
+              </small>
+              <span class="btn btn-outline-info">
+                {% trans "Open Athena" %}
+              </span>
+            </div>
+          </a>
+        {% else %}
+            <div class="position-relative">
+              <div class="neon-glass-card neon-code card-disabled h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+                <div class="card-icon">🔎</div>
+                <h4 class="card-title mb-2">{% trans "Athena" %}</h4>
+                <small class="text-white-50 mb-3">{% trans "Design, version, test, and run prompts in a chat-like Studio. Publish approved prompts for Janus, OKR, Builder, and Code Analyzer." %}</small>
+                <span class="btn btn-outline-secondary disabled">{% trans "Coming soon" %}</span>
+              </div>
+              <div class="coming-soon-badge">Contact Admin for access</div>
+            </div>
+        {% endif %}
+    </div>
+    {# Hermes (Newsletters / Publishing) #}
+    <div class="col">
+        {% if cards.hermes %}
+          <a href="{% url 'hermes:index' %}"
+             class="text-decoration-none text-white position-relative">
+            <div class="neon-glass-card neon-hermes h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+              <div class="card-icon">📬</div>
+              <h4 class="card-title mb-2">{% trans "Hermes" %}</h4>
+              <small class="text-white-50 mb-3">
+                {% trans "Create and publish newsletter issues to static archives, ready to distribute everywhere." %}
+              </small>
+              <span class="btn btn-outline-info">
+                {% trans "Open Hermes" %}
+              </span>
+            </div>
+          </a>
+        {% else %}
+            <div class="position-relative">
+              <div class="neon-glass-card neon-code card-disabled h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+                <div class="card-icon">🔎</div>
+                <h4 class="card-title mb-2">{% trans "Hermes" %}</h4>
+                <small class="text-white-50 mb-3">{% trans "Create and publish newsletter issues to static archives, ready to distribute everywhere." %}</small>
+                <span class="btn btn-outline-secondary disabled">{% trans "Coming soon" %}</span>
+              </div>
+              <div class="coming-soon-badge">Contact Admin for access</div>
+            </div>
+        {% endif %}
+    </div>
+    <div class="col">
+        {% if cards.tasks %}
+          <a href="{% url 'tasks:list' %}"
+             class="text-decoration-none text-white position-relative">
+            <div class="neon-glass-card neon-hermes h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+              <div class="card-icon">📬</div>
+              <h4 class="card-title mb-2">{% trans "Task Management" %}</h4>
+              <small class="text-white-50 mb-3">
+                {% trans "Task Management" %}
+              </small>
+              <span class="btn btn-outline-info">
+                {% trans "Open Tasks" %}
+              </span>
+            </div>
+          </a>
+        {% else %}
+            <div class="position-relative">
+              <div class="neon-glass-card neon-code card-disabled h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+                <div class="card-icon">🔎</div>
+                <h4 class="card-title mb-2">{% trans "Task Management" %}</h4>
+                <small class="text-white-50 mb-3">{% trans "Task Management" %}</small>
+                <span class="btn btn-outline-secondary disabled">{% trans "Coming soon" %}</span>
+              </div>
+              <div class="coming-soon-badge">Contact Admin for access</div>
+            </div>
+        {% endif %}
+    </div>
+      {# Mnemos (File Library) #}
+    <div class="col">
+        {% if cards.mnemos %}
+          <a href="{% url 'mnemos:file-list' %}"
+             class="text-decoration-none text-white position-relative">
+            <div class="neon-glass-card neon-mnemos h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+              <div class="card-icon">🗂️</div>
+              <h4 class="card-title mb-2">{% trans "Mnemos" %}</h4>
+              <small class="text-white-50 mb-3">
+                {% trans "Central file library: uploads, attachments, and AI analyses across apps." %}
+              </small>
+              <span class="btn btn-outline-info">
+                {% trans "Open Mnemos" %}
+              </span>
+            </div>
+          </a>
+        {% else %}
+            <div class="position-relative">
+              <div class="neon-glass-card neon-code card-disabled h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+                <div class="card-icon">🔎</div>
+                <h4 class="card-title mb-2">{% trans "Mnemos" %}</h4>
+                <small class="text-white-50 mb-3">{% trans "Central file library: uploads, attachments, and AI analyses across apps." %}</small>
+                <span class="btn btn-outline-secondary disabled">{% trans "Coming soon" %}</span>
+              </div>
+              <div class="coming-soon-badge">Contact Admin for access</div>
+            </div>
+        {% endif %}
+    </div>
+      {# Atlas (Cloud projects & migrations) #}
+    <div class="col">
+        {% if cards.atlas %}
+          <a href="{% url 'atlas:dashboard' %}"
+             class="text-decoration-none text-white position-relative">
+            <div class="neon-glass-card neon-code h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+              <div class="card-icon">☁️</div>
+              <h4 class="card-title mb-2">{% trans "Atlas" %}</h4>
+              <small class="text-white-50 mb-3">
+                {% trans "Migrate and manage projects in Google Cloud: provisioning, deploys, and status." %}
+              </small>
+              <span class="btn btn-outline-info">
+                {% trans "Open Atlas" %}
+              </span>
+            </div>
+          </a>
+        {% else %}
+            <div class="position-relative">
+              <div class="neon-glass-card neon-code card-disabled h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+                <div class="card-icon">☁️</div>
+                <h4 class="card-title mb-2">{% trans "Atlas" %}</h4>
+                <small class="text-white-50 mb-3">{% trans "Migrate and manage projects in Google Cloud: provisioning, deploys, and status." %}</small>
+                <span class="btn btn-outline-secondary disabled">{% trans "Coming soon" %}</span>
+              </div>
+              <div class="coming-soon-badge">Contact Admin for access</div>
+            </div>
+        {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "hermes/base_static.html" %}
+{% block content %}
+<div class="container py-4">
+  <div class="neon-glass-card p-4">
+    <div class="d-flex justify-content-between align-items-start gap-3">
+      <div>
+        <div class="small opacity-75">
+          <a class="text-white-50 text-decoration-none" href="/newsletters/{{ series.slug }}/">{{ series.name }}</a>
+          · Issue #{{ issue.issue_number|stringformat:"03d" }}
+          {% if issue.published_at %} · {{ issue.published_at|date:"M j, Y" }}{% endif %}
+        </div>
+        <h1 class="mt-1 mb-2">{{ issue.title }}</h1>
+        {% if issue.preheader %}
+          <div class="opacity-75">{{ issue.preheader }}</div>
+        {% endif %}
+      </div>
+
+      <a class="btn btn-outline-light" href="/newsletters/{{ series.slug }}/">Back to archive</a>
+    </div>
+
+    <hr class="my-4" style="opacity:.15">
+
+    <article class="prose" style="max-width: 900px;">
+      {{ issue_body_html|safe }}
+    </article>
+
+    <hr class="my-4" style="opacity:.15">
+
+    <div class="small opacity-75">
+      Published by {{ series.from_name|default:"Mindsgate" }}.
+      <span class="ms-2">Generated {{ generated_at|date:"M j, Y, g:i a" }}</span>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,356 @@
+/* Startup Modern Theme
+   Scope: html.theme-startup, body.theme-startup
+   Uses: --fractals-primary / --fractals-secondary injected from base.html (optional)
+*/
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+html.theme-startup,
+body.theme-startup {
+  --startup-bg: #0b1220;
+  --startup-surface: rgba(255, 255, 255, 0.06);
+  --startup-border: rgba(255, 255, 255, 0.12);
+  --startup-text: rgba(255, 255, 255, 0.92);
+  --startup-muted: rgba(255, 255, 255, 0.68);
+
+  --startup-primary: var(--fractals-primary, #5dd6c6);
+  --startup-secondary: var(--fractals-secondary, #2b2966);
+
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 25% 10%, rgba(93, 214, 198, 0.22), transparent 60%),
+    radial-gradient(900px 500px at 70% 5%, rgba(43, 41, 102, 0.20), transparent 55%),
+    linear-gradient(180deg, #060a12 0%, var(--startup-bg) 40%, #060a12 100%);
+  color: var(--startup-text);
+
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Links */
+html.theme-startup a,
+body.theme-startup a {
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration-color: rgba(255, 255, 255, 0.25);
+}
+html.theme-startup a:hover,
+body.theme-startup a:hover {
+  color: #ffffff;
+  text-decoration-color: rgba(255, 255, 255, 0.6);
+}
+
+/* Headings */
+html.theme-startup h1, body.theme-startup h1,
+html.theme-startup h2, body.theme-startup h2,
+html.theme-startup h3, body.theme-startup h3,
+html.theme-startup h4, body.theme-startup h4,
+html.theme-startup h5, body.theme-startup h5 {
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.96);
+}
+html.theme-startup h1, body.theme-startup h1 { font-weight: 700; }
+html.theme-startup h2, body.theme-startup h2 { font-weight: 650; }
+html.theme-startup h3, body.theme-startup h3 { font-weight: 600; }
+
+/* Muted text */
+html.theme-startup .text-muted,
+body.theme-startup .text-muted {
+  color: var(--startup-muted) !important;
+}
+
+/* Page shell */
+html.theme-startup .page-shell,
+body.theme-startup .page-shell {
+  padding-bottom: 24px;
+}
+
+/* Cards */
+html.theme-startup .neon-glass-card,
+html.theme-startup .card,
+html.theme-startup .content-card,
+body.theme-startup .neon-glass-card,
+body.theme-startup .card,
+body.theme-startup .content-card {
+  background: var(--startup-surface);
+  border: 1px solid var(--startup-border);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Buttons */
+html.theme-startup .btn,
+html.theme-startup .btn-glass,
+html.theme-startup .cta-button,
+body.theme-startup .btn,
+body.theme-startup .btn-glass,
+body.theme-startup .cta-button {
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+  will-change: transform;
+}
+
+html.theme-startup .btn-primary,
+html.theme-startup .cta-button,
+body.theme-startup .btn-primary,
+body.theme-startup .cta-button {
+  background: linear-gradient(135deg, rgba(93,214,198,0.95), rgba(43,41,102,0.70));
+  border-color: rgba(255,255,255,0.18);
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.25);
+}
+
+html.theme-startup .btn-primary:hover,
+html.theme-startup .cta-button:hover,
+body.theme-startup .btn-primary:hover,
+body.theme-startup .cta-button:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(0,0,0,0.28);
+}
+
+/* Navbar links */
+html.theme-startup .navbar-brand,
+html.theme-startup .nav-link,
+body.theme-startup .navbar-brand,
+body.theme-startup .nav-link {
+  color: rgba(255, 255, 255, 0.90);
+}
+html.theme-startup .nav-link:hover,
+body.theme-startup .nav-link:hover { color: #ffffff; }
+
+/* Footer */
+html.theme-startup footer,
+body.theme-startup footer {
+  border-top: 1px solid rgba(255,255,255,0.10) !important;
+  background: rgba(0,0,0,0.30) !important;
+}
+
+/* Reading measure */
+@media (min-width: 992px) {
+  html.theme-startup main.container,
+  body.theme-startup main.container { max-width: 1180px; }
+}
+@media (min-width: 1400px) {
+  html.theme-startup main.container,
+  body.theme-startup main.container { max-width: 1280px; }
+}
+
+/* Headings rhythm */
+html.theme-startup h1, body.theme-startup h1 {
+  font-size: clamp(2.0rem, 2.5vw, 2.6rem);
+  margin-bottom: 0.6rem;
+}
+html.theme-startup h2, body.theme-startup h2 {
+  font-size: clamp(1.35rem, 1.6vw, 1.75rem);
+  margin-top: 1.8rem;
+  margin-bottom: 0.55rem;
+}
+html.theme-startup h3, body.theme-startup h3 {
+  font-size: 1.25rem;
+  margin-top: 1.4rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Body text */
+html.theme-startup p, body.theme-startup p {
+  color: rgba(255, 255, 255, 0.86);
+  margin-bottom: 0.85rem;
+}
+html.theme-startup li, body.theme-startup li { color: rgba(255, 255, 255, 0.86); }
+
+/* Lists */
+html.theme-startup ul,
+html.theme-startup ol,
+body.theme-startup ul,
+body.theme-startup ol {
+  padding-left: 1.2rem;
+  margin-bottom: 1.0rem;
+}
+html.theme-startup ul li::marker,
+body.theme-startup ul li::marker {
+  color: rgba(93, 214, 198, 0.85);
+}
+
+/* Definition lists */
+html.theme-startup dl, body.theme-startup dl { margin-top: 0.75rem; }
+html.theme-startup dt, body.theme-startup dt {
+  font-weight: 650;
+  color: rgba(255, 255, 255, 0.95);
+  margin-top: 0.85rem;
+}
+html.theme-startup dd, body.theme-startup dd {
+  color: rgba(255, 255, 255, 0.84);
+  margin-left: 0;
+  padding-left: 0;
+}
+
+/* Section separators */
+html.theme-startup article > section + section,
+html.theme-startup section > article + article,
+body.theme-startup article > section + section,
+body.theme-startup section > article + article {
+  margin-top: 1.2rem;
+  padding-top: 1.0rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+/* Link underline behavior in main */
+html.theme-startup main a,
+body.theme-startup main a {
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+/* Code blocks */
+html.theme-startup code,
+html.theme-startup pre,
+body.theme-startup code,
+body.theme-startup pre {
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 10px;
+  padding: 0.15rem 0.35rem;
+}
+
+/* Sticky header */
+html.theme-startup > .container:first-of-type,
+body.theme-startup > .container:first-of-type {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  margin-top: 0;
+
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+html.theme-startup .page-shell,
+body.theme-startup .page-shell { padding-top: 10px; }
+
+/* Header links */
+html.theme-startup > .container:first-of-type .navbar-brand,
+html.theme-startup > .container:first-of-type .nav-link,
+body.theme-startup > .container:first-of-type .navbar-brand,
+body.theme-startup > .container:first-of-type .nav-link {
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: none;
+}
+
+html.theme-startup > .container:first-of-type .nav-link:hover,
+body.theme-startup > .container:first-of-type .nav-link:hover {
+  color: #fff;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.45);
+  text-underline-offset: 3px;
+}
+
+/* Card padding comfort */
+html.theme-startup .neon-glass-card,
+body.theme-startup .neon-glass-card {
+  padding: 28px !important;
+}
+@media (max-width: 576px) {
+  html.theme-startup .neon-glass-card,
+  body.theme-startup .neon-glass-card { padding: 18px !important; }
+}
+html.theme-startup .neon-glass-card h1:first-child,
+body.theme-startup .neon-glass-card h1:first-child { margin-top: 0.2rem; }
+
+/* FAQ accordion styling */
+html.theme-startup .faq-accordion .accordion-item,
+body.theme-startup .faq-accordion .accordion-item {
+  background: transparent;
+  border: 0;
+}
+
+html.theme-startup .faq-accordion .accordion-button,
+body.theme-startup .faq-accordion .accordion-button {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.94);
+  border-radius: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  margin-bottom: 10px;
+}
+
+html.theme-startup .faq-accordion .accordion-button:not(.collapsed),
+body.theme-startup .faq-accordion .accordion-button:not(.collapsed) {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+}
+
+html.theme-startup .faq-accordion .accordion-body,
+body.theme-startup .faq-accordion .accordion-body {
+  color: rgba(255, 255, 255, 0.86);
+  padding: 12px 16px 18px 16px;
+}
+
+/* Contact form components */
+html.theme-startup .pill,
+body.theme-startup .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Hide honeypot field */
+html.theme-startup .hp,
+body.theme-startup .hp {
+  position: absolute !important;
+  left: -9999px !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+}
+
+/* Grid layout */
+html.theme-startup .neon-grid,
+body.theme-startup .neon-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+html.theme-startup .neon-grid .span-2,
+body.theme-startup .neon-grid .span-2 { grid-column: span 2; }
+
+@media (max-width: 768px) {
+  html.theme-startup .neon-grid,
+  body.theme-startup .neon-grid { grid-template-columns: 1fr; }
+  html.theme-startup .neon-grid .span-2,
+  body.theme-startup .neon-grid .span-2 { grid-column: auto; }
+}
+
+html.theme-startup .field .lbl,
+body.theme-startup .field .lbl {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* Inputs */
+html.theme-startup .neon-input,
+body.theme-startup .neon-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255

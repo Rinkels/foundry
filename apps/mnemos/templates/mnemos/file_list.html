@@ -1,0 +1,74 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div class="glass-header mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="mb-0">Mnemos</h1>
+      <div class="text-soft">File Library</div>
+    </div>
+    <a class="btn-glass" href="/">← Home</a>
+  </div>
+</div>
+
+<div class="neon-glass-card p-3 mb-3">
+  <form method="get" class="d-flex gap-2 flex-wrap align-items-end">
+    <div style="min-width: 280px;">
+      <label class="text-soft small">Search</label>
+      <input class="form-control" name="q" value="{{ request.GET.q }}" placeholder="Filename, type, uploader...">
+    </div>
+    <button class="btn-glass" type="submit">🔎 Search</button>
+    <a class="btn-glass" href="{% url 'mnemos:file-list' %}">♻ Clear</a>
+  </form>
+</div>
+
+<div class="neon-glass-card p-0 overflow-hidden">
+  <table class="table table-dark mb-0">
+    <thead>
+      <tr>
+        <th>File</th>
+        <th>Type</th>
+        <th class="text-end">Size</th>
+        <th>Uploaded</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in files %}
+        <tr>
+          <td>
+            <div><strong>{{ f.original_name|default:f.file.name }}</strong></div>
+            <div class="text-soft small">{{ f.file.name }}</div>
+          </td>
+          <td class="text-soft">{{ f.mime_type|default:"—" }}</td>
+          <td class="text-end text-soft">
+            {% if f.size_bytes %}{{ f.size_bytes }}{% else %}—{% endif %}
+          </td>
+          <td class="text-soft">
+            {% if f.uploaded_by %}{{ f.uploaded_by }}{% else %}—{% endif %}
+            <div class="text-soft small">{{ f.created_at }}</div>
+          </td>
+          <td class="text-end">
+            <a class="btn-glass" href="{{ f.file.url }}" target="_blank">Open</a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="text-soft p-3">No files uploaded yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if is_paginated %}
+  <div class="d-flex justify-content-center gap-2 mt-3">
+    {% if page_obj.has_previous %}
+      <a class="btn-glass" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}">← Prev</a>
+    {% endif %}
+    <div class="text-soft align-self-center">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
+    {% if page_obj.has_next %}
+      <a class="btn-glass" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}">Next →</a>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% endblock %}

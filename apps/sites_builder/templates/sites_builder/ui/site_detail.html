@@ -1,0 +1,408 @@
+{% extends "common/base.html" %}
+
+{% block title %}{{ site.name }} - Builder{% endblock %}
+
+{% block content %}
+<div style="max-width: 1400px; margin: 0 auto;">
+  <div class="d-flex align-items-end justify-content-between flex-wrap gap-3 mb-3">
+    <div>
+      <h1 class="mb-1">{{ site.name }}</h1>
+      <div class="text-soft">
+        Slug: <code>{{ site.slug }}</code>
+        {% if site.domain %} · Domain: {{ site.domain }}{% endif %}
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+      {% if preview_url %}
+        <a href="{{ preview_url }}" target="_blank" class="btn-glass">
+          Preview latest build
+        </a>
+      {% endif %}
+      <a href="/admin/sites_builder/site/{{ site.pk }}/change/" class="btn-glass">
+        Edit site (admin)
+      </a>
+      <a href="{% url 'sites_builder:dashboard' %}" class="btn-glass">
+        Back to all sites
+      </a>
+<form method="post" action="{% url 'sites_builder:plan_menu' site.id %}" style="display:inline;">
+  {% csrf_token %}
+  <button type="submit" class="btn-glass">
+    🚀 Plan Menu + Lock Structure
+  </button>
+    <div class="text-soft small mt-1">Creates the menu structure and locks it.</div>
+</form>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <!-- Generate / Expand -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="neon-glass-card p-4 h-100">
+        <h5 class="mb-2">(1) Generate / Expand Content</h5>
+        <div class="text-soft small">
+          Use GPT to add or update pages for this site, respecting max depth and children limits.
+        </div>
+
+        <form method="post" action="{% url 'sites_builder:site_expand' site.pk %}" class="mt-3">
+          {% csrf_token %}
+          <label class="text-soft small mb-1">Max new/updated pages this run</label>
+          <input type="number" name="max_new_pages" value="5" min="1" max="50" class="input-glass">
+          <button type="submit" class="btn-glass mt-3">Run expansion</button>
+        </form>
+        <form method="post" action="{% url 'sites_builder:site_fill_content' site.id %}" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn-glass">🧠 Fill Missing Content</button>
+        </form>
+        <form method="post" action="{% url 'sites_builder:site_convert_to_landing' site.pk %}" style="display:inline;"
+              onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Generating…';">
+          {% csrf_token %}
+          <button type="submit" class="btn-glass" title="Generate a marketing landing page for the home page (AI), set the editorial theme, and rebuild.">🚀 Convert home to landing</button>
+        </form>
+
+
+
+        <hr style="border-color: rgba(255,255,255,.10); margin: 1rem 0;">
+
+        <div class="text-soft small mb-2">Fix pages that are missing hero images:</div>
+        <form method="post" action="{% url 'sites_builder:site_backfill_hero_images' site.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn-glass">Generate missing hero images</button>
+        </form>
+
+        <div class="text-soft small mt-3 mb-2">Replace all generated page hero images:</div>
+        <form method="post" action="{% url 'sites_builder:site_regenerate_hero_images' site.pk %}"
+              onsubmit="return confirm('Replace all page hero images and rebuild the static site?');">
+          {% csrf_token %}
+          <button type="submit" class="btn-glass">Regenerate all hero images</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Build -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="neon-glass-card p-4 h-100">
+        <h5 class="mb-2">(2) Build Static Site</h5>
+        <div class="text-soft small">
+          Render all pages into static HTML files under the output directory.<br>This option will also create .webp for any .png files.
+        </div>
+        <form method="post" action="{% url 'sites_builder:site_build' site.pk %}" class="mt-3">
+          {% csrf_token %}
+          <button type="submit" class="btn-glass">Build static files</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Deploy -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="neon-glass-card p-4 h-100">
+        <h5 class="mb-2">(3) Deploy</h5>
+        <div class="text-soft small">
+          Deploy the built site via a configured deployment target.
+        </div>
+
+        {% if targets %}
+          <form method="post" action="{% url 'sites_builder:site_deploy' site.pk %}" class="mt-3">
+            {% csrf_token %}
+            <label class="text-soft small mb-1">Deployment target</label>
+            <select name="target_id" class="input-glass">
+              {% for t in targets %}
+                <option value="{{ t.pk }}">{{ t.name }} ({{ t.type }})</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn-glass mt-3">Deploy</button>
+          </form>
+        {% else %}
+          <div class="text-soft small mt-3">
+            No deployment targets configured for this site.
+          </div>
+          <a href="/admin/sites_builder/site/{{ site.pk }}/change/" class="btn-glass mt-3" style="display:inline-block;">
+            Add deployment target (admin)
+          </a>
+        {% endif %}
+      </div>
+    </div>
+    <!-- After Deploy Audit -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="neon-glass-card p-4 h-100">
+        <h5 class="mb-2">(4) After Deploy Audit</h5>
+        <div class="text-soft small">
+          Crawl your domain and detect broken links (4xx/5xx and network errors).
+        </div>
+
+        <form method="post" action="{% url 'sites_builder:site_audit_run' site.pk %}" class="mt-3">
+          {% csrf_token %}
+          <label class="text-soft small mb-1">Max pages</label>
+          <input type="number" name="max_pages" value="200" min="1" max="2000" class="input-glass">
+
+          <label class="text-soft small mb-1 mt-3">Max links</label>
+          <input type="number" name="max_links" value="5000" min="10" max="50000" class="input-glass">
+
+          <button type="submit" class="btn-glass mt-3">Run audit</button>
+        </form>
+
+        {% if latest_audit %}
+          <hr style="border-color: rgba(255,255,255,.10); margin: 1rem 0;">
+          <div class="text-soft small">
+            <div><strong>Status:</strong> {{ latest_audit.status }}</div>
+            <div><strong>Started:</strong> {{ latest_audit.started_at|date:"Y-m-d H:i" }}</div>
+            <div><strong>Pages:</strong> {{ latest_audit.pages_scanned }} · <strong>Links:</strong> {{ latest_audit.links_checked }}</div>
+            <div><strong>Broken:</strong> {{ latest_audit.broken_count }}</div>
+            {% if latest_audit.notes %}
+              <div class="mt-2">{{ latest_audit.notes }}</div>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Theme & Branding -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="neon-glass-card p-4 h-100">
+        <h5 class="mb-2">Theme & Branding</h5>
+        <div class="text-soft small">
+          Customize logo, theme, and brand colors used by the templates.
+        </div>
+
+        <form method="post" action="{% url 'sites_builder:site_theme_update' site.pk %}" class="mt-3">
+          {% csrf_token %}
+
+        <label class="text-soft small mb-1">Style</label>
+        <select name="theme_css" class="input-glass">
+          {% for value, label in theme_css_choices %}
+            <option value="{{ value }}" {% if site.theme_css == value %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
+          <label class="text-soft small mb-1 mt-3">Logo URL</label>
+          <input type="url" name="logo_url" value="{{ site.logo_url }}" class="input-glass" placeholder="https://...">
+
+          <label class="text-soft small mb-1 mt-3">Primary color</label>
+          <input type="text" name="primary_color" value="{{ site.primary_color }}" class="input-glass" placeholder="#0d6efd or css color">
+
+          <label class="text-soft small mb-1 mt-3">Secondary color</label>
+          <input type="text" name="secondary_color" value="{{ site.secondary_color }}" class="input-glass" placeholder="#6c757d or css color">
+
+          <button type="submit" class="btn-glass mt-3">Save theme</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- GA4 -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="neon-glass-card p-4 h-100">
+        <h3>Analytics (GA4)</h3>
+        <div class="small muted">Last 7 days</div>
+
+        {% if site.ga4_property_id %}
+          {% if ga_summary %}
+            <div class="metrics-grid">
+              <div class="metric">
+                <div class="label">Active users</div>
+                <div class="value">{{ ga_summary.active_users }}</div>
+              </div>
+              <div class="metric">
+                <div class="label">Sessions</div>
+                <div class="value">{{ ga_summary.sessions }}</div>
+              </div>
+              <div class="metric">
+                <div class="label">Page views</div>
+                <div class="value">{{ ga_summary.page_views }}</div>
+              </div>
+            </div>
+            <div class="small muted">Cached ~15 min to stay friendly with API quotas.</div>
+          {% else %}
+            <div class="small muted">No data returned yet (property new / empty range).</div>
+          {% endif %}
+        {% else %}
+          <div class="small muted">
+            Add a GA4 Property ID in <b>Theme & Branding</b> (or Site settings) to enable this card.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Evergreen Articles -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="neon-glass-card p-4 h-100">
+        <h5 class="mb-2">Evergreen Articles</h5>
+        <div class="text-soft small">
+          Write and manage long-life content that compounds traffic and leads.
+        </div>
+
+        <div class="mt-3 text-soft small">
+          <div><strong>Total:</strong> {{ evergreen_stats.total|default:"0" }}</div>
+          <div><strong>Drafts:</strong> {{ evergreen_stats.drafts|default:"0" }}</div>
+          <div><strong>Published:</strong> {{ evergreen_stats.published|default:"0" }}</div>
+          {% if evergreen_stats.last_published %}
+            <div><strong>Last published:</strong> {{ evergreen_stats.last_published|date:"Y-m-d" }}</div>
+          {% endif %}
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap mt-3">
+          <a href="{% url 'sites_builder:article_list' site.pk %}" class="btn-glass">Manage</a>
+          <a href="{% url 'sites_builder:article_ai_studio' site.pk %}" class="btn-glass">AI Studio</a>
+          <a href="{% url 'sites_builder:article_create' site.pk %}" class="btn-glass">+ New</a>
+          <a href="{% url 'sites_builder:article_clusters' site.pk %}" class="btn-glass">Clusters</a>
+
+        </div>
+
+        <div class="text-soft small mt-2">
+          Tip: publish 1 cornerstone article, then add 3 supporting articles that link to it.
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <!-- Page Tree + Pages Table -->
+  <div class="row g-3">
+    <div class="col-12 col-lg-4">
+      <div class="neon-glass-card p-4 h-100">
+        <h5 class="mb-2">Page Tree</h5>
+        <div class="text-soft small mb-2">
+          Hierarchical view of all pages by parent/child relationships.
+        </div>
+
+        {% if page_tree %}
+          <ul class="small" style="list-style:none; padding-left:0; margin:0;">
+            {% for node in page_tree %}
+              {% include "sites_builder/ui/_page_tree_node.html" with node=node only %}
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="text-soft small">No pages yet. Run expansion to generate content.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-8">
+      <div class="d-flex align-items-end justify-content-between gap-3 mb-2">
+        <h2 class="h5 mb-0">Pages</h2>
+        <span class="text-soft small">Generated content inventory</span>
+      </div>
+
+      <div class="neon-glass-card p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0" style="color: var(--fg);">
+            <thead>
+              <tr>
+                <th style="color: var(--fg);">Title</th>
+                <th style="color: var(--fg);">Slug</th>
+                <th style="color: var(--fg);">Depth</th>
+                <th style="color: var(--fg);">Parent</th>
+                <th style="color: var(--fg);">Root?</th>
+                <th style="color: var(--fg);">Hero</th>
+                <th style="color: var(--fg);">Last generated</th>
+                <th style="color: var(--fg);">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for page in pages %}
+                <tr>
+                  <td>{{ page.title }}</td>
+                  <td><code>{{ page.slug }}</code></td>
+                  <td>{{ page.depth }}</td>
+                  <td>{% if page.parent %}{{ page.parent.title }}{% else %}&mdash;{% endif %}</td>
+                  <td>{% if page.is_root %}✔{% else %}&nbsp;{% endif %}</td>
+                  <td>
+                    {% if page.hero_image_url %}
+                      <span class="pill">Yes</span>
+                    {% else %}
+                      <span class="pill">No</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-soft small">
+                    {% if page.last_generated_at %}
+                      {{ page.last_generated_at|date:"Y-m-d H:i" }}
+                    {% else %}
+                      &mdash;
+                    {% endif %}
+                  </td>
+                  <td>
+                      <form method="post" action="{% url 'sites_builder:page_regenerate' site.pk page.pk %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button class="btn-glass btn-sm" type="submit"
+                                {% if page.is_locked %}disabled title="Locked"{% endif %}>
+                          Regenerate
+                        </button>
+                      </form>
+                  </td>
+
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center text-soft small">
+                    No pages yet. Run the expansion to generate content.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  {% if latest_audit %}
+    <div class="mt-4">
+      <div class="d-flex align-items-end justify-content-between gap-3 mb-2">
+        <h2 class="h5 mb-0">Audit Issues</h2>
+        <span class="text-soft small">Latest run</span>
+      </div>
+
+      <div class="neon-glass-card p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0" style="color: var(--fg);">
+            <thead>
+              <tr>
+                <th style="color: var(--fg);">Status</th>
+                <th style="color: var(--fg);">Type</th>
+                <th style="color: var(--fg);">Internal?</th>
+                <th style="color: var(--fg);">Source</th>
+                <th style="color: var(--fg);">Target</th>
+                <th style="color: var(--fg);">Error</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for issue in latest_issues %}
+                <tr>
+                  <td>
+                    {% if issue.status_code %}
+                      <code>{{ issue.status_code }}</code>
+                    {% else %}
+                      <span class="pill">ERR</span>
+                    {% endif %}
+                  </td>
+                  <td><code>{{ issue.link_type }}</code></td>
+                  <td>{% if issue.is_internal %}✔{% else %}&nbsp;{% endif %}</td>
+                  <td class="small text-truncate" style="max-width: 260px;">
+                    {% if issue.source_url %}
+                      <a href="{{ issue.source_url }}" target="_blank">{{ issue.source_url }}</a>
+                    {% else %}
+                      &mdash;
+                    {% endif %}
+                  </td>
+                  <td class="small text-truncate" style="max-width: 380px;">
+                    <a href="{{ issue.target_url }}" target="_blank">{{ issue.target_url }}</a>
+                  </td>
+                  <td class="small text-soft text-truncate" style="max-width: 280px;">
+                    {{ issue.error|default:"" }}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center text-soft small">
+                    No broken links found in the latest audit.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

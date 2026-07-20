@@ -1,0 +1,244 @@
+/* neon_glass.css (Neon Glass Base Theme)
+   - Base public-site theme for Fractals Site Builder
+   - Now supports: html.theme-neon OR body.theme-neon
+*/
+
+/* ===== Theme tokens ===== */
+html.theme-neon,
+body.theme-neon {
+  --fg:            #eaf1ff;
+  --muted:         rgba(234,241,255,.62);
+  --muted-2:       rgba(234,241,255,.48);
+  --border:        rgba(255,255,255,.12);
+  --card-bg:       rgba(255,255,255,.05);
+  --card-bg-2:     rgba(255,255,255,.03);
+  --link:          #63e6ff;
+  --link-hover:    #eaf1ff;
+  --accent:        var(--fractals-primary, #00ffff);
+
+  background:
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(rgba(255,255,255,.014) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.014) 1px, transparent 1px),
+    radial-gradient(circle at 18% 12%, rgba(0,255,255,.10), transparent 28%),
+    radial-gradient(circle at 82% 8%, rgba(120,170,255,.08), transparent 30%),
+    linear-gradient(135deg, #08151a, #112932 46%, #1c3e4c);
+  background-size:
+    72px 72px,
+    72px 72px,
+    18px 18px,
+    18px 18px,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+  background-attachment: fixed;
+  color: var(--fg);
+  margin: 0;
+  padding: 0;
+
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Bootstrap compat: fix muted text contrast ONLY in neon scope */
+html.theme-neon .text-muted,
+body.theme-neon .text-muted { color: var(--muted) !important; }
+
+html.theme-neon .card,
+html.theme-neon .list-group-item,
+body.theme-neon .card,
+body.theme-neon .list-group-item { color: var(--fg); }
+
+/* ===== Base typography (marketing pages) ===== */
+html.theme-neon a,
+body.theme-neon a { color: var(--link); text-decoration: none; }
+
+html.theme-neon a:hover,
+body.theme-neon a:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+html.theme-neon h1,
+html.theme-neon h2,
+html.theme-neon h3,
+html.theme-neon h4,
+body.theme-neon h1,
+body.theme-neon h2,
+body.theme-neon h3,
+body.theme-neon h4 {
+  color: var(--accent);
+  text-shadow: 0 0 5px rgba(0,255,255,.22);
+  margin-top: 1.25rem;
+}
+
+html.theme-neon p,
+html.theme-neon li,
+body.theme-neon p,
+body.theme-neon li {
+  color: rgba(255,255,255,.88);
+  line-height: 1.6;
+}
+
+html.theme-neon ul,
+body.theme-neon ul { padding-left: 1.1rem; }
+
+/* ===== Layout helpers ===== */
+html.theme-neon .page-shell,
+body.theme-neon .page-shell {
+  min-height: 100vh;
+  padding: 1.25rem 1rem;
+}
+
+/* ===== Core components ===== */
+html.theme-neon .neon-glass-card,
+html.theme-neon .neon-card,
+body.theme-neon .neon-glass-card,
+body.theme-neon .neon-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  box-shadow: 0 4px 30px rgba(0,0,0,.5);
+  padding: 1.25rem;
+}
+
+html.theme-neon .neon-glass-card:hover,
+body.theme-neon .neon-glass-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 15px rgba(0,255,255,.18);
+  transition: all .2s ease;
+}
+
+html.theme-neon .btn-glass,
+body.theme-neon .btn-glass {
+  background: rgba(255,255,255,.10);
+  color: var(--accent);
+  border: 1px solid rgba(255,255,255,.20);
+  backdrop-filter: blur(10px);
+  padding: .5rem 1rem;
+  border-radius: 10px;
+  transition: all .2s ease-in-out;
+}
+
+html.theme-neon .btn-glass:hover,
+body.theme-neon .btn-glass:hover {
+  background: rgba(0,255,255,.10);
+  color: #ffffff;
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 0 10px rgba(0,255,255,.55);
+}
+
+/* ===== Header helpers ===== */
+html.theme-neon .glass-header,
+body.theme-neon .glass-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  margin: 1rem auto 1.25rem;
+  border-radius: 18px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(0,0,0,.35);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+
+html.theme-neon .glass-header .navbar-brand,
+html.theme-neon .glass-header .nav-link,
+body.theme-neon .glass-header .navbar-brand,
+body.theme-neon .glass-header .nav-link {
+  color: var(--fg) !important;
+  text-decoration: none;
+}
+
+html.theme-neon .glass-header .nav-link:hover,
+body.theme-neon .glass-header .nav-link:hover {
+  opacity: .92;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+html.theme-neon .brand-badge,
+body.theme-neon .brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .35rem .7rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.10);
+}
+
+html.theme-neon .brand-dot,
+body.theme-neon .brand-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 14px rgba(0,255,255,.35);
+}
+
+/* ===== Inputs ===== */
+html.theme-neon .input-glass,
+html.theme-neon .textarea-glass,
+html.theme-neon select.input-glass,
+body.theme-neon .input-glass,
+body.theme-neon .textarea-glass,
+body.theme-neon select.input-glass {
+  width: 100%;
+  padding: .6rem .75rem;
+  border-radius: 12px;
+  background: rgba(0,0,0,.35);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  outline: none;
+}
+
+html.theme-neon .textarea-glass,
+body.theme-neon .textarea-glass { resize: vertical; }
+
+html.theme-neon .input-glass::placeholder,
+html.theme-neon .textarea-glass::placeholder,
+body.theme-neon .input-glass::placeholder,
+body.theme-neon .textarea-glass::placeholder {
+  color: var(--muted);
+}
+
+html.theme-neon .input-glass:focus,
+html.theme-neon .textarea-glass:focus,
+html.theme-neon select.input-glass:focus,
+body.theme-neon .input-glass:focus,
+body.theme-neon .textarea-glass:focus,
+body.theme-neon select.input-glass:focus {
+  border-color: rgba(0,255,255,.55);
+  box-shadow: 0 0 0 .2rem rgba(0,255,255,.12);
+}
+
+/* ===== Tables inside neon cards ===== */
+html.theme-neon .neon-glass-card .table,
+html.theme-neon .neon-glass-card .table th,
+html.theme-neon .neon-glass-card .table td,
+body.theme-neon .neon-glass-card .table,
+body.theme-neon .neon-glass-card .table th,
+body.theme-neon .neon-glass-card .table td {
+  color: var(--fg) !important;
+  border-color: rgba(255,255,255,.08) !important;
+  background: transparent !important;
+}
+
+/* 🔓 BREAK OUT OF BASE CONTAINER */
+.studio-fullscreen {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+}
+
+/* Ensure body doesn't re-center */
+body {
+  overflow-x: hidden;
+}

@@ -1,0 +1,119 @@
+{% extends "common/base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="neon-glass-card okr-heatmap-card">
+  <div class="okr-heatmap-head">
+    <div>
+      <div class="okr-title">Strategy Heatmap</div>
+      <div class="okr-subtitle">One-glance health across TrustBIX strategies</div>
+    </div>
+
+    <form method="get" class="okr-filters">
+      <select name="entity" class="okr-select">
+        <option value="">All entities</option>
+        {% for eid, name in entities %}
+          <option value="{{ eid }}" {% if entity_id == eid|stringformat:"s" %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="health" class="okr-select">
+        <option value="">All health</option>
+        <option value="green" {% if health_filter == "green" %}selected{% endif %}>Green</option>
+        <option value="amber" {% if health_filter == "amber" %}selected{% endif %}>Amber</option>
+        <option value="red" {% if health_filter == "red" %}selected{% endif %}>Red</option>
+        <option value="none" {% if health_filter == "none" %}selected{% endif %}>No data</option>
+      </select>
+
+      <button class="btn btn-primary okr-btn" type="submit">Apply</button>
+      <a class="btn btn-secondary okr-btn" href="{% url 'okr:strategy-heatmap' %}">Reset</a>
+    </form>
+  </div>
+
+  <div class="okr-table-wrap">
+    <table class="okr-table">
+        <colgroup>
+          <col class="col-strategy">
+          <col class="col-progress">
+          <col class="col-health">
+          <col class="col-small">
+          <col class="col-small">
+          <col class="col-small">
+          <col class="col-entity">
+          <col class="col-date">
+        </colgroup>
+
+      <thead>
+        <tr>
+          <th>Strategy</th>
+          <th class="num">Progress</th>
+          <th class="center">Health</th>
+          <th class="num">Objectives</th>
+          <th class="num">KRs</th>
+          <th class="num">At Risk</th>
+          <th>Entity</th>
+          <th class="nowrap">Last update</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for r in rows %}
+        <tr class="okr-row health-{{ r.health }}">
+          <td class="strategy-cell">
+            <a class="strategy-link" href="{% url 'okr:strategy-detail' r.strategy.id %}">
+              <span class="strategy-dot theme-{{ r.strategy.theme|slugify }}"></span>
+              {{ r.strategy.name }}
+            </a>
+          </td>
+
+          <td class="num">
+            <div class="okr-progress">
+              <span class="okr-pct">{{ r.progress }}%</span>
+              <div class="okr-bar" aria-hidden="true">
+                <div class="okr-fill" style="width: {{ r.progress }}%"></div>
+              </div>
+            </div>
+          </td>
+
+          <td class="center">
+            <span class="okr-pill {{ r.health }}">
+              {% if r.health == "green" %}🟢{% elif r.health == "amber" %}🟡{% elif r.health == "red" %}🔴{% else %}⚪{% endif %}
+              {{ r.health|capfirst }}
+            </span>
+          </td>
+
+          <td class="num">{{ r.objective_count }}</td>
+          <td class="num">{{ r.kr_count }}</td>
+
+          <td class="num">
+            {% if r.at_risk_count > 0 %}
+                <a class="okr-risk-badge okr-risk-link"
+                   href="{% url 'okr:kr-at-risk-list' %}?strategy={{ r.strategy.id }}{% if entity_id %}&entity={{ entity_id }}{% endif %}">
+                  {{ r.at_risk_count }}
+                </a>
+
+            {% else %}
+              0
+            {% endif %}
+          </td>
+
+          <td class="entity-cell nowrap">{{ r.owner_label }}</td>
+
+          <td class="muted  nowrap">
+            {% if r.last_update %}
+              {{ r.last_update|date:"Y-m-d" }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="okr-empty">No strategies match the selected filters.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

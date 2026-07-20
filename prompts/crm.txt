@@ -1,0 +1,164 @@
+Please add a new professional webpage that describes our CRM solution.
+
+Context:
+This CRM is part of the Nurbai/Mindsgate ecosystem. It is a practical, AI-assisted CRM designed for sales, relationship management, follow-ups, engagement tracking, and pipeline visibility. The CRM should feel modern, trustworthy, and useful for small to mid-sized businesses, MSPs, consultants, service businesses, and relationship-driven teams.
+
+Goal:
+Create a polished marketing/information page that explains what the CRM does, why it matters, and how it helps users stay on top of customer relationships.
+
+Page purpose:
+The page should explain the CRM solution in a clear, professional, non-hypey way. It should make the CRM feel like an intelligent command center for customer relationships, not just another contact database.
+
+Suggested page title:
+AI-Assisted CRM for Relationship-Driven Teams
+
+Suggested subtitle:
+Capture conversations, manage follow-ups, track engagements, and keep every opportunity moving forward from one intelligent workspace.
+
+Page sections to include:
+
+1. Hero section
+   Create a strong hero area with:
+
+* Main headline
+* Short supporting paragraph
+* Primary call-to-action button: “Explore the CRM”
+* Secondary call-to-action button: “View Demo Workflow”
+
+Suggested hero copy:
+“Turn conversations into action.
+Our CRM helps teams capture relationship activity, manage follow-ups, track engagements, and keep every customer opportunity moving without losing context.”
+
+2. Problem section
+   Explain the common problems businesses face:
+
+* Follow-ups get missed
+* Customer notes are scattered
+* Sales activity is hard to track
+* Teams rely on memory instead of process
+* Opportunities stall because next actions are unclear
+
+Keep the tone professional and practical.
+
+3. Solution section
+   Describe the CRM as a relationship operating system:
+
+* Centralized company and contact records
+* Engagement tracking
+* Follow-up management
+* Activity history
+* Pipeline visibility
+* AI-assisted voice/text capture
+* Smart next-action prompts
+
+4. Feature cards
+   Create visually clean cards for these features:
+
+Feature 1: Contact & Company Management
+Description:
+Keep people, companies, roles, decision-makers, communication preferences, and relationship history organized in one place.
+
+Feature 2: Engagement Tracking
+Description:
+Track opportunities, relationship status, probability, next actions, and last-touch dates so nothing quietly disappears into the fog.
+
+Feature 3: Follow-Up Command Center
+Description:
+See overdue, due today, and upcoming follow-ups in a focused dashboard designed to help users act quickly.
+
+Feature 4: Activity Timeline
+Description:
+Automatically build a history of calls, emails, meetings, notes, and completed follow-ups.
+
+Feature 5: AI Voice Capture
+Description:
+Use voice or natural language notes to create CRM actions, follow-ups, contacts, engagements, and activities faster.
+
+Feature 6: Pipeline Visibility
+Description:
+View deals, leads, stages, and progress across the sales process with clear next steps.
+
+5. Workflow section
+   Add a simple workflow block showing:
+
+6. Capture a conversation or note
+
+7. Create or update the contact/company
+
+8. Create an engagement or follow-up
+
+9. Complete the follow-up
+
+10. Activity is recorded automatically
+
+11. Next action is suggested
+
+12. Benefits section
+    Add a section titled:
+    Why Teams Use It
+
+Include these benefits:
+
+* Fewer missed follow-ups
+* Better customer context
+* Cleaner sales process
+* Faster activity capture
+* Stronger relationship history
+* Better visibility for owners and managers
+* Less admin work
+
+7. AI assistance section
+   Explain that AI is used to reduce admin work, not replace human relationships.
+
+Suggested copy:
+“AI helps capture, summarize, and organize relationship activity, but the CRM keeps people at the center. The goal is simple: less typing, better context, and more consistent follow-through.”
+
+8. Ideal users section
+   Add a section titled:
+   Built For
+
+Include:
+
+* MSPs and technology providers
+* Consultants
+* B2B sales teams
+* Professional services firms
+* Founders and owner-led businesses
+* Teams managing long-term customer relationships
+
+9. Design direction
+   Use a modern professional look:
+
+* Clean layout
+* Dark-tech or polished SaaS style
+* Subtle neon accents if consistent with the existing app style
+* Card-based sections
+* Clear spacing
+* Strong typography
+* Professional but slightly futuristic
+* Avoid cheesy stock-photo energy
+
+10. Final call-to-action
+    Add a closing CTA:
+    “Ready to make follow-ups impossible to forget?”
+    Button: “Open CRM Dashboard”
+
+Technical implementation:
+
+* Use the existing project styling where possible.
+* If this is a Django app, create or update the appropriate template and route.
+* Reuse the existing side menu/header/footer patterns if available.
+* Keep the page responsive for desktop and mobile.
+* Use semantic HTML.
+* Keep copy easy to edit later.
+* Avoid hardcoding URLs unless existing named routes are available.
+* If route names exist for CRM dashboard, company list, contacts, pipelines, or command center, use Django `{% url %}` tags.
+* If uncertain about route names, add placeholder links with clear comments.
+
+Deliverables:
+
+* New webpage/template
+* Route/view if needed
+* Any CSS additions required
+* Clean, maintainable code
+* Brief summary of what was changed

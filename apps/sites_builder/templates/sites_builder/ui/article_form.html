@@ -1,0 +1,106 @@
+{% extends "common/base.html" %}
+{% block title %}{% if article %}Edit{% else %}New{% endif %} Article - {{ site.name }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 0 auto;">
+  <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
+    <div>
+      <h1 class="mb-1">{% if article %}Edit{% else %}New{% endif %} Evergreen Article</h1>
+      <div class="text-soft small">{{ site.name }}</div>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn-glass" href="{% url 'sites_builder:article_list' site.pk %}">Back to articles</a>
+      <a class="btn-glass" href="{% url 'sites_builder:site_detail' site.pk %}">Back to site</a>
+    </div>
+  </div>
+
+  <!-- Main edit/create form -->
+  <form method="post" class="neon-glass-card p-4">
+    {% csrf_token %}
+
+    <label class="text-soft small mb-1">Title</label>
+    <input class="input-glass" name="title" value="{% if article %}{{ article.title }}{% endif %}" required>
+
+    <label class="text-soft small mb-1 mt-3">Slug</label>
+    <input class="input-glass" name="slug" value="{% if article %}{{ article.slug }}{% endif %}">
+
+    <div class="row g-3 mt-1">
+      <div class="col-12 col-md-4">
+        <label class="text-soft small mb-1 mt-3">Status</label>
+        <select class="input-glass" name="status">
+          <option value="draft" {% if article and article.status == "draft" %}selected{% endif %}>Draft</option>
+          <option value="published" {% if article and article.status == "published" %}selected{% endif %}>Published</option>
+          <option value="archived" {% if article and article.status == "archived" %}selected{% endif %}>Archived</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <label class="text-soft small mb-1 mt-3">Cornerstone?</label>
+        <div class="d-flex align-items-center gap-2" style="padding-top: 10px;">
+          <input type="checkbox" name="is_cornerstone" value="1"
+                 {% if article and article.is_cornerstone %}checked{% endif %}>
+          <span class="text-soft small">This is a hub (pillar) article.</span>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <label class="text-soft small mb-1 mt-3">Linked cornerstones</label>
+        <select class="input-glass" name="cornerstone_ids" multiple size="6">
+          {% for c in cornerstones %}
+            <option value="{{ c.id }}"
+              {% if selected_cornerstone_ids and c.id in selected_cornerstone_ids %}selected{% endif %}
+            >{{ c.title }}</option>
+          {% endfor %}
+        </select>
+        <div class="text-soft small mt-1">Hold Ctrl/Command to select multiple.</div>
+      </div>
+    </div>
+
+    <label class="text-soft small mb-1 mt-3">Excerpt</label>
+    <textarea class="input-glass" name="excerpt" rows="3">{% if article %}{{ article.excerpt }}{% endif %}</textarea>
+
+    <label class="text-soft small mb-1 mt-3">Body (Markdown)</label>
+    <textarea class="input-glass" name="body_md" rows="12">{% if article %}{{ article.body_md }}{% endif %}</textarea>
+
+    <hr style="border-color: rgba(255,255,255,.10); margin: 1rem 0;">
+
+    <label class="text-soft small mb-1">Meta title</label>
+    <input class="input-glass" name="meta_title" value="{% if article %}{{ article.meta_title }}{% endif %}">
+
+    <label class="text-soft small mb-1 mt-3">Meta description</label>
+    <input class="input-glass" name="meta_description" value="{% if article %}{{ article.meta_description }}{% endif %}">
+
+    <label class="text-soft small mb-1 mt-3">Canonical URL</label>
+    <input class="input-glass" name="canonical_url" value="{% if article %}{{ article.canonical_url }}{% endif %}">
+
+    <label class="text-soft small mb-1 mt-3">Hero image URL</label>
+    <input class="input-glass" name="hero_image_url" value="{% if article %}{{ article.hero_image_url }}{% endif %}">
+
+    <div class="d-flex gap-2 flex-wrap mt-4">
+      <button class="btn-glass" type="submit">Save</button>
+      {% if article %}
+        <a class="btn-glass" href="{% url 'sites_builder:article_list' site.pk %}">Done</a>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if article %}
+    <!-- Separate action buttons (NOT nested in the edit form) -->
+    <div class="neon-glass-card p-4 mt-3">
+      <div class="text-soft small mb-2">Actions</div>
+      <div class="d-flex gap-2 flex-wrap">
+        <form method="post" action="{% url 'sites_builder:article_publish' site.pk article.pk %}">
+          {% csrf_token %}
+          <button class="btn-glass" type="submit">Publish</button>
+        </form>
+
+        <form method="post" action="{% url 'sites_builder:article_archive' site.pk article.pk %}">
+          {% csrf_token %}
+          <button class="btn-glass" type="submit">Archive</button>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

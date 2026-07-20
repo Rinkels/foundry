@@ -1,0 +1,14 @@
+<section class="lp-section lp-stats-band">
+  <div class="lp-container">
+    {% if s.heading %}<h2 class="lp-section__heading">{{ s.heading }}</h2>{% endif %}
+    <div class="lp-stats">
+      {% for item in s.items %}
+        <div class="lp-stat">
+          <div class="lp-stat__value">{{ item.value }}</div>
+          <div class="lp-stat__label">{{ item.label }}</div>
+          {% if item.sublabel %}<div class="lp-stat__sublabel">{{ item.sublabel }}</div>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

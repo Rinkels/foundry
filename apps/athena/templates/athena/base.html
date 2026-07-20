@@ -1,0 +1,9 @@
+{# apps/athena/templates/athena/base.html #}
+{% extends "sites_builder/ui/base.html" %}
+{% block title %}Athena{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  {% block athena_content %}{% endblock %}
+</div>
+{% endblock %}

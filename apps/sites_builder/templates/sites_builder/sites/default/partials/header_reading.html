@@ -1,0 +1,32 @@
+{# Reading-mode header for /insights/*.html pages #}
+<header class="site-header" style="position: sticky; top: 0; z-index: 50;">
+  <div class="container" style="max-width: 1100px; margin: 0 auto; padding: 10px 16px;">
+    <div class="d-flex align-items-center justify-content-between gap-3">
+
+      <div class="d-flex align-items-center gap-2">
+        <a href="{{ rel_root }}index.html" class="d-flex align-items-center gap-2 text-decoration-none">
+            {% if site.logo_url %}
+              {% if site.logo_url|slice:":4" == "http" %}
+                <img src="{{ site.logo_url }}" alt="{{ site.name }}" style="height:28px;width:auto;object-fit:contain;">
+              {% else %}
+                {% if site.logo_url|slice:":1" == "/" %}
+                  <img src="{{ rel_root }}{{ site.logo_url|slice:"1:" }}" alt="{{ site.name }}" style="height:28px;width:auto;object-fit:contain;">
+                {% else %}
+                  <img src="{{ rel_root }}{{ site.logo_url }}" alt="{{ site.name }}" style="height:28px;width:auto;object-fit:contain;">
+                {% endif %}
+              {% endif %}
+            {% endif %}
+        </a>
+      </div>
+
+      <nav class="d-flex align-items-center gap-3">
+        <a class="text-soft" href="{{ rel_root }}index.html">Home</a>
+        <a class="text-soft" href="{{ rel_root }}insights.html">Insights</a>
+        {# Optional: if these pages exist on the static site #}
+        <a class="text-soft" href="{{ rel_root }}about-us.html">About</a>
+        <a class="text-soft" href="{{ rel_root }}contact_us.html">Contact</a>
+      </nav>
+
+    </div>
+  </div>
+</header>

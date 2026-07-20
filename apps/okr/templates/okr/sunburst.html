@@ -1,0 +1,94 @@
+{% extends "common/base.html" %}
+{% block content %}
+<style>
+#krDrilldownPanel .offcanvas-header {
+  background: linear-gradient(180deg, rgba(24,31,58,0.96), rgba(14,18,36,0.96));
+}
+#krDrilldownPanel .offcanvas-body {
+  background: #0b1020;
+}
+</style>
+<div style="max-width: 1700px; margin: 0 auto;">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="mb-0">
+        {% if entity %}{{ entity.name }}{% else %}OKR{% endif %} Sunburst
+      </h2>
+      <div class="text-soft mt-1">Click an Objective or Key Result segment to drill in.</div>
+    </div>
+  </div>
+
+  <div class="neon-glass-card p-3">
+    <div id="sunburst-wrapper">
+      {{ chart_html|safe }}
+    </div>
+  </div>
+</div>
+<div class="offcanvas offcanvas-end text-bg-dark"
+     tabindex="-1"
+     id="krDrilldownPanel"
+     aria-labelledby="krDrilldownPanelLabel"
+     style="width: 720px; background: #0b1020; border-left: 1px solid rgba(255,255,255,0.12);">
+  <div class="offcanvas-header" style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+    <h5 class="offcanvas-title" id="krDrilldownPanelLabel">Key Result</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body" id="krDrilldownBody">
+    <div class="text-soft">Select a Key Result to view details.</div>
+  </div>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const plot = document.querySelector("#sunburst-wrapper .js-plotly-plot");
+  if (!plot) return;
+
+  const panelEl = document.getElementById("krDrilldownPanel");
+  const bodyEl = document.getElementById("krDrilldownBody");
+  const titleEl = document.getElementById("krDrilldownPanelLabel");
+  const panel = new bootstrap.Offcanvas(panelEl);
+
+  plot.on("plotly_hover", function (eventData) {
+    const point = eventData.points && eventData.points[0];
+    if (!point || !point.customdata) {
+      plot.style.cursor = "default";
+      return;
+    }
+
+    const level = point.customdata[0];
+    const url = point.customdata[7];
+    plot.style.cursor = (level === "Key Result" && url) ? "pointer" : "default";
+  });
+
+  plot.on("plotly_unhover", function () {
+    plot.style.cursor = "default";
+  });
+
+  plot.on("plotly_click", function (eventData) {
+    const point = eventData.points && eventData.points[0];
+    if (!point || !point.customdata) return;
+
+    const level = point.customdata[0];
+    const url = point.customdata[7];
+    const label = point.label || "Key Result";
+
+    if (level !== "Key Result" || !url) return;
+
+    titleEl.textContent = label;
+    bodyEl.innerHTML = '<div class="text-soft">Loading…</div>';
+    panel.show();
+
+    fetch(url, {
+      headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+      .then(response => response.text())
+      .then(html => {
+        bodyEl.innerHTML = html;
+      })
+      .catch(error => {
+        bodyEl.innerHTML = '<div class="text-danger">Could not load Key Result.</div>';
+        console.error(error);
+      });
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,164 @@
+/* Mindsgate — dark premium enterprise theme.
+   Scope: html.theme-mindsgate, body.theme-mindsgate
+   Maps the redesign design tokens (see mindsgate-redesign/DESIGN.md) onto the
+   --site-* system consumed by the shared _landing.css. Display face
+   Space Grotesk, body Inter — both via Google Fonts. */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap");
+
+html.theme-mindsgate,
+body.theme-mindsgate {
+  /* Brand palette */
+  --mg-ink-950: #05080F;   /* page background */
+  --mg-ink-900: #0A0F1C;   /* alternating section background */
+  --mg-ink-800: #101828;   /* card surface */
+  --mg-accent: #4FD8C4;    /* signal teal */
+  --mg-accent-2: #7C8CF8;  /* gradient end only */
+  --mg-gold: #D9B36B;      /* golden-ratio signature */
+
+  /* Landing design tokens (consumed by the shared landing.css) */
+  --site-accent: var(--mg-accent);
+  --site-accent-2: var(--mg-accent-2);
+  --site-gold: var(--mg-gold);                 /* NEW token: eyebrows, exit badge, quote rule */
+  --site-gold-line: rgba(217, 179, 107, 0.35);
+  --site-bg: var(--mg-ink-950);
+  --site-text: #A8B3C9;
+  --site-heading: #EDF1FA;
+  --site-muted: #71809B;
+  --site-surface: var(--mg-ink-800);
+  --site-surface-alt: var(--mg-ink-900);
+  --site-border: rgba(148, 163, 199, 0.14);
+  --site-border-strong: rgba(148, 163, 199, 0.24);
+  --site-cta-bg: var(--mg-ink-900);
+  --site-on-accent: #04121C;
+  --site-heading-font: "Space Grotesk", "Inter", sans-serif;
+
+  background: var(--mg-ink-950);
+  color: var(--site-text);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Display face + tight tracking on all headings */
+.theme-mindsgate h1, .theme-mindsgate h2,
+.theme-mindsgate h3, .theme-mindsgate h4,
+.theme-mindsgate .lp-hero__headline, .theme-mindsgate .lp-section__heading {
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  letter-spacing: -0.015em;
+}
+
+/* ---- Left-aligned enterprise rhythm (the redesign is left-set, not centered) ---- */
+.theme-mindsgate .lp .lp-hero { text-align: left; }
+.theme-mindsgate .lp .lp-hero__headline,
+.theme-mindsgate .lp .lp-hero__subhead { margin-left: 0; max-width: 20ch; }
+.theme-mindsgate .lp .lp-hero__subhead { max-width: 52ch; }
+.theme-mindsgate .lp .lp-hero__ctas { justify-content: flex-start; }
+.theme-mindsgate .lp .lp-section__heading,
+.theme-mindsgate .lp .lp-section__subhead { text-align: left; margin-left: 0; }
+.theme-mindsgate .lp .lp-section__subhead { max-width: 640px; }
+
+/* Alternating section surfaces for the "engineered" cadence */
+.theme-mindsgate .lp .lp-cards-band,
+.theme-mindsgate .lp .lp-steps-band,
+.theme-mindsgate .lp .lp-cta-band {
+  background: var(--mg-ink-900);
+  border-top: 1px solid var(--site-border);
+  border-bottom: 1px solid var(--site-border);
+}
+
+/* ---- Gold eyebrow with a 26px rule (brand signature; overrides the accent pill) ---- */
+.theme-mindsgate .lp .lp-section__eyebrow,
+.theme-mindsgate .lp .lp-hero__eyebrow {
+  color: var(--mg-gold); background: none; border: none; border-radius: 0; padding: 0;
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: var(--site-heading-font); font-weight: 600;
+  letter-spacing: 0.18em; text-transform: uppercase; text-align: left;
+}
+.theme-mindsgate .lp .lp-hero__eyebrow::before,
+.theme-mindsgate .lp .lp-section__eyebrow::before {
+  content: ""; width: 26px; height: 1px; border-radius: 0;
+  background: var(--mg-gold); opacity: 0.7; display: inline-block;
+}
+
+/* ---- Primary CTA = teal→violet gradient pill, dark text (the one premium accent) ---- */
+.theme-mindsgate .lp .btn { border-radius: 999px; transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, color 0.18s ease; }
+.theme-mindsgate .lp .btn-primary {
+  background: linear-gradient(92deg, var(--mg-accent) 0%, var(--mg-accent-2) 100%);
+  color: var(--site-on-accent);
+  box-shadow: 0 6px 24px -8px rgba(79, 216, 196, 0.45);
+}
+.theme-mindsgate .lp .btn-primary:hover { filter: none; transform: translateY(-2px); box-shadow: 0 10px 30px -8px rgba(79, 216, 196, 0.55); color: var(--site-on-accent); }
+.theme-mindsgate .lp .btn-secondary { border-color: var(--site-border-strong); color: var(--site-heading); background: rgba(255,255,255,0.02); }
+.theme-mindsgate .lp .btn-secondary:hover { border-color: var(--mg-accent); color: var(--mg-accent); }
+
+/* Header CTA in the same gradient */
+.theme-mindsgate .site-header .site-cta {
+  background: linear-gradient(92deg, var(--mg-accent), var(--mg-accent-2));
+  color: var(--site-on-accent); border-radius: 999px;
+}
+.theme-mindsgate .site-header .site-cta:hover { filter: brightness(1.05); color: var(--site-on-accent); }
+
+/* Premium card hover — lift + accent border (services & platforms) */
+.theme-mindsgate .lp .lp-card { transition: transform 0.2s ease, border-color 0.2s ease; }
+.theme-mindsgate .lp .lp-card:hover { transform: translateY(-4px); border-color: rgba(79, 216, 196, 0.40); }
+
+/* ============================================================
+   Editorial content — Insights index + article pages.
+   These pages load only site.css (this file), NOT landing.css, so the
+   neon-glass-card / btn-glass / text-soft hooks are styled here with the
+   mindsgate tokens instead of the app's default glass chrome.
+   ============================================================ */
+
+/* Insights index header band (replaces the old hero image) */
+.theme-mindsgate .insights-hero { padding: 8px 0 22px; border-bottom: 1px solid var(--site-border); margin-bottom: 28px; }
+.theme-mindsgate .insights-hero__title { font-size: clamp(2.2rem, 4vw, 3rem); font-weight: 700; color: var(--site-heading); margin: 0 0 10px; }
+.theme-mindsgate .insights-hero__lede { color: var(--site-muted); font-size: 1.1rem; max-width: 62ch; margin: 0; }
+
+/* Muted text + accent links */
+.theme-mindsgate .text-soft { color: var(--site-muted) !important; }
+.theme-mindsgate .neon-glass-card a,
+.theme-mindsgate .article-body a { color: var(--mg-accent); text-decoration: none; }
+.theme-mindsgate .neon-glass-card a:hover,
+.theme-mindsgate .article-body a:hover { text-decoration: underline; }
+
+/* Insights index cards — clean premium surface */
+.theme-mindsgate .neon-glass-card {
+  background: var(--mg-ink-800); border: 1px solid var(--site-border);
+  border-radius: 14px; box-shadow: none; backdrop-filter: none;
+}
+.theme-mindsgate:not(.article-page) .container .neon-glass-card { transition: transform 0.18s ease, border-color 0.18s ease; }
+.theme-mindsgate:not(.article-page) .container .neon-glass-card:hover { transform: translateY(-3px); border-color: rgba(79, 216, 196, 0.35); }
+.theme-mindsgate .neon-glass-card h3 a { color: var(--site-heading); }
+.theme-mindsgate .neon-glass-card h3 a:hover { color: var(--mg-accent); }
+
+/* Read button (btn-glass) -> accent gradient pill */
+.theme-mindsgate .btn-glass {
+  display: inline-block; background: linear-gradient(92deg, var(--mg-accent), var(--mg-accent-2));
+  color: var(--site-on-accent); border: none; border-radius: 999px;
+  padding: 0.5rem 1.1rem; font-weight: 600; text-decoration: none; font-size: 0.9rem;
+}
+.theme-mindsgate .btn-glass:hover { filter: brightness(1.05); color: var(--site-on-accent); }
+
+/* Article reading page — flat editorial column (kill the outer card chrome) */
+.theme-mindsgate.article-page .article-shell > .neon-glass-card {
+  background: transparent; border: none; border-radius: 0; padding: 0; box-shadow: none;
+}
+.theme-mindsgate.article-page h1 { font-size: clamp(2.1rem, 4vw, 2.9rem); font-weight: 700; color: var(--site-heading); }
+.theme-mindsgate .article-body { color: var(--site-text); font-size: 1.06rem; line-height: 1.75; }
+.theme-mindsgate .article-body h2 { font-size: clamp(1.6rem, 2.6vw, 2rem); font-weight: 600; color: var(--site-heading); margin: 1.8rem 0 0.7rem; }
+.theme-mindsgate .article-body h3 { font-size: 1.3rem; font-weight: 600; color: var(--site-heading); margin: 1.4rem 0 0.5rem; }
+.theme-mindsgate .article-body p, .theme-mindsgate .article-body li { color: var(--site-text); }
+.theme-mindsgate .article-body ul, .theme-mindsgate .article-body ol { padding-left: 1.2rem; margin: 0 0 1.15rem; }
+.theme-mindsgate .article-body li { margin: 0.35rem 0; }
+.theme-mindsgate .article-body table { width: 100%; border-collapse: collapse; margin: 1.2rem 0; }
+.theme-mindsgate .article-body th, .theme-mindsgate .article-body td { border: 1px solid var(--site-border); padding: 8px 12px; text-align: left; }
+.theme-mindsgate .article-body th { color: var(--site-heading); }
+.theme-mindsgate .article-body code { background: var(--mg-ink-900); padding: 2px 6px; border-radius: 6px; font-size: 0.92em; }
+.theme-mindsgate .article-body pre { background: var(--mg-ink-900); border: 1px solid var(--site-border); border-radius: 10px; padding: 14px 16px; overflow: auto; }
+.theme-mindsgate .article-body pre code { background: none; padding: 0; }
+/* Cornerstone/"part of" box stays a subtle card inside the flat article */
+.theme-mindsgate.article-page .article-body .neon-glass-card {
+  background: var(--mg-ink-900); border: 1px solid var(--site-border); border-radius: 12px; padding: 1rem 1.2rem;
+}

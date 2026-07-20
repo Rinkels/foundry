@@ -1,0 +1,140 @@
+{# templates/fractals/home.html #}
+{% extends "common/base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+  body {
+    background: radial-gradient(circle at top right, #081622, #000000);
+    background-attachment: fixed;
+    background-size: cover;
+  }
+
+  .neon-glass-card {
+    position: relative;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    color: #fff;
+  }
+  .neon-glass-card:hover {
+    transform: translateY(-3px);
+  }
+
+  .neon-builder   { box-shadow: 0 0 10px #0ff, 0 0 20px #0ff; }
+  .neon-execution { box-shadow: 0 0 10px #f0f, 0 0 20px #f0f; }
+  .neon-code { box-shadow: 0 0 10px #f0f, 0 0 20px #ff0; }
+  .neon-okr { box-shadow: 0 0 10px #f0f, 0 0 20px #1ff; }
+  .neon-janus { box-shadow: 0 0 10px #ff8a00, 0 0 20px #ff3d8a; }
+
+  .card-icon {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+</style>
+
+<div class="container py-4">
+common-home.html
+  <h1 class="mb-2 text-white">Fractals Workspacexxx</h1>
+  <h6 class="mb-4 text-light">
+    🎯 Build once, reuse everywhere. Fractals turns your sites, sections, and components
+    into reusable building blocks — so you can go from idea to live experience in hours,
+    not weeks.
+  </h6>
+
+  <div class="row row-cols-1 row-cols-md-2 g-4">
+
+    {# Site Builder card #}
+    <div class="col">
+      <a href="http://localhost:8000/builder/" class="text-decoration-none text-white position-relative">
+        <div class="neon-glass-card neon-builder h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+          <div class="card-icon">🧩</div>
+          <h4 class="card-title mb-2">{% trans "Site Builder" %}</h4>
+          <small class="text-white-50 mb-3">
+            {% trans "Design, assemble, and publish sites using reusable Fractals blocks." %}
+          </small>
+          <span class="btn btn-outline-info">
+            {% trans "Open Builder" %}
+          </span>
+        </div>
+      </a>
+    </div>
+
+    {# Execution / Project Management card (coming soon) #}
+    <div class="col">
+      <a href="#" class="text-decoration-none text-white position-relative">
+        <div class="neon-glass-card neon-execution h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+          <div class="card-icon">📈</div>
+          <h4 class="card-title mb-2">{% trans "Execution" %}</h4>
+          <small class="text-white-50 mb-3">
+            {% trans "Plan sprints, track delivery, and connect websites to real execution data." %}
+          </small>
+
+          <span class="badge bg-warning text-dark mb-2">
+            {% trans "Coming soon" %}
+          </span>
+          <span class="btn btn-outline-light disabled">
+            {% trans "Project Management" %}
+          </span>
+        </div>
+      </a>
+    </div>
+    {# Code Analyzer card #}
+    <div class="col">
+      <a href="{% url 'code_analyzer:dashboard' %}"
+         class="text-decoration-none text-white position-relative">
+        <div class="neon-glass-card neon-code h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+          <div class="card-icon">🧪</div>
+          <h4 class="card-title mb-2">{% trans "Code Analysis" %}</h4>
+          <small class="text-white-50 mb-3">
+            {% trans "Inspect code, analyze components, and evolve Fractals modules from real projects." %}
+          </small>
+          <span class="btn btn-outline-success">
+            {% trans "Open Code Analyzer" %}
+          </span>
+        </div>
+      </a>
+    </div>
+    {# OKR #}
+    <div class="col">
+      <a href="{% url 'okr:entity-list' %}"
+         class="text-decoration-none text-white position-relative">
+        <div class="neon-glass-card neon-okr h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+          <div class="card-icon">🧪</div>
+          <h4 class="card-title mb-2">{% trans "OKR" %}</h4>
+          <small class="text-white-50 mb-3">
+            {% trans "Objectives, Key, Results." %}
+          </small>
+          <span class="btn btn-outline-success">
+            {% trans "Open OKR" %}
+          </span>
+        </div>
+      </a>
+    </div>
+   {# Janus (Idea Validator) #}
+    <div class="col">
+      <a href="{% url 'janus:dashboard' %}"
+         class="text-decoration-none text-white position-relative">
+        <div class="neon-glass-card neon-janus h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+          <div class="card-icon">🗝️</div>
+          <h4 class="card-title mb-2">{% trans "Janus" %}</h4>
+          <small class="text-white-50 mb-3">
+            {% trans "Validate ideas with customer proof, gates, and portfolio ranking before OKRs." %}
+          </small>
+          <span class="btn btn-outline-warning">
+            {% trans "Open Janus" %}
+          </span>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

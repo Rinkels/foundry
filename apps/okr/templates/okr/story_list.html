@@ -1,0 +1,112 @@
+{% extends "common/base.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="neon-glass-card okr-heatmap-card">
+  <div class="okr-heatmap-head">
+    <div>
+      <div class="okr-title">Stories</div>
+      <div class="okr-subtitle">Browse and manage user stories (filter by epic or search).</div>
+    </div>
+
+    <form method="get" class="okr-filters">
+      {% if epic_id %}
+        <input type="hidden" name="epic" value="{{ epic_id }}">
+      {% endif %}
+
+      <input
+        type="text"
+        name="q"
+        value="{{ q }}"
+        class="okr-input"
+        placeholder="Search stories…"
+        aria-label="Search stories"
+      />
+
+      <button class="btn btn-primary okr-btn" type="submit">Search</button>
+      <a class="btn btn-secondary okr-btn" href="{% url 'okr:story-list' %}{% if epic_id %}?epic={{ epic_id }}{% endif %}">Reset</a>
+        {% if epic_id %}
+            <a class="btn btn-primary okr-btn" href="{% url 'okr:story-create' %}?epic={{ epic_id }}">+ Add Story</a>
+        {% else %}
+            <a class="btn btn-primary okr-btn" href="{% url 'okr:story-create' %}">+ Add Story</a>
+        {% endif %}
+
+        </form>
+      </div>
+
+  <div class="okr-table-wrap">
+    <table class="okr-table">
+      <colgroup>
+        <col style="width: 40%">
+        <col style="width: 14%">
+        <col style="width: 10%">
+        <col style="width: 12%">
+        <col style="width: 12%">
+        <col style="width: 12%">
+      </colgroup>
+
+      <thead>
+        <tr>
+          <th>Story</th>
+          <th class="num">Tasks</th>
+          <th>Epic</th>
+          <th class="nowrap">Updated</th>
+          <th class="nowrap">Created</th>
+          <th class="center">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for s in stories %}
+        <tr class="okr-row">
+          <td class="strategy-cell">
+            <a class="strategy-link" href="{% url 'okr:story-detail' s.id %}">
+              {{ s.title }}
+            </a>
+            <div class="muted" style="margin-top:4px; font-size:.9rem;">
+              As a <b>{{ s.role }}</b>, {{ s.goal|truncatechars:90 }}
+            </div>
+          </td>
+
+          <td class="num">
+            <span class="okr-pill none">{{ s.task_count }}</span>
+          </td>
+
+          <td class="muted">
+            <a href="{% url 'okr:epic-detail' s.epic.id %}" class="muted" style="text-decoration:none;">
+              #{{ s.epic.id }}
+            </a>
+          </td>
+
+          <td class="muted nowrap">{{ s.updated_at|date:"Y-m-d" }}</td>
+          <td class="muted nowrap">{{ s.created_at|date:"Y-m-d" }}</td>
+
+          <td class="center nowrap">
+            <a class="btn btn-secondary okr-btn" href="{% url 'okr:story-update' s.id %}">Edit</a>
+            <a class="btn btn-secondary okr-btn" href="{% url 'okr:story-delete' s.id %}">Delete</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="okr-empty">No stories found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if is_paginated %}
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+    <div class="muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
+    <div style="display:flex; gap:10px;">
+      {% if page_obj.has_previous %}
+        <a class="btn btn-secondary okr-btn" href="?page={{ page_obj.previous_page_number }}{% if epic_id %}&epic={{ epic_id }}{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">Prev</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <a class="btn btn-secondary okr-btn" href="?page={{ page_obj.next_page_number }}{% if epic_id %}&epic={{ epic_id }}{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">Next</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

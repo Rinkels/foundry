@@ -1,0 +1,16 @@
+<li style="margin: .25rem 0;">
+  <div class="d-flex align-items-center gap-2">
+    <span class="pill">{{ node.page.title }}</span>
+    <span class="text-soft" style="font-size:.85rem;">
+      slug: <code>{{ node.page.slug }}</code>{% if node.page.is_root %} · root{% endif %}
+    </span>
+  </div>
+
+  {% if node.children %}
+    <ul class="mt-2" style="list-style: none; padding-left: 1rem; border-left: 1px solid rgba(255,255,255,.10);">
+      {% for child in node.children %}
+        {% include "sites_builder/ui/_page_tree_node.html" with node=child only %}
+      {% endfor %}
+    </ul>
+  {% endif %}
+</li>

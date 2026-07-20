@@ -1,0 +1,226 @@
+{% extends "common/base.html" %}
+{% load static %}
+
+{% block title %}Janus{% endblock %}
+
+{% block extra_head %}
+<style>
+  body { background: radial-gradient(circle at top right, #081622, #000000); background-attachment: fixed; }
+  .neon-glass-card{
+    position: relative;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,.15);
+    background: rgba(255,255,255,.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: transform .25s ease;
+    color:#fff;
+  }
+  .neon-glass-card:hover { transform: translateY(-3px); }
+  .pill { border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); border-radius:999px; padding:.25rem .6rem; font-size:.85rem;}
+  .neon-janus { box-shadow: 0 0 10px #ff8a00, 0 0 20px #ff3d8a; }
+   .janus-logo{
+      display:block;
+      width: 360px;      /* adjust */
+      height: auto;
+    }
+</style>
+{% endblock %}
+
+{% block topnav %}
+  <a class="nav-link" href="{% url 'fractals_home' %}"><i class="fa-solid fa-house"></i></a>
+  <a class="nav-link" href="{% url 'janus:idea_create' %}"><i class="fa-solid fa-plus"></i> New</a>
+{% endblock %}
+
+{% block content %}
+<div class="py-3">
+  <div class="d-flex align-items-end justify-content-between flex-wrap gap-2 mb-3">
+    <div>
+        <svg xmlns="http://www.w3.org/2000/svg"
+             class="janus-logo"
+             viewBox="0 0 550 240"
+             role="img"
+             aria-label="JANUS logo"
+             preserveAspectRatio="xMinYMid meet">
+
+          <!-- Palette -->
+          <!-- Midnight: #0F1E2E | Ivory: #F4F2EE | Gold (optional): #C9A24D -->
+
+          <defs>
+            <!-- Subtle rounding consistency -->
+            <style>
+              .wordmark{
+                font-family: "Canela", "Noe Display", "Garamond", "Georgia", "Times New Roman", serif;
+                font-weight: 400;
+                letter-spacing: 0.18em;
+              }
+            </style>
+          </defs>
+
+          <!-- Icon -->
+          <g transform="translate(70,30)">
+            <!-- Pillar body -->
+            <rect x="0" y="0" width="120" height="200" rx="18" fill="#0F1E2E"/>
+            <!-- Central split (negative space rendered as ivory) -->
+            <rect x="57" y="20" width="6" height="160" rx="3" fill="#F4F2EE"/>
+            <!-- Optional subtle inner framing (very light, keeps it carved) -->
+            <rect x="14" y="14" width="92" height="172" rx="14" fill="none" stroke="#F4F2EE" stroke-opacity="0.08" stroke-width="2"/>
+          </g>
+
+          <!-- Wordmark -->
+          <text x="240" y="150" class="wordmark" font-size="78" fill="#0F1E2E">JANUS</text>
+
+          <!-- Small descriptor line (optional; delete if not needed) -->
+          <!--
+          <text x="244" y="190"
+                font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+                font-size="18"
+                letter-spacing="0.08em"
+                fill="#0F1E2E"
+                opacity="0.72">
+            DECISION THRESHOLD
+          </text>
+          -->
+        </svg>
+
+      <!-- <h1 class="text-white mb-1">Janus</h1>  -->
+      <div class="text-white-50">Validate ideas before they graduate into OKRs.</div>
+    </div>
+    <a class="btn btn-outline-warning" href="{% url 'janus:idea_create' %}">
+      <i class="fa-solid fa-plus"></i> New Idea
+    </a>
+  </div>
+
+  <div class="row row-cols-1 row-cols-md-2 g-4">
+    {% for i in ideas %}
+      <div class="col">
+        <a href="{% url 'janus:idea_detail' i.pk %}" class="text-decoration-none">
+          <div class="neon-glass-card neon-janus h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+              <div>
+                <div class="h5 text-white mb-1">{{ i.name }}</div>
+                <div class="text-white-50 small">
+                  {% if i.target_customer %}<b>Customer:</b> {{ i.target_customer }}{% else %}No customer defined yet{% endif %}
+                </div>
+              </div>
+              <div class="text-end">
+                <div class="pill">{{ i.status }}</div>
+                <div class="pill mt-2">Conviction {{ i.founder_conviction }}/5</div>
+              </div>
+            </div>
+
+            <div class="mt-3 text-white-50 small">
+              {{ i.problem_statement|truncatechars:140 }}
+            </div>
+
+            <div class="mt-3 d-flex gap-2 flex-wrap">
+              <span class="pill">{{ i.idea_type }}</span>
+              {% if i.entity %}<span class="pill">Entity: {{ i.entity }}</span>{% endif %}
+              {% if i.proposed_strategy %}<span class="pill">Strategy: {{ i.proposed_strategy }}</span>{% endif %}
+            </div>
+          </div>
+        </a>
+      </div>
+    {% empty %}
+      <div class="col">
+        <div class="neon-glass-card p-4">
+          <div class="text-white">No ideas yet.</div>
+          <div class="text-white-50 small">Create one and start a 2-week sprint.</div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+  <!-- =========================
+       Due Diligence Cockpit (mini)
+       ========================= -->
+  <div class="mt-4">
+    <div class="d-flex align-items-end justify-content-between flex-wrap gap-2 mb-3">
+      <div>
+        <h2 class="text-white mb-1">Due Diligence</h2>
+        <div class="text-white-50 small">Latest run per target. Scores, blockers, and verdict at a glance.</div>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-outline-light" href="{% url 'janus:dd-cockpit' %}">
+          <i class="fa-solid fa-gauge-high"></i> Open Cockpit
+        </a>
+        <a class="btn btn-outline-light" href="{% url 'janus:dd-compare' %}">
+          <i class="fa-solid fa-code-compare"></i> Compare
+        </a>
+      </div>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+      {% for c in dd_cards %}
+        <div class="col">
+          <a href="{% url 'janus:dd-run-detail' c.run_id %}" class="text-decoration-none">
+            <div class="neon-glass-card h-100 p-4">
+              <div class="d-flex justify-content-between align-items-start gap-3">
+                <div class="flex-grow-1 text-start">
+                  <div class="text-white-50 small">
+                    {{ c.deal_stage|upper }} • {{ c.template }}
+                  </div>
+                  <div class="h5 text-white mb-1">{{ c.target_name }}</div>
+
+                  <div class="text-white-50 small">
+                    {% if c.target_website %}
+                      <a href="{{ c.target_website }}" target="_blank" rel="noopener">Open website</a>
+                    {% else %}
+                      <span>No website</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="text-end">
+                  <div class="text-white-50 small">Overall</div>
+                  <div style="font-size: 34px; font-weight: 800; line-height: 1;">{{ c.overall_score|floatformat:0 }}</div>
+                  <div class="mt-2">
+                    {% if c.verdict %}
+                      <span class="pill">{{ c.verdict|cut:"_"|title }}</span>
+                    {% else %}
+                      <span class="pill">No verdict</span>
+                    {% endif %}
+                    <span class="pill mt-2 d-inline-block">
+                      {{ c.status|cut:"_"|title }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-3 d-flex gap-2 flex-wrap">
+                <span class="pill">Blockers {{ c.blockers }}</span>
+                <span class="pill">Open risks {{ c.risks_open }}</span>
+                <span class="pill">Evidence {{ c.evidence_count }}</span>
+                <span class="pill">NN fail {{ c.nonneg_fail }}</span>
+                <span class="pill">NN ? {{ c.nonneg_unknown }}</span>
+                {% if c.promoted %}
+                  <span class="pill" style="border-color: rgba(40,167,69,.6);">Promoted</span>
+                {% endif %}
+              </div>
+
+              {% if c.due_date %}
+                <div class="text-white-50 small mt-2">Due: {{ c.due_date }}</div>
+              {% endif %}
+            </div>
+          </a>
+        </div>
+      {% empty %}
+        <div class="col">
+          <div class="neon-glass-card p-4">
+            <div class="text-white">No due diligence runs yet.</div>
+            <div class="text-white-50 small">Create a target + run in admin, then the cockpit cards will show here.</div>
+            <div class="mt-3 d-flex gap-2 flex-wrap">
+              <a class="btn btn-outline-warning" href="/admin/janus/targetcompany/">
+                <i class="fa-solid fa-building"></i> Add Target
+              </a>
+              <a class="btn btn-outline-warning" href="/admin/janus/duediligencerun/">
+                <i class="fa-solid fa-list-check"></i> Add Run
+              </a>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+{% endblock %}

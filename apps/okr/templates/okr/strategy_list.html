@@ -1,0 +1,66 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div style="max-width: 1100px; margin: 0 auto;">
+  <div class="d-flex align-items-end justify-content-between gap-3 mb-3">
+    <div>
+      <h2 class="mb-0">Strategies for {{ entity.name }}</h2>
+      <div class="text-soft mt-1">Select a strategy to see objectives and key results.</div>
+    </div>
+
+    <a href="{% url 'okr:strategy-create' %}?entity={{ entity.id }}" class="btn-glass">
+      ➕ Add Strategy
+    </a>
+  </div>
+
+  <div class="row g-3">
+    {% for strategy in object_list %}
+      <div class="col-12 col-md-6">
+        <div class="neon-glass-card p-4 h-100 position-relative">
+
+          <div class="d-flex align-items-start justify-content-between gap-3">
+            <a href="{% url 'okr:strategy-detail' strategy.id %}" class="text-strong" style="text-decoration:none;">
+              <h3 class="mb-1">{{ strategy.name }}</h3>
+            </a>
+
+            <span
+              title="Theme: {{ strategy.theme|default:'default' }}"
+              style="
+                display:inline-block; width:12px; height:12px; border-radius:999px;
+                background:
+                  {% if strategy.theme == 'green' %} #2dffb2
+                  {% elif strategy.theme == 'blue' %} #53b7ff
+                  {% elif strategy.theme == 'orange' %} #ffb34f
+                  {% elif strategy.theme == 'purple' %} #b084ff
+                  {% elif strategy.theme == 'red' %} #ff5b7a
+                  {% else %} rgba(255,255,255,.35)
+                  {% endif %}
+              ">
+            </span>
+          </div>
+
+          <div class="text-soft mt-2">
+            {{ strategy.objectives.count }} objective{{ strategy.objectives.count|pluralize }}
+          </div>
+
+          <div class="d-flex gap-2 flex-wrap mt-3">
+            <a href="{% url 'okr:strategy-detail' strategy.id %}" class="btn-glass">View</a>
+            <a href="{% url 'okr:strategy-edit' strategy.id %}" class="btn-glass">Edit</a>
+            <a href="{% url 'okr:strategy-delete' strategy.id %}" class="btn-glass" style="border-color: rgba(255,91,122,.45);">Delete</a>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="col-12">
+        <div class="neon-glass-card p-4">
+          <div class="text-soft">No strategies yet for this entity.</div>
+          <div class="mt-3">
+            <a href="{% url 'okr:strategy-create' %}?entity={{ entity.id }}" class="btn-glass">➕ Add Strategy</a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}

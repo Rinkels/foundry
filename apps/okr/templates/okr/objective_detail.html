@@ -1,0 +1,148 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div style="max-width: 1100px; margin: 0 auto;">
+
+  <div class="d-flex align-items-end justify-content-between gap-3 mb-3">
+    <div>
+      <h2 class="mb-0">{{ objective.name }}</h2>
+      {% if objective.description %}
+        <div class="text-soft mt-1">{{ objective.description }}</div>
+      {% endif %}
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{% url 'okr:objective-scorecard' objective.pk %}" class="btn-glass">📊 Scorecard</a>
+      <a href="{% url 'okr:objective-edit' objective.pk %}" class="btn-glass">✏️ Edit</a>
+      <a href="{% url 'okr:objective-list' %}" class="btn-glass">← Back</a>
+    </div>
+  </div>
+
+  <div class="d-flex align-items-end justify-content-between gap-3 mb-3">
+    <div>
+      <h3 class="mb-0">Key Results</h3>
+      <div class="text-soft mt-1">Track progress and link execution (Epics) to outcomes.</div>
+    </div>
+
+    <a href="{% url 'okr:keyresult-create' objective.pk %}" class="btn-glass">
+      ➕ Add Key Result
+    </a>
+  </div>
+
+  {% if scorecard_preview %}
+    <div class="neon-glass-card p-4 mb-3">
+      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div>
+          <h4 class="mb-1">📊 Scorecard Preview</h4>
+          <div class="text-soft">
+            {{ scorecard_preview.krs_with_metrics }} / {{ scorecard_preview.total_krs }} key results have scorecard metrics
+            {% if scorecard_preview.total_metrics %}
+              • {{ scorecard_preview.total_metrics }} metric(s) tracked
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+          <a href="{% url 'okr:objective-scorecard' objective.pk %}" class="btn-glass">View full scorecard →</a>
+        </div>
+      </div>
+
+      {% if scorecard_preview.total_metrics == 0 %}
+        <div class="text-soft mt-3">
+          No metrics yet. Add Metric Dimensions + Key Result Metrics in Admin, then they’ll show up here.
+        </div>
+      {% else %}
+        <div class="row g-3 mt-2">
+          {% for row in scorecard_preview.dimensions %}
+            <div class="col-12 col-md-4">
+              <div class="neon-glass-card p-3 h-100">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <div>
+                    <div class="text-strong">{{ row.dimension.name }}</div>
+                    {% if row.dimension.category %}
+                      <div class="text-soft" style="font-size:.9rem;">{{ row.dimension.category }}</div>
+                    {% endif %}
+                  </div>
+                  <span class="pill">{{ row.count }} metric(s)</span>
+                </div>
+
+                <div class="mt-2 d-flex gap-2 flex-wrap">
+                  <span class="pill">🟢 {{ row.rag.green|default:0 }}</span>
+                  <span class="pill">🟡 {{ row.rag.yellow|default:0 }}</span>
+                  <span class="pill">🔴 {{ row.rag.red|default:0 }}</span>
+                  <span class="pill">⚪ {{ row.rag.gray|default:0 }}</span>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+
+          {% if scorecard_preview.more_dimensions_count > 0 %}
+            <div class="col-12">
+              <div class="text-soft">
+                + {{ scorecard_preview.more_dimensions_count }} more dimension(s) tracked
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="row g-3">
+    {% for key_result in key_results %}
+      <div class="col-12 col-md-6">
+        <div class="neon-glass-card p-4 h-100">
+          <div class="d-flex align-items-start justify-content-between gap-3">
+            <div>
+              <h4 class="mb-1">{{ key_result.name }}</h4>
+              {% if key_result.description %}
+                <div class="text-soft">{{ key_result.description }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="text-soft mt-3">
+            <strong>Execution:</strong>
+            {{ key_result.execution_progress|floatformat:1 }}%
+          </div>
+
+          <div class="text-soft mt-1">
+            <strong>Outcome:</strong>
+            {{ key_result.current_value }} / {{ key_result.target_value }} {{ key_result.unit }}
+            ({{ key_result.progress|floatformat:1 }}%)
+          </div>
+
+          {% with key_result.epics.all as epics %}
+            {% if epics %}
+              <div class="text-soft mt-2">
+                <strong>Epic:</strong>
+                <a href="{% url 'okr:keyresult-epics' key_result.id %}" class="text-strong" style="text-decoration: underline;">
+                  {{ epics.0.title }}
+                </a>
+                {% if epics|length > 1 %}
+                  <span class="text-soft">(+{{ epics|length|add:"-1" }} more)</span>
+                {% endif %}
+              </div>
+            {% else %}
+              <div class="text-soft mt-2"><em>No epic linked</em></div>
+            {% endif %}
+          {% endwith %}
+
+          <div class="d-flex gap-2 flex-wrap mt-3">
+            <a href="{% url 'okr:keyresult-update' key_result.pk %}" class="btn-glass">✏️ Update</a>
+            <a href="{% url 'okr:keyresult-delete' key_result.pk %}" class="btn-glass" style="border-color: rgba(255,91,122,.45);">🗑️ Delete</a>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="col-12">
+        <div class="neon-glass-card p-4">
+          <div class="text-soft">No key results added yet.</div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+{% endblock %}

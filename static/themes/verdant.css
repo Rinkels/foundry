@@ -1,0 +1,367 @@
+/* Verdant Light Theme
+   Scope: html.theme-verdant, body.theme-verdant
+   Bright glass UI with greenhouse / daylight gradients.
+   Compatible with:
+     - .neon-glass-card / .content-card / .card
+     - .btn-glass / .cta-button / .btn-neon
+     - .neon-grid / .neon-input / .pill
+*/
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap");
+
+/* Theme background bridge: ensures page background changes even if body/html differ */
+html.theme-aurora, body.theme-aurora,
+html.theme-verdant, body.theme-verdant,
+html.theme-bauhaus, body.theme-bauhaus {
+  min-height: 100%;
+  background-attachment: fixed;
+}
+
+html.theme-verdant,
+body.theme-verdant {
+  /* Base palette */
+  --verdant-bg: #f7fbf8;
+  --verdant-ink: rgba(10, 16, 18, 0.92);
+  --verdant-ink-2: rgba(10, 16, 18, 0.74);
+  --verdant-muted: rgba(10, 16, 18, 0.58);
+
+  /* Glass surfaces */
+  --verdant-surface: rgba(255, 255, 255, 0.72);
+  --verdant-surface-2: rgba(255, 255, 255, 0.58);
+  --verdant-border: rgba(10, 16, 18, 0.10);
+
+  /* Accents */
+  --verdant-accent: var(--fractals-primary, #17c964);
+  --verdant-accent-2: var(--fractals-secondary, #2bb3ff);
+  --verdant-accent-3: #a3ffcf;
+
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  color: var(--verdant-ink);
+
+  background:
+    radial-gradient(900px 600px at 12% 10%, rgba(23, 201, 100, 0.14), transparent 62%),
+    radial-gradient(900px 600px at 88% 8%, rgba(43, 179, 255, 0.14), transparent 62%),
+    radial-gradient(900px 700px at 50% 105%, rgba(255, 255, 255, 0.65), transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, var(--verdant-bg) 55%, #ffffff 100%);
+
+  line-height: 1.58;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings */
+html.theme-verdant h1, body.theme-verdant h1,
+html.theme-verdant h2, body.theme-verdant h2,
+html.theme-verdant h3, body.theme-verdant h3,
+html.theme-verdant h4, body.theme-verdant h4,
+html.theme-verdant h5, body.theme-verdant h5 {
+  font-family: "Space Grotesk", "Inter", system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  color: rgba(10, 16, 18, 0.94);
+}
+
+html.theme-verdant h1, body.theme-verdant h1 { font-weight: 700; font-size: clamp(2.05rem, 2.6vw, 2.75rem); }
+html.theme-verdant h2, body.theme-verdant h2 { font-weight: 650; font-size: clamp(1.35rem, 1.7vw, 1.85rem); margin-top: 1.6rem; }
+html.theme-verdant h3, body.theme-verdant h3 { font-weight: 600; font-size: 1.25rem; margin-top: 1.2rem; }
+
+html.theme-verdant p, body.theme-verdant p,
+html.theme-verdant li, body.theme-verdant li {
+  color: var(--verdant-ink-2);
+}
+
+html.theme-verdant .text-muted,
+body.theme-verdant .text-muted { color: var(--verdant-muted) !important; }
+
+/* Links */
+html.theme-verdant a,
+body.theme-verdant a {
+  color: rgba(10, 16, 18, 0.90);
+  text-decoration-color: rgba(23, 201, 100, 0.35);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+html.theme-verdant a:hover,
+body.theme-verdant a:hover {
+  color: rgba(10, 16, 18, 0.98);
+  text-decoration-color: rgba(23, 201, 100, 0.65);
+}
+
+/* Layout width */
+@media (min-width: 992px) {
+  html.theme-verdant main.container,
+  body.theme-verdant main.container { max-width: 1200px; }
+}
+@media (min-width: 1400px) {
+  html.theme-verdant main.container,
+  body.theme-verdant main.container { max-width: 1320px; }
+}
+
+/* Sticky header */
+html.theme-verdant > .container:first-of-type,
+body.theme-verdant > .container:first-of-type {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  flex-wrap: nowrap;
+
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.64));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(10, 16, 18, 0.10);
+}
+
+html.theme-verdant .navbar-brand, body.theme-verdant .navbar-brand,
+html.theme-verdant .nav-link, body.theme-verdant .nav-link {
+  color: rgba(10, 16, 18, 0.88);
+}
+html.theme-verdant .nav-link:hover,
+body.theme-verdant .nav-link:hover { color: rgba(10, 16, 18, 0.98); }
+
+/* Logo */
+html.theme-verdant .navbar-brand img,
+body.theme-verdant .navbar-brand img {
+  height: 56px;
+  width: auto;
+  border-radius: 12px;
+  opacity: 0.96;
+  filter: saturate(1.04) contrast(1.03);
+  box-shadow:
+    0 10px 24px rgba(0,0,0,0.10),
+    0 0 18px rgba(23, 201, 100, 0.10);
+}
+
+/* Cards */
+html.theme-verdant .neon-glass-card, body.theme-verdant .neon-glass-card,
+html.theme-verdant .content-card, body.theme-verdant .content-card,
+html.theme-verdant .card, body.theme-verdant .card {
+  background: linear-gradient(180deg, var(--verdant-surface), var(--verdant-surface-2));
+  border: 1px solid var(--verdant-border);
+  border-radius: 18px;
+  box-shadow:
+    0 18px 50px rgba(0,0,0,0.10),
+    0 1px 0 rgba(255,255,255,0.55) inset;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+html.theme-verdant .neon-glass-card,
+body.theme-verdant .neon-glass-card { padding: 28px !important; }
+
+@media (max-width: 576px) {
+  html.theme-verdant .neon-glass-card,
+  body.theme-verdant .neon-glass-card { padding: 18px !important; }
+}
+
+html.theme-verdant .section-card + .section-card,
+body.theme-verdant .section-card + .section-card { margin-top: 22px; }
+
+/* Hero */
+html.theme-verdant .hero-image,
+body.theme-verdant .hero-image {
+  border-radius: 16px;
+  box-shadow: 0 18px 44px rgba(0,0,0,0.14);
+}
+
+/* Buttons */
+html.theme-verdant .btn, body.theme-verdant .btn,
+html.theme-verdant .btn-glass, body.theme-verdant .btn-glass,
+html.theme-verdant .cta-button, body.theme-verdant .cta-button,
+html.theme-verdant .btn-neon, body.theme-verdant .btn-neon {
+  border-radius: 999px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  border: 1px solid rgba(10, 16, 18, 0.12);
+  transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+  will-change: transform;
+}
+
+html.theme-verdant .btn-primary, body.theme-verdant .btn-primary,
+html.theme-verdant .cta-button, body.theme-verdant .cta-button {
+  background: linear-gradient(135deg, var(--verdant-accent), var(--verdant-accent-2));
+  color: rgba(255,255,255,0.96);
+  border-color: rgba(0,0,0,0.06);
+}
+
+html.theme-verdant .btn-outline-primary,
+body.theme-verdant .btn-outline-primary {
+  background: rgba(255,255,255,0.65);
+  color: rgba(10,16,18,0.86);
+  border-color: rgba(23, 201, 100, 0.28);
+}
+
+html.theme-verdant .btn:hover, body.theme-verdant .btn:hover,
+html.theme-verdant .btn-glass:hover, body.theme-verdant .btn-glass:hover,
+html.theme-verdant .cta-button:hover, body.theme-verdant .cta-button:hover,
+html.theme-verdant .btn-neon:hover, body.theme-verdant .btn-neon:hover {
+  filter: brightness(1.02);
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(0,0,0,0.12);
+}
+
+/* Lists */
+html.theme-verdant ul, body.theme-verdant ul,
+html.theme-verdant ol, body.theme-verdant ol { padding-left: 1.2rem; }
+
+html.theme-verdant ul li::marker,
+body.theme-verdant ul li::marker { color: rgba(23, 201, 100, 0.90); }
+
+@media (min-width: 992px) {
+  html.theme-verdant ul.list-cols-2,
+  body.theme-verdant ul.list-cols-2 {
+    columns: 2;
+    column-gap: 38px;
+  }
+  html.theme-verdant ul.list-cols-2 li,
+  body.theme-verdant ul.list-cols-2 li {
+    break-inside: avoid;
+    margin-bottom: 6px;
+  }
+}
+
+/* Accordions */
+html.theme-verdant .faq-accordion .accordion-item,
+body.theme-verdant .faq-accordion .accordion-item {
+  background: transparent;
+  border: 0;
+}
+
+html.theme-verdant .faq-accordion .accordion-button,
+body.theme-verdant .faq-accordion .accordion-button {
+  background: rgba(255, 255, 255, 0.70);
+  color: rgba(10, 16, 18, 0.90);
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(10, 16, 18, 0.10);
+  margin-bottom: 10px;
+}
+
+html.theme-verdant .faq-accordion .accordion-button:not(.collapsed),
+body.theme-verdant .faq-accordion .accordion-button:not(.collapsed) {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(23, 201, 100, 0.22);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+}
+
+html.theme-verdant .faq-accordion .accordion-body,
+body.theme-verdant .faq-accordion .accordion-body {
+  color: rgba(10, 16, 18, 0.76);
+  padding: 12px 16px 18px 16px;
+}
+
+/* Contact form components */
+html.theme-verdant .pill,
+body.theme-verdant .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: rgba(10, 16, 18, 0.72);
+  border: 1px solid rgba(10, 16, 18, 0.10);
+  background: rgba(255, 255, 255, 0.70);
+}
+
+html.theme-verdant .neon-grid,
+body.theme-verdant .neon-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+html.theme-verdant .neon-grid .span-2,
+body.theme-verdant .neon-grid .span-2 { grid-column: span 2; }
+
+@media (max-width: 768px) {
+  html.theme-verdant .neon-grid,
+  body.theme-verdant .neon-grid { grid-template-columns: 1fr; }
+  html.theme-verdant .neon-grid .span-2,
+  body.theme-verdant .neon-grid .span-2 { grid-column: auto; }
+}
+
+html.theme-verdant .field .lbl,
+body.theme-verdant .field .lbl {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+  color: rgba(10, 16, 18, 0.68);
+}
+
+html.theme-verdant .neon-input,
+body.theme-verdant .neon-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(10, 16, 18, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+  color: rgba(10, 16, 18, 0.88);
+  outline: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.70);
+}
+
+html.theme-verdant .neon-input::placeholder,
+body.theme-verdant .neon-input::placeholder { color: rgba(10, 16, 18, 0.40); }
+
+html.theme-verdant .neon-input:focus,
+body.theme-verdant .neon-input:focus {
+  border-color: rgba(23, 201, 100, 0.55);
+  box-shadow: 0 0 0 4px rgba(23, 201, 100, 0.14);
+}
+
+html.theme-verdant select.neon-input,
+body.theme-verdant select.neon-input {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(10,16,18,0.55) 50%),
+    linear-gradient(135deg, rgba(10,16,18,0.55) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 40px;
+}
+
+html.theme-verdant .neon-textarea,
+body.theme-verdant .neon-textarea {
+  resize: vertical;
+  min-height: 140px;
+}
+
+/* Tables */
+html.theme-verdant table,
+body.theme-verdant table { color: rgba(10, 16, 18, 0.86); }
+
+html.theme-verdant .table,
+html.theme-verdant table.table,
+body.theme-verdant .table,
+body.theme-verdant table.table { background: transparent; }
+
+html.theme-verdant .table th, html.theme-verdant .table td,
+body.theme-verdant .table th, body.theme-verdant .table td {
+  border-color: rgba(10, 16, 18, 0.10) !important;
+}
+
+/* Footer */
+html.theme-verdant footer,
+body.theme-verdant footer {
+  border-top: 1px solid rgba(10,16,18,0.10) !important;
+  background: rgba(255,255,255,0.62) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Focus */
+html.theme-verdant a:focus-visible,
+html.theme-verdant button:focus-visible,
+html.theme-verdant .btn:focus-visible,
+html.theme-verdant .neon-input:focus-visible,
+body.theme-verdant a:focus-visible,
+body.theme-verdant button:focus-visible,
+body.theme-verdant .btn:focus-visible,
+body.theme-verdant .neon-input:focus-visible {
+  outline: 2px solid rgba(43, 179, 255, 0.55);
+  outline-offset: 2px;
+}

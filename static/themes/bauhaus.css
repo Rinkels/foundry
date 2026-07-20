@@ -1,0 +1,449 @@
+/* bauhaus.css
+   Scope: html.theme-bauhaus, body.theme-bauhaus
+   Purpose: Bold, geometric “Bauhaus” light theme, drop-in compatible with:
+     - .neon-glass-card / .content-card / .card / .section-card
+     - .btn-glass / .cta-button / .btn-neon / .btn
+     - .neon-input / .neon-textarea / forms
+     - .faq-accordion (Bootstrap)
+   Works best when your theme class is applied to <html> OR <body>.
+*/
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap");
+
+html.theme-bauhaus,
+body.theme-bauhaus {
+  /* Core */
+  --bh-bg: #fbfaf6;                 /* warm paper */
+  --bh-ink: rgba(10, 12, 14, 0.92); /* near-black */
+  --bh-ink-2: rgba(10, 12, 14, 0.70);
+  --bh-muted: rgba(10, 12, 14, 0.56);
+
+  /* Surfaces */
+  --bh-surface: #ffffff;
+  --bh-surface-2: #f3f2ed;          /* subtle card alt */
+  --bh-border: rgba(10, 12, 14, 0.18);
+  --bh-border-strong: rgba(10, 12, 14, 0.82);
+
+  /* Bauhaus accents (primary colors) */
+  --bh-red: #e1262f;
+  --bh-yellow: #f3c623;
+  --bh-blue: #1a57ff;
+
+  /* Optional farm-ish accent (used sparingly) */
+  --bh-green: #12b45b;
+
+  /* Map to common tokens if your UI uses them */
+  --fractals-primary: var(--bh-blue);
+  --fractals-secondary: var(--bh-red);
+
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  color: var(--bh-ink);
+
+  background:
+    radial-gradient(900px 520px at 12% 10%, rgba(243, 198, 35, 0.10), transparent 60%),
+    radial-gradient(900px 520px at 88% 14%, rgba(26, 87, 255, 0.08), transparent 62%),
+    radial-gradient(900px 520px at 55% 110%, rgba(225, 38, 47, 0.07), transparent 62%),
+    linear-gradient(180deg, #ffffff 0%, var(--bh-bg) 55%, #ffffff 100%);
+
+  line-height: 1.58;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography */
+html.theme-bauhaus h1,
+html.theme-bauhaus h2,
+html.theme-bauhaus h3,
+html.theme-bauhaus h4,
+html.theme-bauhaus h5,
+body.theme-bauhaus h1,
+body.theme-bauhaus h2,
+body.theme-bauhaus h3,
+body.theme-bauhaus h4,
+body.theme-bauhaus h5 {
+  font-family: "Space Grotesk", "Inter", system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  color: rgba(10, 12, 14, 0.95);
+}
+
+html.theme-bauhaus h1,
+body.theme-bauhaus h1 { font-weight: 700; font-size: clamp(2.0rem, 2.5vw, 2.75rem); }
+
+html.theme-bauhaus h2,
+body.theme-bauhaus h2 { font-weight: 650; font-size: clamp(1.35rem, 1.7vw, 1.85rem); margin-top: 1.6rem; }
+
+html.theme-bauhaus h3,
+body.theme-bauhaus h3 { font-weight: 600; font-size: 1.2rem; margin-top: 1.2rem; }
+
+html.theme-bauhaus p,
+html.theme-bauhaus li,
+body.theme-bauhaus p,
+body.theme-bauhaus li { color: var(--bh-ink-2); }
+
+html.theme-bauhaus .text-muted,
+body.theme-bauhaus .text-muted { color: var(--bh-muted) !important; }
+
+/* Links */
+html.theme-bauhaus a,
+body.theme-bauhaus a {
+  color: rgba(10, 12, 14, 0.92);
+  text-decoration-color: rgba(26, 87, 255, 0.45);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+html.theme-bauhaus a:hover,
+body.theme-bauhaus a:hover {
+  color: rgba(10, 12, 14, 0.98);
+  text-decoration-color: rgba(225, 38, 47, 0.55);
+}
+
+/* Sticky header (works with your simple header container layout) */
+html.theme-bauhaus > .container:first-of-type,
+body.theme-bauhaus > .container:first-of-type {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  padding-top: 8px;
+  padding-bottom: 8px;
+
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 2px solid rgba(10, 12, 14, 0.12);
+}
+
+/* Nav spacing + alignment helper */
+html.theme-bauhaus .navbar-brand,
+html.theme-bauhaus .nav-link,
+body.theme-bauhaus .navbar-brand,
+body.theme-bauhaus .nav-link {
+  color: rgba(10, 12, 14, 0.86);
+}
+html.theme-bauhaus .nav-link:hover,
+body.theme-bauhaus .nav-link:hover { color: rgba(10, 12, 14, 0.98); }
+
+/* Logo */
+html.theme-bauhaus .navbar-brand img,
+body.theme-bauhaus .navbar-brand img {
+  height: 56px;
+  width: auto;
+  border-radius: 10px;
+
+  /* Bauhaus feel: crisp outline + minimal shadow */
+  border: 2px solid rgba(10, 12, 14, 0.18);
+  box-shadow: 4px 4px 0 rgba(10, 12, 14, 0.14);
+  filter: saturate(1.02) contrast(1.02);
+}
+
+/* Layout width */
+@media (min-width: 992px) {
+  html.theme-bauhaus main.container,
+  body.theme-bauhaus main.container { max-width: 1200px; }
+}
+@media (min-width: 1400px) {
+  html.theme-bauhaus main.container,
+  body.theme-bauhaus main.container { max-width: 1320px; }
+}
+
+/* Cards: geometric blocks with crisp shadow */
+html.theme-bauhaus .neon-glass-card,
+html.theme-bauhaus .content-card,
+html.theme-bauhaus .card,
+body.theme-bauhaus .neon-glass-card,
+body.theme-bauhaus .content-card,
+body.theme-bauhaus .card {
+  background: var(--bh-surface);
+  border: 2px solid rgba(10, 12, 14, 0.14);
+  border-radius: 14px;
+
+  /* crisp drop shadow, no blur */
+  box-shadow: 8px 8px 0 rgba(10, 12, 14, 0.14);
+}
+
+html.theme-bauhaus .neon-glass-card,
+body.theme-bauhaus .neon-glass-card { padding: 28px !important; }
+
+@media (max-width: 576px) {
+  html.theme-bauhaus .neon-glass-card,
+  body.theme-bauhaus .neon-glass-card { padding: 18px !important; }
+}
+
+/* Optional: section spacing */
+html.theme-bauhaus .section-card + .section-card,
+body.theme-bauhaus .section-card + .section-card { margin-top: 22px; }
+
+/* Hero image: framed poster block */
+html.theme-bauhaus .hero-image,
+body.theme-bauhaus .hero-image {
+  border-radius: 14px;
+  border: 2px solid rgba(10, 12, 14, 0.14);
+  box-shadow: 10px 10px 0 rgba(10, 12, 14, 0.16);
+}
+
+/* Pills / badges */
+html.theme-bauhaus .pill,
+body.theme-bauhaus .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: rgba(10, 12, 14, 0.74);
+
+  background: var(--bh-surface-2);
+  border: 2px solid rgba(10, 12, 14, 0.14);
+}
+
+/* Buttons */
+html.theme-bauhaus .btn,
+html.theme-bauhaus .btn-glass,
+html.theme-bauhaus .cta-button,
+html.theme-bauhaus .btn-neon,
+body.theme-bauhaus .btn,
+body.theme-bauhaus .btn-glass,
+body.theme-bauhaus .cta-button,
+body.theme-bauhaus .btn-neon {
+  border-radius: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+
+  border: 2px solid rgba(10, 12, 14, 0.18);
+  background: var(--bh-surface);
+  color: rgba(10, 12, 14, 0.90);
+
+  box-shadow: 6px 6px 0 rgba(10, 12, 14, 0.14);
+  transition: transform 110ms ease, box-shadow 110ms ease, filter 110ms ease;
+  will-change: transform;
+}
+
+html.theme-bauhaus .btn:hover,
+html.theme-bauhaus .btn-glass:hover,
+html.theme-bauhaus .cta-button:hover,
+html.theme-bauhaus .btn-neon:hover,
+body.theme-bauhaus .btn:hover,
+body.theme-bauhaus .btn-glass:hover,
+body.theme-bauhaus .cta-button:hover,
+body.theme-bauhaus .btn-neon:hover {
+  transform: translateY(-1px);
+  box-shadow: 7px 7px 0 rgba(10, 12, 14, 0.16);
+  filter: brightness(1.01);
+}
+
+html.theme-bauhaus .btn:active,
+html.theme-bauhaus .btn-glass:active,
+html.theme-bauhaus .cta-button:active,
+html.theme-bauhaus .btn-neon:active,
+body.theme-bauhaus .btn:active,
+body.theme-bauhaus .btn-glass:active,
+body.theme-bauhaus .cta-button:active,
+body.theme-bauhaus .btn-neon:active {
+  transform: translateY(0px);
+  box-shadow: 4px 4px 0 rgba(10, 12, 14, 0.14);
+}
+
+/* Primary actions: Bauhaus color blocks */
+html.theme-bauhaus .btn-primary,
+html.theme-bauhaus .cta-button,
+body.theme-bauhaus .btn-primary,
+body.theme-bauhaus .cta-button {
+  background: linear-gradient(180deg, var(--bh-blue), #1243d8);
+  color: rgba(255, 255, 255, 0.96);
+  border-color: rgba(10, 12, 14, 0.18);
+}
+
+html.theme-bauhaus .btn-danger,
+body.theme-bauhaus .btn-danger {
+  background: linear-gradient(180deg, var(--bh-red), #b81e26);
+  color: rgba(255, 255, 255, 0.96);
+}
+
+html.theme-bauhaus .btn-warning,
+body.theme-bauhaus .btn-warning {
+  background: linear-gradient(180deg, var(--bh-yellow), #d9aa14);
+  color: rgba(10, 12, 14, 0.92);
+}
+
+html.theme-bauhaus .btn-outline-primary,
+body.theme-bauhaus .btn-outline-primary {
+  background: var(--bh-surface);
+  color: rgba(10, 12, 14, 0.92);
+  border-color: rgba(26, 87, 255, 0.55);
+}
+
+/* Forms */
+html.theme-bauhaus .field .lbl,
+body.theme-bauhaus .field .lbl {
+  display: block;
+  font-size: 0.92rem;
+  margin-bottom: 6px;
+  color: rgba(10, 12, 14, 0.72);
+}
+
+html.theme-bauhaus .neon-input,
+html.theme-bauhaus .neon-textarea,
+body.theme-bauhaus .neon-input,
+body.theme-bauhaus .neon-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 2px solid rgba(10, 12, 14, 0.16);
+  background: var(--bh-surface);
+  color: rgba(10, 12, 14, 0.90);
+  outline: none;
+
+  box-shadow: 4px 4px 0 rgba(10, 12, 14, 0.10);
+}
+
+html.theme-bauhaus .neon-input::placeholder,
+html.theme-bauhaus .neon-textarea::placeholder,
+body.theme-bauhaus .neon-input::placeholder,
+body.theme-bauhaus .neon-textarea::placeholder {
+  color: rgba(10, 12, 14, 0.42);
+}
+
+html.theme-bauhaus .neon-input:focus,
+html.theme-bauhaus .neon-textarea:focus,
+body.theme-bauhaus .neon-input:focus,
+body.theme-bauhaus .neon-textarea:focus {
+  border-color: rgba(26, 87, 255, 0.72);
+  box-shadow:
+    0 0 0 4px rgba(26, 87, 255, 0.18),
+    4px 4px 0 rgba(10, 12, 14, 0.10);
+}
+
+html.theme-bauhaus select.neon-input,
+body.theme-bauhaus select.neon-input {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(10, 12, 14, 0.70) 50%),
+    linear-gradient(135deg, rgba(10, 12, 14, 0.70) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 40px;
+}
+
+html.theme-bauhaus .neon-textarea,
+body.theme-bauhaus .neon-textarea { resize: vertical; min-height: 140px; }
+
+/* Grid helper from your contact form */
+html.theme-bauhaus .neon-grid,
+body.theme-bauhaus .neon-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+html.theme-bauhaus .neon-grid .span-2,
+body.theme-bauhaus .neon-grid .span-2 { grid-column: span 2; }
+
+@media (max-width: 768px) {
+  html.theme-bauhaus .neon-grid,
+  body.theme-bauhaus .neon-grid { grid-template-columns: 1fr; }
+  html.theme-bauhaus .neon-grid .span-2,
+  body.theme-bauhaus .neon-grid .span-2 { grid-column: auto; }
+}
+
+/* Lists */
+html.theme-bauhaus ul,
+html.theme-bauhaus ol,
+body.theme-bauhaus ul,
+body.theme-bauhaus ol { padding-left: 1.2rem; }
+
+html.theme-bauhaus ul li::marker,
+body.theme-bauhaus ul li::marker { color: var(--bh-red); }
+
+/* FAQ accordion (Bootstrap) */
+html.theme-bauhaus .faq-accordion .accordion-item,
+body.theme-bauhaus .faq-accordion .accordion-item {
+  background: transparent;
+  border: 0;
+}
+
+html.theme-bauhaus .faq-accordion .accordion-button,
+body.theme-bauhaus .faq-accordion .accordion-button {
+  background: var(--bh-surface);
+  color: rgba(10, 12, 14, 0.92);
+  border-radius: 12px;
+  padding: 14px 16px;
+  border: 2px solid rgba(10, 12, 14, 0.14);
+  margin-bottom: 10px;
+  box-shadow: 6px 6px 0 rgba(10, 12, 14, 0.12);
+}
+
+html.theme-bauhaus .faq-accordion .accordion-button:not(.collapsed),
+body.theme-bauhaus .faq-accordion .accordion-button:not(.collapsed) {
+  border-color: rgba(225, 38, 47, 0.45);
+  box-shadow: 7px 7px 0 rgba(10, 12, 14, 0.14);
+}
+
+html.theme-bauhaus .faq-accordion .accordion-body,
+body.theme-bauhaus .faq-accordion .accordion-body {
+  color: rgba(10, 12, 14, 0.74);
+  padding: 12px 16px 18px 16px;
+}
+
+/* Tables */
+html.theme-bauhaus .table th,
+html.theme-bauhaus .table td,
+body.theme-bauhaus .table th,
+body.theme-bauhaus .table td {
+  border-color: rgba(10, 12, 14, 0.14) !important;
+}
+html.theme-bauhaus .table thead th,
+body.theme-bauhaus .table thead th {
+  background: var(--bh-surface-2);
+  border-bottom: 2px solid rgba(10, 12, 14, 0.18) !important;
+}
+
+/* Footer */
+html.theme-bauhaus footer,
+body.theme-bauhaus footer {
+  background: var(--bh-surface) !important;
+  border-top: 2px solid rgba(10, 12, 14, 0.12) !important;
+}
+
+/* Focus visibility */
+html.theme-bauhaus a:focus-visible,
+html.theme-bauhaus button:focus-visible,
+html.theme-bauhaus .btn:focus-visible,
+html.theme-bauhaus .neon-input:focus-visible,
+html.theme-bauhaus .neon-textarea:focus-visible,
+body.theme-bauhaus a:focus-visible,
+body.theme-bauhaus button:focus-visible,
+body.theme-bauhaus .btn:focus-visible,
+body.theme-bauhaus .neon-input:focus-visible,
+body.theme-bauhaus .neon-textarea:focus-visible {
+  outline: 3px solid rgba(243, 198, 35, 0.75);
+  outline-offset: 2px;
+}
+
+/* Optional: small Bauhaus “corner mark” helper you can add to cards
+   Usage: add class="bauhaus-mark mark-red" (or mark-blue / mark-yellow)
+*/
+html.theme-bauhaus .bauhaus-mark,
+body.theme-bauhaus .bauhaus-mark {
+  position: relative;
+  overflow: hidden;
+}
+html.theme-bauhaus .bauhaus-mark::after,
+body.theme-bauhaus .bauhaus-mark::after {
+  content: "";
+  position: absolute;
+  top: -16px;
+  right: -16px;
+  width: 52px;
+  height: 52px;
+  transform: rotate(45deg);
+  background: var(--bh-blue);
+  border: 2px solid rgba(10, 12, 14, 0.16);
+}
+html.theme-bauhaus .bauhaus-mark.mark-red::after,
+body.theme-bauhaus .bauhaus-mark.mark-red::after { background: var(--bh-red); }
+html.theme-bauhaus .bauhaus-mark.mark-yellow::after,
+body.theme-bauhaus .bauhaus-mark.mark-yellow::after { background: var(--bh-yellow); }
+html.theme-bauhaus .bauhaus-mark.mark-blue::after,
+body.theme-bauhaus .bauhaus-mark.mark-blue::after { background: var(--bh-blue); }
+html.theme-bauhaus .bauhaus-mark.mark-green::after,
+body.theme-bauhaus .bauhaus-mark.mark-green::after { background: var(--bh-green); }

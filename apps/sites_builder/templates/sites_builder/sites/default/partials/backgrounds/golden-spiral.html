@@ -1,0 +1,36 @@
+{% comment %}
+Golden-rectangle subdivision hero background — human-curated per site.
+Seven quarter-arcs draw in outermost→innermost, square guides fade in beneath,
+the eye pulses at the spiral's origin. Recolors entirely via --site-* tokens;
+all motion is gated on prefers-reduced-motion in landing.css. Inline SVG, ~1.5KB.
+{% endcomment %}
+<div class="lp-hero__bg" aria-hidden="true">
+  <div class="lp-glow"></div>
+  <div class="lp-glow2"></div>
+  {% comment %}
+  xMidYMid meet = whole composition (incl. the spiral eye) fits inside the
+  hero, centered — nothing crops into the next section. Negative
+  viewBox origin pads the drawing away from the hero edges.
+  {% endcomment %}
+  <svg class="lp-spiral" viewBox="-40 -60 1520 1010" preserveAspectRatio="xMidYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g class="lp-guides" stroke-width="1">
+      <rect x="0" y="0" width="890" height="890"/>
+      <rect x="890" y="0" width="550" height="550"/>
+      <rect x="1100" y="550" width="340" height="340"/>
+      <rect x="890" y="680" width="210" height="210"/>
+      <rect x="890" y="550" width="130" height="130"/>
+      <rect x="1020" y="550" width="80" height="80"/>
+      <rect x="1050" y="630" width="50" height="50"/>
+    </g>
+    <g class="lp-arcs" stroke-width="1.6" stroke-linecap="round">
+      <path class="lp-arc" d="M0 890 A890 890 0 0 1 890 0"/>
+      <path class="lp-arc" d="M890 0 A550 550 0 0 1 1440 550"/>
+      <path class="lp-arc" d="M1440 550 A340 340 0 0 1 1100 890"/>
+      <path class="lp-arc" d="M1100 890 A210 210 0 0 1 890 680"/>
+      <path class="lp-arc" d="M890 680 A130 130 0 0 1 1020 550"/>
+      <path class="lp-arc" d="M1020 550 A80 80 0 0 1 1100 630"/>
+      <path class="lp-arc" d="M1100 630 A50 50 0 0 1 1050 680"/>
+    </g>
+    <circle class="lp-eye" cx="1050" cy="680" r="3.5"/>
+  </svg>
+</div>

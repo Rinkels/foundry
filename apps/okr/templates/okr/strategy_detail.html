@@ -1,0 +1,69 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div style="max-width: 1100px; margin: 0 auto;">
+
+  <div class="neon-glass-card p-4 mb-3">
+    <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+      <div>
+        <h2 class="mb-1">{{ object.name }}</h2>
+        {% if object.description %}
+          <div class="text-soft">{{ object.description }}</div>
+        {% else %}
+          <div class="text-soft"><em>No description.</em></div>
+        {% endif %}
+      </div>
+
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'okr:strategy-edit' object.pk %}" class="btn-glass">✏️ Edit</a>
+        <a href="{% url 'okr:strategy-delete' object.pk %}" class="btn-glass" style="border-color: rgba(255,91,122,.45);">🗑️ Delete</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex align-items-end justify-content-between gap-3 mb-3">
+    <div>
+      <h3 class="mb-0">Objectives</h3>
+      <div class="text-soft mt-1">Everything that moves this strategy forward.</div>
+    </div>
+
+    <a href="{% url 'okr:objective-create' %}?strategy={{ object.pk }}" class="btn-glass">
+      ➕ Add Objective
+    </a>
+  </div>
+
+  <div class="row g-3">
+    {% for objective in object.objectives.all %}
+      <div class="col-12 col-md-6">
+        <div class="neon-glass-card p-4 h-100">
+          <div class="d-flex align-items-start justify-content-between gap-3">
+            <div>
+              <h4 class="mb-1">{{ objective.name }}</h4>
+              <div class="text-soft">
+                <strong>Owner:</strong> {{ objective.owner|default:"—" }}
+              </div>
+            </div>
+          </div>
+
+          <div class="text-soft mt-2">
+            {{ objective.description|default:""|truncatewords:25 }}
+          </div>
+
+          <div class="d-flex gap-2 flex-wrap mt-3">
+            <a href="{% url 'okr:objective-detail' objective.pk %}" class="btn-glass">View</a>
+            <a href="{% url 'okr:objective-edit' objective.pk %}" class="btn-glass">Edit</a>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="col-12">
+        <div class="neon-glass-card p-4">
+          <div class="text-soft">No objectives linked to this strategy yet.</div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+{% endblock %}

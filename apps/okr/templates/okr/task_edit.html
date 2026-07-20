@@ -1,0 +1,96 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div class="glass-header mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="mb-0">Edit Task</h1>
+      <div class="text-soft">{{ object.title }}</div>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="btn-glass" href="{% url 'okr:task-detail' object.pk %}">← Back</a>
+      <a class="btn-glass" href="{% url 'okr:task-list' %}">📋 Tasks</a>
+    </div>
+  </div>
+</div>
+
+<form method="post" class="row g-3">
+  {% csrf_token %}
+
+  <!-- LEFT: Main fields -->
+  <div class="col-12 col-lg-7">
+    <div class="neon-glass-card p-3">
+      <h3 class="mb-3">Details</h3>
+
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <label class="text-soft small mb-1">{{ form.status.label }}</label>
+          {{ form.status }}
+          {% if form.status.errors %}<div class="text-danger small mt-1">{{ form.status.errors }}</div>{% endif %}
+        </div>
+
+        <div class="col-12 col-md-6 d-flex align-items-end">
+          <div class="form-check">
+            {{ form.completed }}
+            <label class="form-check-label ms-1" for="{{ form.completed.id_for_label }}">Completed</label>
+          </div>
+          {% if form.completed.errors %}<div class="text-danger small mt-1">{{ form.completed.errors }}</div>{% endif %}
+        </div>
+
+        <div class="col-12">
+          <label class="text-soft small mb-1">{{ form.title.label }}</label>
+          {{ form.title }}
+          {% if form.title.errors %}<div class="text-danger small mt-1">{{ form.title.errors }}</div>{% endif %}
+        </div>
+
+        <div class="col-12 col-md-7">
+          <label class="text-soft small mb-1">{{ form.assigned_user.label }}</label>
+          {{ form.assigned_user }}
+          {% if form.assigned_user.errors %}<div class="text-danger small mt-1">{{ form.assigned_user.errors }}</div>{% endif %}
+        </div>
+
+        <div class="col-12 col-md-5">
+          <label class="text-soft small mb-1">{{ form.due_date.label }}</label>
+          {{ form.due_date }}
+          {% if form.due_date.errors %}<div class="text-danger small mt-1">{{ form.due_date.errors }}</div>{% endif %}
+        </div>
+
+        <div class="col-12">
+          <label class="text-soft small mb-1">{{ form.notes.label }}</label>
+          {{ form.notes }}
+          {% if form.notes.errors %}<div class="text-danger small mt-1">{{ form.notes.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Summary + actions -->
+  <div class="col-12 col-lg-5">
+    <div class="neon-glass-card p-3">
+      <h3 class="mb-2">Save</h3>
+      <div class="text-soft small mb-3">
+        Keep tasks crisp and traceable. Assign an owner, set a due date, attach the docs in Task Detail.
+      </div>
+
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn-glass" type="submit">💾 Save changes</button>
+        <a class="btn-glass" href="{% url 'okr:task-detail' object.pk %}">Cancel</a>
+      </div>
+
+      <hr class="border-soft my-3">
+
+      <div class="text-soft small">
+        <div>Story: {% if object.story %}{{ object.story }}{% else %}—{% endif %}</div>
+        <div>Created: {{ object.created_at }}</div>
+        <div>Updated: {{ object.updated_at }}</div>
+      </div>
+    </div>
+  </div>
+</form>
+
+{% endblock %}

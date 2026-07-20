@@ -1,0 +1,93 @@
+{% extends "common/base.html" %}
+
+{% block title %}Fractals Builder - Sites{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto;">
+  <div class="d-flex align-items-end justify-content-between flex-wrap gap-2 mb-3">
+    <div>
+      <h1 class="mb-0">Sites</h1>
+      <div class="text-soft mt-1">Manage generation, build, deploy, and theming across your sites.</div>
+    </div>
+
+    <a href="/admin/sites_builder/site/add/" class="btn-glass">
+      <i class="fa-solid fa-plus"></i> New Site (admin)
+    </a>
+        {# --- Website download tool --- #}
+  <div class="neon-glass-card p-4 mb-3">
+    <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+      <div>
+        <div class="h5 mb-1">Download a Website</div>
+        <div class="text-soft" style="font-size:.9rem;">
+          Enter a URL and Fractals will scrape and package it for download (ZIP).
+        </div>
+      </div>
+    </div>
+
+    <form method="post" action="{% url 'sites_builder:website_download' %}" class="mt-3">
+      {% csrf_token %}
+      <div class="d-flex gap-2 flex-wrap">
+        <input
+          type="url"
+          name="url"
+          class="form-control"
+          placeholder="https://example.com"
+          required
+          style="min-width: 320px; flex: 1;"
+        />
+        <button type="submit" class="btn-glass">
+          <i class="fa-solid fa-download"></i> Download
+        </button>
+      </div>
+      <div class="text-soft mt-2" style="font-size:.85rem;">
+        Note: large sites may take longer. Start with a single-page URL.
+      </div>
+    </form>
+  </div>
+
+  </div>
+
+  {% if site_infos %}
+    <div class="row g-3">
+      {% for info in site_infos %}
+        {% with site=info.site %}
+          <div class="col-12 col-md-6 col-lg-4">
+            <div class="neon-glass-card p-4 h-100">
+              <div class="d-flex align-items-start justify-content-between gap-3">
+                <div>
+                  <div class="h5 mb-1">{{ site.name }}</div>
+                  <div class="text-soft" style="font-size:.9rem;">
+                    <code>{{ site.slug }}</code>
+                  </div>
+                </div>
+                <div class="text-end">
+                  <div class="pill">Pages {{ info.page_count }}</div>
+                  <div class="pill mt-2">Roots {{ info.root_count }}</div>
+                </div>
+              </div>
+
+              <div class="text-soft mt-3" style="font-size:.9rem;">
+                Max depth: <strong>{{ site.max_depth }}</strong><br>
+                Max children/page: <strong>{{ site.max_children_per_page }}</strong>
+              </div>
+
+              <div class="d-flex gap-2 flex-wrap mt-4">
+                <a href="{% url 'sites_builder:site_detail' site.pk %}" class="btn-glass">
+                  Open
+                </a>
+                <a href="/admin/sites_builder/site/{{ site.pk }}/change/" class="btn-glass">
+                  Edit (admin)
+                </a>
+              </div>
+            </div>
+          </div>
+        {% endwith %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="neon-glass-card p-4">
+      <div class="text-soft">No sites yet. Use the admin to create one.</div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

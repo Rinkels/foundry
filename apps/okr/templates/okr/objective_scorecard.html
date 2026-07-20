@@ -1,0 +1,65 @@
+{% extends "common/base.html" %}
+{% block content %}
+  <div class="neon-glass-card p-4">
+    <h2>📊 Scorecard: {{ objective.name }}</h2>
+    <p class="muted">{{ objective.description }}</p>
+  </div>
+
+  {% if not rows %}
+    <div class="neon-glass-card p-4 mt-3">
+      <p>No scorecard dimensions attached yet.</p>
+      <p class="muted">Add MetricDimensions and attach KeyResultMetrics to your Key Results.</p>
+    </div>
+  {% endif %}
+
+  {% for row in rows %}
+    <div class="neon-glass-card p-4 mt-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h4 class="mb-1">{{ row.dimension.name }}</h4>
+          {% if row.dimension.category %}<span class="pill">{{ row.dimension.category }}</span>{% endif %}
+        </div>
+        <div class="text-end">
+          {% if row.avg_progress != None %}
+            <div class="pill">Avg progress: {{ row.avg_progress|floatformat:2 }}</div>
+          {% else %}
+            <div class="pill">Avg progress: N/A</div>
+          {% endif %}
+          <div class="mt-1">
+            <span class="pill">🟢 {{ row.rag.green }}</span>
+            <span class="pill">🟡 {{ row.rag.yellow }}</span>
+            <span class="pill">🔴 {{ row.rag.red }}</span>
+            <span class="pill">⚪ {{ row.rag.gray }}</span>
+          </div>
+        </div>
+      </div>
+
+      <hr style="opacity:.15"/>
+
+      <table class="table table-sm table-borderless text-white">
+        <thead style="opacity:.85">
+          <tr>
+            <th>Key Result</th>
+            <th>Target</th>
+            <th>Current</th>
+            <th>Unit</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in row.items %}
+            <tr>
+              <td>{{ item.kr.name }}</td>
+              <td>{{ item.metric.target_value }}</td>
+              <td>{{ item.metric.current_value }}</td>
+              <td>{{ item.metric.unit }}</td>
+              <td>
+                {% if item.rag == "green" %}🟢{% elif item.rag == "yellow" %}🟡{% elif item.rag == "red" %}🔴{% else %}⚪{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endfor %}
+{% endblock %}

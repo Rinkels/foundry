@@ -1,0 +1,351 @@
+/* Aurora Theme - FULL UPDATED VERSION */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..800&family=Space+Grotesk:wght@400..700&display=swap");
+
+/* 1. LAYOUT ENGINE (Updated for Sticky Footer) */
+html { height: 100%; }
+
+body.theme-aurora,
+body.theme-verdant,
+body.theme-bauhaus {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  background: transparent; /* important to avoid seams */
+}
+
+/* Ensure the main content area grows to fill space */
+main#article-main,
+main.container {
+  flex: 1 0 auto;
+}
+
+/* --- ALL ORIGINAL THEME STYLES START HERE (UNTOUCHED) --- */
+/* Paint aurora background ONCE (on html) to avoid seam/restart */
+html.theme-aurora {
+  --aurora-bg: #050812;
+  --aurora-surface: rgba(255,255,255,0.045);
+  --aurora-surface-2: rgba(255,255,255,0.070);
+  --aurora-border: rgba(255,255,255,0.11);
+
+  --aurora-text: rgba(255, 255, 255, 0.92);
+  --aurora-muted: rgba(255, 255, 255, 0.70);
+  --aurora-accent: #38f2c5;
+  --aurora-accent-2: var(--fractals-secondary, #8b7dff);
+
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  color: var(--aurora-text);
+
+  background:
+    radial-gradient(900px 600px at 12% 8%, rgba(56, 242, 197, 0.22), transparent 62%),
+    radial-gradient(900px 600px at 88% 10%, rgba(166, 125, 255, 0.22), transparent 62%),
+    radial-gradient(800px 700px at 50% 105%, rgba(255, 255, 255, 0.05), transparent 58%),
+    linear-gradient(180deg, #02040a 0%, var(--aurora-bg) 45%, #02040a 100%);
+
+  background-attachment: fixed;
+  line-height: 1.58;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Body should be transparent so it doesn't "repaint" the background */
+body.theme-aurora {
+  background: transparent !important;
+}
+
+
+/* Headings */
+html.theme-aurora h1, body.theme-aurora h1,
+html.theme-aurora h2, body.theme-aurora h2,
+html.theme-aurora h3, body.theme-aurora h3,
+html.theme-aurora h4, body.theme-aurora h4,
+html.theme-aurora h5, body.theme-aurora h5 {
+  font-family: "Space Grotesk", "Inter", system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.96);
+}
+
+html.theme-aurora h1, body.theme-aurora h1 { font-weight: 700; font-size: clamp(2.1rem, 2.7vw, 2.8rem); }
+html.theme-aurora h2, body.theme-aurora h2 { font-weight: 650; font-size: clamp(1.4rem, 1.7vw, 1.85rem); margin-top: 1.6rem; }
+html.theme-aurora h3, body.theme-aurora h3 { font-weight: 600; font-size: 1.25rem; margin-top: 1.2rem; }
+
+html.theme-aurora p, body.theme-aurora p,
+html.theme-aurora li, body.theme-aurora li {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+html.theme-aurora .text-muted,
+body.theme-aurora .text-muted {
+  color: var(--aurora-muted) !important;
+}
+/* Links */
+html.theme-aurora a,
+body.theme-aurora a {
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration-color: rgba(255, 255, 255, 0.22);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+html.theme-aurora a:hover,
+body.theme-aurora a:hover {
+  color: #fff;
+  text-decoration-color: rgba(255, 255, 255, 0.55);
+}
+
+/* Layout width */
+@media (min-width: 992px) {
+  html.theme-aurora main.container,
+  body.theme-aurora main.container { max-width: 1200px; }
+}
+@media (min-width: 1400px) {
+  html.theme-aurora main.container,
+  body.theme-aurora main.container { max-width: 1320px; }
+}
+
+/* Sticky header */
+html.theme-aurora > .container:first-of-type,
+body.theme-aurora > .container:first-of-type {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  flex-wrap: nowrap;
+  background: linear-gradient(180deg, rgba(10, 16, 24, 0.68), rgba(10, 16, 24, 0.40));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+html.theme-aurora .navbar-brand, body.theme-aurora .navbar-brand,
+html.theme-aurora .nav-link, body.theme-aurora .nav-link {
+  color: rgba(255, 255, 255, 0.92);
+}
+html.theme-aurora .nav-link:hover,
+body.theme-aurora .nav-link:hover { color: #fff; }
+
+/* Logo */
+html.theme-startup .navbar-brand img,
+body.theme-startup .navbar-brand img,
+html.theme-aurora .navbar-brand img,
+body.theme-aurora .navbar-brand img {
+  height: 56px;
+  width: auto;
+  border-radius: 10px;
+  opacity: 0.92;
+  filter: saturate(1.08) contrast(1.05);
+  box-shadow:
+    0 10px 24px rgba(0,0,0,0.35),
+    0 0 18px rgba(124, 247, 212, 0.18);
+}
+
+/* Cards */
+html.theme-aurora .neon-glass-card, body.theme-aurora .neon-glass-card,
+html.theme-aurora .content-card, body.theme-aurora .content-card,
+html.theme-aurora .card, body.theme-aurora .card {
+  background: linear-gradient(180deg, var(--aurora-surface), rgba(255,255,255,0.04));
+  border: 1px solid var(--aurora-border);
+  border-radius: 18px;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.34);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+html.theme-aurora .neon-glass-card,
+body.theme-aurora .neon-glass-card { padding: 28px !important; }
+
+@media (max-width: 576px) {
+  html.theme-aurora .neon-glass-card,
+  body.theme-aurora .neon-glass-card { padding: 18px !important; }
+}
+
+html.theme-aurora .section-card + .section-card,
+body.theme-aurora .section-card + .section-card {
+  margin-top: 22px;
+}
+
+/* Hero */
+html.theme-aurora .hero-image,
+body.theme-aurora .hero-image {
+  border-radius: 16px;
+  box-shadow: 0 18px 44px rgba(0,0,0,0.45);
+}
+
+/* Buttons */
+html.theme-aurora .btn, body.theme-aurora .btn,
+html.theme-aurora .btn-glass, body.theme-aurora .btn-glass,
+html.theme-aurora .cta-button, body.theme-aurora .cta-button,
+html.theme-aurora .btn-neon, body.theme-aurora .btn-neon {
+  border-radius: 999px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+  will-change: transform;
+}
+
+html.theme-aurora .btn-primary, body.theme-aurora .btn-primary,
+html.theme-aurora .cta-button, body.theme-aurora .cta-button {
+  background: linear-gradient(135deg, var(--aurora-accent), var(--aurora-accent-2));
+  color: #060914;
+}
+
+html.theme-aurora .btn:hover, body.theme-aurora .btn:hover,
+html.theme-aurora .btn-glass:hover, body.theme-aurora .btn-glass:hover,
+html.theme-aurora .cta-button:hover, body.theme-aurora .cta-button:hover,
+html.theme-aurora .btn-neon:hover, body.theme-aurora .btn-neon:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(0,0,0,0.30);
+}
+
+/* Lists */
+html.theme-aurora ul, body.theme-aurora ul,
+html.theme-aurora ol, body.theme-aurora ol {
+  padding-left: 1.2rem;
+}
+html.theme-aurora ul li::marker,
+body.theme-aurora ul li::marker {
+  color: rgba(124, 247, 212, 0.95);
+}
+
+@media (min-width: 992px) {
+  html.theme-aurora ul.list-cols-2, body.theme-aurora ul.list-cols-2 {
+    columns: 2;
+    column-gap: 38px;
+  }
+  html.theme-aurora ul.list-cols-2 li,
+  body.theme-aurora ul.list-cols-2 li {
+    break-inside: avoid;
+    margin-bottom: 6px;
+  }
+}
+
+/* Accordions */
+html.theme-aurora .faq-accordion .accordion-item,
+body.theme-aurora .faq-accordion .accordion-item {
+  background: transparent;
+  border: 0;
+}
+html.theme-aurora .faq-accordion .accordion-button,
+body.theme-aurora .faq-accordion .accordion-button {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.94);
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  margin-bottom: 10px;
+}
+html.theme-aurora .faq-accordion .accordion-button:not(.collapsed),
+body.theme-aurora .faq-accordion .accordion-button:not(.collapsed) {
+  background: rgba(255, 255, 255, 0.075);
+}
+html.theme-aurora .faq-accordion .accordion-body,
+body.theme-aurora .faq-accordion .accordion-body {
+  color: rgba(255, 255, 255, 0.86);
+  padding: 12px 16px 18px 16px;
+}
+
+/* Contact form components */
+html.theme-aurora .pill,
+body.theme-aurora .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html.theme-aurora .neon-grid,
+body.theme-aurora .neon-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+html.theme-aurora .neon-grid .span-2,
+body.theme-aurora .neon-grid .span-2 { grid-column: span 2; }
+
+@media (max-width: 768px) {
+  html.theme-aurora .neon-grid,
+  body.theme-aurora .neon-grid { grid-template-columns: 1fr; }
+  html.theme-aurora .neon-grid .span-2,
+  body.theme-aurora .neon-grid .span-2 { grid-column: auto; }
+}
+
+html.theme-aurora .field .lbl,
+body.theme-aurora .field .lbl {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+html.theme-aurora .neon-input,
+body.theme-aurora .neon-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+html.theme-aurora .neon-input::placeholder,
+body.theme-aurora .neon-input::placeholder { color: rgba(255, 255, 255, 0.45); }
+
+html.theme-aurora .neon-input:focus,
+body.theme-aurora .neon-input:focus {
+  border-color: rgba(124, 247, 212, 0.58);
+  box-shadow: 0 0 0 4px rgba(124, 247, 212, 0.12);
+}
+
+html.theme-aurora select.neon-input,
+body.theme-aurora select.neon-input {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(255,255,255,0.65) 50%),
+    linear-gradient(135deg, rgba(255,255,255,0.65) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 40px;
+}
+
+html.theme-aurora .neon-textarea,
+body.theme-aurora .neon-textarea {
+  resize: vertical;
+  min-height: 140px;
+}
+/* --- THE FIX FOR ARTICLE PAGES --- */
+
+/* Footer cleanup */
+body[class*="theme-"] footer {
+  flex-shrink: 0; /* Prevents footer from squishing */
+  position: static !important;
+  margin-top: auto !important; /* Pushes footer to bottom if content is short */
+  border-top: 1px solid rgba(255,255,255,0.10) !important;
+  background: rgba(0,0,0,0.28) !important;
+}
+
+/* Main Container Fix: Removing the huge padding that caused the stretch */
+body.article-page main#article-main {
+  background: transparent !important;
+  padding-bottom: 24px !important; /* Reduced from 96px */
+  margin-bottom: 60px !important;  /* Creates the gap OUTSIDE the box */
+  outline: none !important;        /* Removed debug lime outline */
+}
+
+/* Removed other debug outlines */
+body.article-page footer,
+body.article-page .neon-glass-card {
+  outline: none !important;
+}

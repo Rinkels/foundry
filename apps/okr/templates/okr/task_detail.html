@@ -1,0 +1,172 @@
+{% extends "common/base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div class="glass-header mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="mb-0">Task</h1>
+      <div class="text-soft">{{ task.title }}</div>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="btn-glass" href="{% url 'okr:task-list' %}">← Tasks</a>
+      {% if task.story %}
+        <a class="btn-glass" href="{% url 'okr:story-detail' task.story.pk %}">📘 Story</a>
+      {% endif %}
+      <a class="btn-glass" href="{% url 'okr:task-edit' task.pk %}">✏️ Edit</a>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- LEFT: Task details -->
+  <div class="col-12 col-lg-7">
+    <div class="neon-glass-card p-3">
+      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div>
+          <h3 class="mb-1">{{ task.title }}</h3>
+
+          <div class="d-flex flex-wrap gap-2 mt-2">
+            <span class="badge bg-secondary">{{ task.status }}</span>
+            {% if task.completed %}
+              <span class="badge bg-success">Completed</span>
+            {% else %}
+              <span class="badge bg-warning text-dark">Open</span>
+            {% endif %}
+            {% if task.due_date %}
+              <span class="badge bg-info text-dark">Due {{ task.due_date }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="text-end text-soft small">
+          <div>Created: {{ task.created_at }}</div>
+          <div>Updated: {{ task.updated_at }}</div>
+        </div>
+      </div>
+
+      <hr class="border-soft my-3">
+
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <div class="text-soft small">Assigned To</div>
+          <div>{{ task.assigned_to|default:"—" }}</div>
+        </div>
+        <div class="col-12 col-md-6">
+          <div class="text-soft small">Story</div>
+          <div>
+            {% if task.story %}
+              <a href="{% url 'okr:story-detail' task.story.pk %}">{{ task.story }}</a>
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <div class="text-soft small mb-1">Notes</div>
+        <div class="p-3 rounded" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
+          {{ task.notes|linebreaksbr|default:"<span class='text-soft'>No notes yet.</span>"|safe }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Attachments / Actions -->
+  <div class="col-12 col-lg-5">
+    <div class="neon-glass-card p-3">
+      <h4 class="mb-2">📎 Attachments</h4>
+      <div class="text-soft small mb-3">
+        Upload files here (PnL statements, safety docs, certifications) and they’ll follow this task.
+      </div>
+
+      {# ---- Mnemos upload form (requires mnemos urls/view) ---- #}
+      {# If you haven't wired mnemos yet, you can comment this block out safely. #}
+
+      <form method="post"
+            action="{% url 'mnemos:upload_attach' %}"
+            enctype="multipart/form-data"
+            class="mb-3">
+        {% csrf_token %}
+        <input type="hidden" name="app_label" value="okr">
+        <input type="hidden" name="model" value="task">
+        <input type="hidden" name="object_id" value="{{ task.pk }}">
+        <input type="hidden" name="next" value="{% url 'okr:task-detail' task.pk %}">
+
+        <div class="mb-2">
+          <label class="text-soft small">Label</label>
+          <input type="text" name="label" class="form-control" placeholder="PNL / Safety Manual / License">
+        </div>
+
+        <div class="mb-2">
+          <label class="text-soft small">File</label>
+          <input type="file" name="file" class="form-control" required>
+        </div>
+
+        <button class="btn-glass w-100" type="submit">Upload & Attach</button>
+      </form>
+
+      <div class="mt-2">
+        {% if attachments %}
+          <div class="d-flex flex-column gap-2">
+            {% for a in attachments %}
+              <div class="p-2 rounded"
+                   style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <div>
+                    <div>
+                      <strong>{{ a.label|default:"File" }}</strong>
+                      <span class="text-soft">•</span>
+                      <span class="text-soft">{{ a.file_asset.original_name }}</span>
+                    </div>
+                    <div class="text-soft small">{{ a.created_at }}</div>
+                  </div>
+                  <a class="btn-glass" href="{{ a.file_asset.file.url }}" target="_blank">Open</a>
+                </div>
+              </div>
+            {% endfor %}
+             <div class="neon-glass-card p-3 mt-3">
+  <h4 class="mb-2">🧠 Saved Analyses (Mnemos)</h4>
+
+  {% for a in ai_artifacts %}
+    <div class="p-2 rounded mb-2" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
+      <div class="d-flex justify-content-between align-items-start gap-2">
+        <div>
+          <strong>{{ a.title|default:"AI Analysis" }}</strong>
+          <div class="text-soft small">{{ a.created_at }} • {{ a.model }}</div>
+        </div>
+        {# Later: link to a global Mnemos artifact detail page #}
+      </div>
+      <div class="text-soft small mt-2">{{ a.output_text|truncatechars:220 }}</div>
+    </div>
+  {% empty %}
+    <div class="text-soft">No saved analyses yet.</div>
+  {% endfor %}
+</div>
+
+          </div>
+        {% else %}
+          <div class="text-soft">No files attached yet.</div>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <div class="neon-glass-card p-3 mt-3">
+      <h4 class="mb-2">Quick actions</h4>
+      <div class="d-flex gap-2 flex-wrap">
+          <form method="post" action="{% url 'okr:task-analyze' task.pk %}" class="mt-2">
+              {% csrf_token %}
+              <button class="btn-glass" type="submit">🧠 Analyze attachments → save to notes</button>
+          </form>
+        <a class="btn-glass" href="{% url 'okr:task-edit' task.pk %}">✏️ Edit Task</a>
+        <a class="btn-glass" href="{% url 'okr:task-list' %}">📋 Back to List</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

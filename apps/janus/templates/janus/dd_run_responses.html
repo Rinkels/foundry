@@ -1,0 +1,299 @@
+{% extends "common/base.html" %}
+{% block content %}
+{% load humanize %}
+
+<style>
+.offcanvas {
+  border-left: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 0 28px rgba(0,0,0,.35);
+}
+.offcanvas .form-control, .offcanvas .form-select {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.14);
+  color: #fff;
+}
+.offcanvas .form-control:focus, .offcanvas .form-select:focus {
+  border-color: rgba(255,255,255,.28);
+  box-shadow: none;
+}
+.border-soft { border-color: rgba(255,255,255,.12) !important; }
+</style>
+
+<div class="d-flex align-items-end justify-content-between gap-3 mb-3 flex-wrap">
+  <div>
+    <div class="text-soft small">
+      <a href="{% url 'janus:dd-run-detail' run.id %}">← Back to run dashboard</a>
+      • <a href="{% url 'janus:dd-cockpit' %}">Cockpit</a>
+    </div>
+    <h1 class="mb-0">Responses: {{ run.target_company.name }}</h1>
+    <div class="text-soft mt-1">{{ run.template }} • Round {{ run.round_number }}</div>
+  </div>
+
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn-glass" href="/admin/janus/ddresponse/?run__id__exact={{ run.id }}">Open in admin</a>
+
+    <a class="btn-glass {% if only_unknown %}active{% endif %}"
+       href="{% url 'janus:dd-run-responses' run.id %}?unknown=1">
+      Show unknown
+    </a>
+
+    <a class="btn-glass {% if only_nonneg %}active{% endif %}"
+       href="{% url 'janus:dd-run-responses' run.id %}?nonneg=1">
+      Non-negotiables
+    </a>
+<a class="btn-glass"
+   href="{% url 'janus:dd-run-questions-pdf' run.id %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
+   target="_blank" rel="noopener">
+  🖨️ Printable Questions (PDF)
+</a>
+<a class="btn-glass"
+   href="{% url 'janus:dd-run-qna-pdf' run.id %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
+   target="_blank" rel="noopener">
+  🧾 Questions + Answers (PDF)
+</a>
+
+    <a class="btn-glass" href="{% url 'janus:dd-run-responses' run.id %}">Clear</a>
+  </div>
+</div>
+
+<div class="neon-glass-card p-4">
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th style="min-width:160px;">Section</th>
+          <th style="min-width:220px;">Criterion</th>
+          <th class="text-center" style="width:90px;">Score</th>
+          <th style="min-width:120px;">Confidence</th>
+          <th style="min-width:140px;">Assessed by</th>
+          <th>Commentary</th>
+          <th style="width:120px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in responses %}
+          <tr id="r{{ r.id }}">
+            <td class="text-soft">{{ r.criterion.section.title }}</td>
+            <td>
+              <div style="font-weight:700;">
+                {{ r.criterion.title }}
+                {% if r.criterion.non_negotiable %}
+                  <span class="badge bg-danger">NN</span>
+                {% endif %}
+              </div>
+              <div class="text-soft small">Weight {{ r.criterion.weight }}</div>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-dark">{{ r.score_value }}</span>
+            </td>
+            <td>{{ r.confidence|title }}</td>
+            <td class="text-soft">{% if r.assessed_by %}{{ r.assessed_by }}{% else %}-{% endif %}</td>
+            <td class="text-soft small">
+              {% if r.commentary %}
+                {{ r.commentary|truncatechars:120 }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <button
+                type="button"
+                class="btn-glass"
+                data-bs-toggle="offcanvas"
+                data-bs-target="#responseEditor"
+                data-response-id="{{ r.id }}"
+                data-criterion-title="{{ r.criterion.title|escape }}"
+                data-section-title="{{ r.criterion.section.title|escape }}"
+                data-score="{{ r.score_value }}"
+                data-confidence="{{ r.confidence }}"
+                data-commentary="{{ r.commentary|default_if_none:''|escape }}"
+              >
+                Edit
+              </button>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="text-soft">No responses found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Offcanvas Editor -->
+<div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="responseEditor" aria-labelledby="responseEditorLabel" style="width: 520px;">
+  <div class="offcanvas-header">
+    <div>
+      <div class="text-soft small" id="editorSection">Section</div>
+      <h5 class="offcanvas-title" id="responseEditorLabel">Edit Response</h5>
+      <div class="text-soft small" id="editorCriterion">Criterion</div>
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+
+  <div class="offcanvas-body">
+
+    <!-- MAIN EDIT FORM (Save/Cancel must be inside this form) -->
+    <form method="post" id="responseEditorForm" action="">
+      {% csrf_token %}
+
+      <div class="mb-3">
+        <label class="form-label text-soft">Score (0–5)</label>
+        <input class="form-control" type="number" min="0" max="5" step="1" name="score_value" id="editorScore" required>
+        <div class="text-soft small mt-1">Clamped to the criterion’s scoring scale on save.</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label text-soft">Confidence</label>
+        <select class="form-select" name="confidence" id="editorConfidence">
+          <option value="low">Low</option>
+          <option value="med">Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label text-soft">Commentary</label>
+        <textarea class="form-control" name="commentary" id="editorCommentary" rows="7"
+                  placeholder="Evidence, rationale, what you saw, and what’s missing..."></textarea>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Save</button>
+        <button class="btn btn-outline-light" type="button" data-bs-dismiss="offcanvas">Cancel</button>
+      </div>
+
+      <div class="text-soft small mt-3">
+        Saving will mark <strong>Assessed by</strong> as you and refresh the run score.
+      </div>
+    </form>
+
+    <hr class="border-soft my-3">
+
+    <!-- ATTACHMENTS (separate form; do not nest) -->
+    <h5 class="mb-2">📎 Attachments</h5>
+    <div class="text-soft small mb-3">
+      Upload files (P&L, contracts, SOC2, screenshots) and attach them to this response.
+      <div class="text-soft small mt-1">
+        Tip: click 📎 on a row to load that response’s attachments into this panel.
+      </div>
+    </div>
+
+    <form method="post"
+          action="{% url 'mnemos:upload_attach' %}"
+          enctype="multipart/form-data"
+          class="mb-3">
+      {% csrf_token %}
+
+  <input type="hidden" name="app_label" value="janus">
+  <input type="hidden" name="model" value="ddresponse">
+  <input type="hidden" name="object_id" id="att_object_id" value="">
+  <input type="hidden" name="next" id="att_next" value="">
+
+      <div class="mb-2">
+        <label class="text-soft small">Label</label>
+        <input type="text" name="label" class="form-control" placeholder="Contract / P&L / Evidence">
+      </div>
+
+      <div class="mb-2">
+        <label class="text-soft small">File</label>
+        <input type="file" name="file" class="form-control" required>
+      </div>
+
+      <button class="btn-glass w-100" type="submit">Upload & Attach</button>
+    </form>
+
+    <div id="att_list_container">
+      {% if selected_attachments %}
+        <div class="d-flex flex-column gap-2">
+          {% for a in selected_attachments %}
+            <div class="p-2 rounded"
+                 style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <div>
+                  <div>
+                    <strong>{{ a.label|default:"File" }}</strong>
+                    <span class="text-soft">•</span>
+                    <span class="text-soft">{{ a.file_asset.original_name }}</span>
+                  </div>
+                  <div class="text-soft small">{{ a.created_at }}</div>
+                </div>
+                <a class="btn-glass" href="{{ a.file_asset.file.url }}" target="_blank" rel="noopener">Open</a>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-soft">No files attached to this response yet.</div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+{% if edit_id %}
+<script>
+  (function(){
+    const btn = document.querySelector('[data-response-id="{{ edit_id }}"]');
+    if (!btn) return;
+    const oc = document.getElementById('responseEditor');
+    if (!oc || !window.bootstrap) return;
+    const instance = bootstrap.Offcanvas.getOrCreateInstance(oc);
+    instance.show(btn);
+  })();
+</script>
+{% endif %}
+
+<script>
+  (function() {
+    const editor = document.getElementById('responseEditor');
+    if (!editor) return;
+
+    editor.addEventListener('show.bs.offcanvas', function (event) {
+      const btn = event.relatedTarget;
+      if (!btn) return;
+
+      const responseId = btn.getAttribute('data-response-id');
+      const sectionTitle = btn.getAttribute('data-section-title') || '';
+      const criterionTitle = btn.getAttribute('data-criterion-title') || '';
+      const score = btn.getAttribute('data-score') || '0';
+      const confidence = btn.getAttribute('data-confidence') || 'med';
+      const commentary = btn.getAttribute('data-commentary') || '';
+
+      document.getElementById('editorSection').textContent = sectionTitle;
+      document.getElementById('responseEditorLabel').textContent = "Edit Response";
+      document.getElementById('editorCriterion').textContent = criterionTitle;
+
+      document.getElementById('editorScore').value = score;
+      document.getElementById('editorConfidence').value = confidence;
+      document.getElementById('editorCommentary').value = commentary;
+
+      // Main edit form action
+      const form = document.getElementById('responseEditorForm');
+      form.action = "{% url 'janus:dd-response-quick-update' 0 %}".replace("/0/", "/" + responseId + "/");
+
+      // Attachments hidden fields
+      const attObject = document.getElementById("att_object_id");
+      const attNext = document.getElementById("att_next");
+      if (attObject) attObject.value = responseId;
+
+    // After upload, redirect back with ?edit=<responseId> so the server loads attachments
+    if (attNext) {
+      const base = window.location.pathname; // e.g. /janus/dd/run/1/responses/
+      const params = new URLSearchParams(window.location.search);
+
+      // preserve existing filters if present
+      if (params.get("unknown") === "1") params.set("unknown", "1");
+      if (params.get("nonneg") === "1") params.set("nonneg", "1");
+
+      // force edit id so selected_attachments is populated
+      params.set("edit", responseId);
+
+      attNext.value = base + "?" + params.toString() + "#r" + responseId;
+    }
+
+    });
+  })();
+</script>
+
+{% endblock %}

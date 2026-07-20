@@ -1,0 +1,6 @@
+<section class="lp-section lp-richtext-band">
+  <div class="lp-container lp-prose">
+    {% if s.heading %}<h2 class="lp-section__heading">{{ s.heading }}</h2>{% endif %}
+    {% if s.html %}{{ s.html|safe }}{% endif %}
+  </div>
+</section>

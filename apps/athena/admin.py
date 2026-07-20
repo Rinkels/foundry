@@ -1,0 +1,109 @@
+# apps/athena/admin.py
+from django.contrib import admin
+from .models import PromptTemplate, PromptVersion, PromptVariable, PromptTestCase, PromptRun
+
+
+@admin.register(PromptTemplate)
+class PromptTemplateAdmin(admin.ModelAdmin):
+    list_display = ("name", "key", "role", "status", "consumer", "updated_at")
+    list_editable = ("role",)
+    search_fields = ("name", "key", "description", "tags")
+    list_filter = ("status", "consumer", "role")
+
+
+@admin.register(PromptVersion)
+class PromptVersionAdmin(admin.ModelAdmin):
+    list_display = ("template", "version", "created_at", "created_by", "changelog")
+    search_fields = ("template__key", "template__name", "body")
+    list_filter = ("template",)
+
+
+@admin.register(PromptVariable)
+class PromptVariableAdmin(admin.ModelAdmin):
+    list_display = ("template", "name", "var_type", "required")
+    search_fields = ("template__key", "name")
+
+
+@admin.register(PromptTestCase)
+class PromptTestCaseAdmin(admin.ModelAdmin):
+    list_display = ("template", "name", "created_at")
+    search_fields = ("template__key", "name")
+    list_filter = ("template",)
+
+
+@admin.register(PromptRun)
+class PromptRunAdmin(admin.ModelAdmin):
+    list_display = ("template", "version", "test_case", "status", "created_at", "created_by")
+    search_fields = ("template__key", "output_text")
+    list_filter = ("status", "template")
+
+# apps/athena/admin.py (add to PromptTemplateAdmin)
+from django.contrib import admin, messages
+from apps.athena.services.runtime import approve_current_version
+
+@admin.action(description="Approve current version (set as canonical)")
+def action_approve_current(modeladmin, request, queryset):
+    count = 0
+    for t in queryset:
+        try:
+            approve_current_version(t.key)
+            count += 1
+        except Exception as e:
+            messages.error(request, f"Failed to approve {t.key}: {e}")
+    if count:
+        messages.success(request, f"Approved {count} prompt(s).")
+
+@admin.action(description="Mark as deprecated")
+def action_deprecate(modeladmin, request, queryset):
+    updated = queryset.update(status="deprecated")
+    messages.success(request, f"Deprecated {updated} prompt(s).")
+
+
+# inside PromptTemplateAdmin:
+actions = [action_approve_current, action_deprecate]
+
+
+# apps/athena/admin.py (append)
+
+from .models import AthenaModelSettings, AthenaThread, AthenaMessage, AthenaStudioRun
+
+@admin.register(AthenaModelSettings)
+class AthenaModelSettingsAdmin(admin.ModelAdmin):
+    list_display = ("name", "provider", "model", "temperature", "max_tokens", "is_default")
+    list_filter = ("provider", "is_default")
+    search_fields = ("name", "model")
+
+
+@admin.register(AthenaThread)
+class AthenaThreadAdmin(admin.ModelAdmin):
+    list_display = ("title", "created_by", "updated_at")
+    search_fields = ("title",)
+
+
+@admin.register(AthenaMessage)
+class AthenaMessageAdmin(admin.ModelAdmin):
+    list_display = ("thread", "role", "created_at")
+    list_filter = ("role",)
+    search_fields = ("content",)
+
+
+@admin.register(AthenaStudioRun)
+class AthenaStudioRunAdmin(admin.ModelAdmin):
+    list_display = ("thread", "template", "version", "ok", "created_at")
+    list_filter = ("ok", "template")
+
+from django.utils import timezone
+from django.contrib import admin
+from .models import AppContextSnapshot
+
+@admin.action(description="Approve selected snapshots")
+def approve_snapshots(modeladmin, request, queryset):
+    queryset.update(is_approved=True, approved_at=timezone.now(), approved_by=request.user)
+
+@admin.register(AppContextSnapshot)
+class AppContextSnapshotAdmin(admin.ModelAdmin):
+    list_display = ("title", "key", "version", "is_approved", "created_at")
+    list_filter = ("is_approved", "source")
+    search_fields = ("title", "key", "app_path")
+    actions = [approve_snapshots]
+    readonly_fields = ("version", "created_at", "approved_at", "approved_by")

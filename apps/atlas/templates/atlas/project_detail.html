@@ -1,0 +1,151 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div class="glass-header mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="mb-0">{{ project.name }}</h1>
+      <div class="text-soft">
+        {{ project.get_origin_display }} · {{ project.get_status_display }}
+        {% if project.gcp_project_id %} · {{ project.gcp_project_id }} ({{ project.gcp_region }}){% endif %}
+      </div>
+      <div class="text-soft small">
+        {% if project.hardened %}
+          <span class="badge bg-success">🔒 Hardened</span>
+          <span class="text-soft">{% if project.hardened_at %}on {{ project.hardened_at|date:"Y-m-d" }}{% endif %}</span>
+        {% else %}
+          <span class="badge bg-danger">⚠ Not hardened</span>
+          <span class="text-soft">DEBUG/secrets not yet locked down</span>
+        {% endif %}
+      </div>
+      <div class="text-soft small">
+        Identity:
+        {% if project.credential %}
+          🔐 {{ project.credential.name }} ({{ project.credential.get_method_display }})
+        {% else %}
+          ⚠ host gcloud identity — attach a credential in admin for isolation
+        {% endif %}
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <form method="post" action="{% url 'atlas:deploy' project.slug %}"
+            onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Deploying…';">
+        {% csrf_token %}
+        <button class="btn-glass" type="submit">🚀 Deploy to Cloud Run</button>
+      </form>
+      <form method="post" action="{% url 'atlas:sync_status' project.slug %}">
+        {% csrf_token %}
+        <button class="btn-glass" type="submit">↻ Sync status</button>
+      </form>
+      <form method="post" action="{% url 'atlas:harden' project.slug %}"
+            onsubmit="this.querySelector('button').disabled=true;">
+        {% csrf_token %}
+        {% if project.hardened %}
+          <button class="btn-glass" type="submit" title="Set DEBUG=True for debugging">🔓 Unharden (debug)</button>
+        {% else %}
+          <button class="btn-glass" type="submit" title="Set DEBUG=False on the live service">🔒 Harden</button>
+        {% endif %}
+      </form>
+      <form method="post" action="{% url 'atlas:pull' project.slug %}" style="display:inline"
+            onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Pulling…';">
+        {% csrf_token %}
+        <button class="btn-glass" type="submit" title="Fetch the latest code from GitHub for review — no deploy">⤓ Pull latest</button>
+      </form>
+      <a class="btn-glass" href="{% url 'atlas:project_manage' project.slug %}">📊 Manage</a>
+      <a class="btn-glass" href="{% url 'atlas:dashboard' %}">← Atlas</a>
+    </div>
+  </div>
+</div>
+
+<div class="neon-glass-card p-3 mb-3">
+  <div class="text-soft small">Source</div>
+  <div>
+    {% if project.repo_url %}
+      <i class="fa-brands fa-github me-1"></i>
+      <a href="{{ project.repo_url }}" target="_blank">{{ project.repo_url }}</a>
+    {% elif project.source_path %}
+      <code>{{ project.source_path }}</code>
+    {% else %}
+      <span class="text-soft">No repo or local path set — add one in admin before deploying.</span>
+    {% endif %}
+  </div>
+  <div class="mt-2">
+    {% if project.auto_deploy %}
+      <span class="badge bg-success">Auto-deploy on</span>
+      <span class="text-soft small">
+        branch: <code>{{ project.deploy_branch|default:"(default)" }}</code>
+        {% if project.github_installation %} · installed via GitHub App{% endif %}
+      </span>
+    {% else %}
+      <span class="badge bg-secondary">Auto-deploy off</span>
+      <span class="text-soft small">Enable in admin to deploy on push.</span>
+    {% endif %}
+  </div>
+</div>
+
+{% if project.notes %}
+<div class="neon-glass-card p-3 mb-3">
+  <div class="text-soft small">Notes</div>
+  <div>{{ project.notes|linebreaksbr }}</div>
+</div>
+{% endif %}
+
+<div class="neon-glass-card p-0 overflow-hidden mb-3">
+  <div class="p-3 text-soft small">Resources</div>
+  <table class="table table-dark mb-0">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Status</th>
+        <th>Identifier</th>
+        <th>Last synced</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for resource in resources %}
+        <tr>
+          <td class="text-soft">{{ resource.get_resource_type_display }}</td>
+          <td><strong>{{ resource.name }}</strong></td>
+          <td class="text-soft">{{ resource.get_status_display }}</td>
+          <td class="text-soft">{{ resource.identifier|default:"—" }}</td>
+          <td class="text-soft">{{ resource.last_synced_at|default:"—" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="text-soft p-3">No resources tracked yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="neon-glass-card p-0 overflow-hidden">
+  <div class="p-3 text-soft small">Recent runs</div>
+  <table class="table table-dark mb-0">
+    <thead>
+      <tr>
+        <th>Action</th>
+        <th>Status</th>
+        <th>Started</th>
+        <th>Finished</th>
+        <th>By</th>
+        <th>Log</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for run in runs %}
+        <tr>
+          <td class="text-soft">{{ run.get_action_display }}</td>
+          <td class="text-soft">{{ run.status }}</td>
+          <td class="text-soft">{{ run.started_at }}</td>
+          <td class="text-soft">{{ run.finished_at|default:"—" }}</td>
+          <td class="text-soft">{{ run.triggered_by|default:"—" }}</td>
+          <td class="text-soft"><pre class="mb-0">{{ run.log }}</pre></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="text-soft p-3">No runs yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

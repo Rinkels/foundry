@@ -1,0 +1,48 @@
+{% extends "common/base.html" %}
+{% block content %}
+<div class="container py-4">
+
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h3 class="mb-0">Search</h3>
+    <form class="d-flex" method="get" action="{% url 'global-search' %}">
+      <input class="form-control" name="q" value="{{ q }}" placeholder="Search…" style="min-width: 320px;">
+    </form>
+  </div>
+
+  {% if not q %}
+    <div class="text-muted">Type something in the search bar.</div>
+  {% else %}
+    {% if results %}
+      {% for group in results %}
+        <div class="card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>{{ group.label }}</strong>
+            <span class="text-muted small">{{ group.model }}</span>
+          </div>
+          <ul class="list-group list-group-flush">
+            {% for item in group.items %}
+              <li class="list-group-item">
+                <div class="d-flex justify-content-between gap-3">
+                  <div>
+                    {% if item.url %}
+                      <a href="{{ item.url }}" class="fw-semibold text-decoration-none">{{ item.title }}</a>
+                    {% else %}
+                      <span class="fw-semibold">{{ item.title }}</span>
+                    {% endif %}
+                    {% if item.snippet %}
+                      <div class="text-muted small mt-1">{{ item.snippet }}</div>
+                    {% endif %}
+                  </div>
+                  <div class="text-muted small text-nowrap">{{ item.meta }}</div>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="text-muted">No results for “{{ q }}”.</div>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

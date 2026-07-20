@@ -1,0 +1,112 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div style="max-width: 1400px; margin: 0 auto;">
+    {% if epic_id %}
+      <div class="okr-epic-badge">
+        {% if object %}
+          Editing story in <b>Epic #{{ epic_id }}</b>
+        {% else %}
+          Creating story for <b>Epic #{{ epic_id }}</b>
+        {% endif %}
+      </div>
+    {% endif %}
+    <div class="mb-3">
+      <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+        <div>
+          <div class="text-soft" style="font-size:.9rem;">story_detail.html</div>
+          <h2 class="mb-1">{{ story.title }}</h2>
+          <div class="text-soft">
+            <em>As a {{ story.role }}, I want to {{ story.goal }} so that {{ story.reason }}.</em>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+          <a class="btn-glass" href="{% url 'okr:task-create-for-story' story.pk %}">➕ Add task</a>
+        </div>
+      </div>
+    </div>
+  <div class="row g-3">
+    {% for status in statuses %}
+      <div class="col-12 col-lg-4">
+        <div class="neon-glass-card p-3 h-100">
+          <h3 class="mb-3">{{ status }}</h3>
+
+          <div id="{{ status|slugify }}-tasks"
+               class="task-column"
+               data-status="{{ status }}"
+               style="min-height: 180px;">
+            {% for task in story.tasks.all %}
+              {% if task.status == status %}
+
+              <div class="task-card neon-glass-card p-3 mb-2"
+                     style="cursor: grab;"
+                     data-task-id="{{ task.id }}">
+                  <a href="{% url 'okr:task-detail' task.pk %}" class="stretched-link"></a>
+                  <div class="text-strong"><strong>{{ task.title }}{{ task.pk }}</strong></div>
+                  {% if task.assigned_to %}
+                    <div class="text-soft" style="margin-top:.25rem;">👤 {{ task.assigned_to }}</div>
+                  {% endif %}
+                </div>
+
+              {% endif %}
+            {% endfor %}
+          </div>
+
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <a href="{% url 'okr:epic-detail' story.epic.id %}" class="text-strong" style="display:inline-block; margin-top:1.25rem; text-decoration: underline;">
+    ← Back to Epic
+  </a>
+</div>
+<meta name="csrf-token" content="{{ csrf_token }}">
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".task-column").forEach(function (el) {
+    new Sortable(el, {
+      group: { name: "kanban", pull: true, put: true },
+      animation: 150,
+      ghostClass: "sortable-ghost",
+      onEnd: function (evt) {
+        const taskId = evt.item.dataset.taskId;
+        const newStatus = evt.to.dataset.status;
+
+        fetch(`/okr/task/${taskId}/update-status/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "csrftoken"
+          },
+          body: JSON.stringify({ status: newStatus })
+        }).then(r => {
+          if (!r.ok) console.error("❌ Status update failed");
+        });
+      }
+    });
+  });
+});
+
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== "") {
+    const cookies = document.cookie.split(";");
+    for (let cookie of cookies) {
+      cookie = cookie.trim();
+      if (cookie.substring(0, name.length + 1) === (name + "=")) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+</script>
+{% endblock %}

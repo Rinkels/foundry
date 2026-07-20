@@ -1,0 +1,23 @@
+{% extends "common/base.html" %}
+{% load static %}
+
+{% block title %}New Idea | Janus{% endblock %}
+
+{% block topnav %}
+  <a class="nav-link" href="{% url 'janus:dashboard' %}"><i class="fa-solid fa-arrow-left"></i> Back</a>
+{% endblock %}
+
+{% block content %}
+<div class="neon-glass-card p-4">
+  <h1 class="text-white mb-3">New Idea</h1>
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+
+    <button type="submit" class="btn btn-outline-warning">
+      <i class="fa-solid fa-plus"></i> Create
+    </button>
+  </form>
+</div>
+{% endblock %}

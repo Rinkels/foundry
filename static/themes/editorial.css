@@ -1,0 +1,147 @@
+/* Editorial (dark) theme — flat, de-carded, website-like.
+   Scope: html.theme-editorial, body.theme-editorial
+   Neutralises the .neon-glass-card / .section-card / .content-card panels so
+   content flows as editorial sections instead of stacked app cards. */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap");
+
+html.theme-editorial,
+body.theme-editorial {
+  --ed-bg: #0c0f14;
+  --ed-text: #e7e9ee;
+  --ed-muted: #9aa3af;
+  --ed-faint: rgba(255, 255, 255, 0.10);
+  --ed-accent: var(--fractals-primary, #5dd6c6);
+
+  /* Landing design tokens (consumed by shared landing.css) */
+  --site-accent: var(--ed-accent);
+  --site-accent-2: #5aa9ff;  /* second stop for headline gradient */
+  --site-text: var(--ed-text);
+  --site-heading: #f4f6f9;
+  --site-muted: var(--ed-muted);
+  --site-surface: rgba(255, 255, 255, 0.04);
+  --site-border: var(--ed-faint);
+  --site-cta-bg: rgba(255, 255, 255, 0.03);
+  --site-on-accent: #07120f;
+  --site-heading-font: "Plus Jakarta Sans", "Inter", sans-serif;
+
+  background: var(--ed-bg);
+  color: var(--ed-text);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Reading column — wider for consistency with the 1240 header/landing, but still
+   capped for readability (full 1240 makes long-form lines too long). */
+.theme-editorial .container { max-width: 1040px; }
+.theme-editorial main.container { padding-top: 2.5rem; padding-bottom: 4.5rem; }
+.theme-editorial .page-shell { background: transparent; }
+
+/* KILL the card chrome — the core of the change */
+.theme-editorial .neon-glass-card,
+.theme-editorial .section-card,
+.theme-editorial .content-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  backdrop-filter: none !important;
+}
+
+/* Vertical rhythm + a thin separator between cardified subsections */
+.theme-editorial .content-card {
+  margin: 2.75rem 0 0 !important;
+  padding-top: 2.5rem !important;
+  border-top: 1px solid var(--ed-faint) !important;
+}
+.theme-editorial .content-card:first-of-type {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  border-top: none !important;
+}
+
+/* Typography */
+.theme-editorial h1, .theme-editorial h2,
+.theme-editorial h3, .theme-editorial h4 {
+  font-family: "Plus Jakarta Sans", "Inter", sans-serif;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: #f4f6f9;
+  margin: 0 0 0.6em;
+}
+.theme-editorial h1 { font-size: clamp(2.6rem, 4vw, 3.3rem); font-weight: 700; margin-top: 0.2rem; }
+.theme-editorial h2 { font-size: clamp(1.9rem, 2.6vw, 2.2rem); font-weight: 600; margin-top: 0.4em; }
+.theme-editorial h3 { font-size: 1.35rem; font-weight: 600; }
+.theme-editorial p, .theme-editorial li { font-size: 1.0625rem; }
+.theme-editorial p { margin: 0 0 1.15rem; }
+.theme-editorial .text-muted, .theme-editorial .lead { color: var(--ed-muted) !important; }
+.theme-editorial .lead { font-size: 1.2rem; line-height: 1.6; }
+
+/* Links */
+.theme-editorial a {
+  color: var(--ed-accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(93, 214, 198, 0.35);
+}
+.theme-editorial a:hover { border-bottom-color: var(--ed-accent); }
+
+/* Hero image — calm, full column width */
+.theme-editorial .hero-image,
+.theme-editorial article img.img-fluid {
+  width: 100%;
+  max-height: 460px;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: none;
+  margin: 0 0 2.5rem;
+}
+
+/* Buttons -> solid accent, not glass */
+.theme-editorial .btn-glass,
+.theme-editorial .btn {
+  display: inline-block;
+  background: var(--ed-accent);
+  color: #07120f;
+  border: none;
+  border-radius: 8px;
+  padding: 0.7rem 1.3rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.theme-editorial .btn-glass:hover,
+.theme-editorial .btn:hover { filter: brightness(1.08); color: #07120f; }
+
+/* Lists */
+.theme-editorial ul, .theme-editorial ol { padding-left: 1.2rem; }
+.theme-editorial li { margin: 0.35rem 0; }
+.theme-editorial ul.list-cols-2 { columns: 2; column-gap: 2.5rem; }
+@media (max-width: 640px) { .theme-editorial ul.list-cols-2 { columns: 1; } }
+
+/* FAQ accordions -> flat dividers, no boxy chrome */
+.theme-editorial .accordion,
+.theme-editorial .accordion-item {
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--ed-faint);
+}
+.theme-editorial .accordion-button {
+  background: transparent;
+  color: var(--ed-text);
+  font-weight: 600;
+  font-size: 1.1rem;
+  box-shadow: none;
+  padding: 1rem 0;
+}
+.theme-editorial .accordion-button:not(.collapsed) { color: var(--ed-accent); }
+.theme-editorial .accordion-button::after { filter: invert(0.8); }
+.theme-editorial .accordion-body { color: var(--ed-muted); padding: 0 0 1rem; }
+
+/* Header / footer partials — minimal */
+.theme-editorial header,
+.theme-editorial footer { border-color: var(--ed-faint) !important; background: transparent !important; }
+
+/* Landing-page (.lp-*) layout now lives in the shared landing.css, driven by the
+   --site-* tokens defined at the top of this file. (Theme-agnostic + reusable.) */

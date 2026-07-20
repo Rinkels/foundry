@@ -1,0 +1,31 @@
+{% extends "sites_builder/base.html" %}
+{% load site_assets %}
+{% block body %}
+  {% include "sites_builder/sites/default/partials/header.html" %}
+
+  <main class="lp">
+    {% for s in page.landing_sections %}
+      {% if s.type == "hero" %}
+        {% include "sites_builder/sites/default/partials/sections/hero.html" %}
+      {% elif s.type == "stats" %}
+        {% include "sites_builder/sites/default/partials/sections/stats.html" %}
+      {% elif s.type == "features" %}
+        {% include "sites_builder/sites/default/partials/sections/features.html" %}
+      {% elif s.type == "cards" %}
+        {% include "sites_builder/sites/default/partials/sections/cards.html" %}
+      {% elif s.type == "steps" %}
+        {% include "sites_builder/sites/default/partials/sections/steps.html" %}
+      {% elif s.type == "proof" %}
+        {% include "sites_builder/sites/default/partials/sections/proof.html" %}
+      {% elif s.type == "contact_form" %}
+        {% include "sites_builder/sites/default/partials/sections/contact_form.html" %}
+      {% elif s.type == "cta" %}
+        {% include "sites_builder/sites/default/partials/sections/cta.html" %}
+      {% elif s.type == "richtext" %}
+        {% include "sites_builder/sites/default/partials/sections/richtext.html" %}
+      {% endif %}
+    {% endfor %}
+  </main>
+
+  {% include "sites_builder/sites/default/partials/footer.html" %}
+{% endblock %}

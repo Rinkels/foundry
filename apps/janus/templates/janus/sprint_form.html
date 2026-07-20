@@ -1,0 +1,16 @@
+{% extends "common/base.html" %}
+{% load static %}
+{% block title %}New Idea | Janus{% endblock %}
+
+{% block topnav %}
+  <a class="nav-link" href="{% url 'janus:dashboard' %}"><i class="fa-solid fa-arrow-left"></i> Back</a>
+{% endblock %}
+
+{% block content %}
+<h1>New Sprint for: {{ idea.name }}</h1>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Create Sprint</button>
+</form>
+{% endblock %}

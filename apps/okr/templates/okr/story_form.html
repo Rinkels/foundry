@@ -1,0 +1,98 @@
+{% extends "common/base.html" %}
+{% load humanize %}
+
+{% block content %}
+story_form.html
+<div class="neon-glass-card okr-heatmap-card">
+  <div class="okr-heatmap-head">
+    <div>
+      <div class="okr-title">{% if object %}Edit Story{% else %}Create Story{% endif %}</div>
+      <div class="okr-subtitle">Define the story clearly, then track tasks on the Kanban.</div>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          {% if object %}
+            <a class="btn btn-secondary okr-btn" href="{% url 'okr:story-detail' object.id %}">Kanban</a>
+          {% endif %}
+        <a class="btn btn-secondary okr-btn"
+           href="{% url 'okr:story-list' %}{% if epic_id %}?epic={{ epic_id }}{% endif %}">
+          ← Back to Stories
+        </a>
+    </div>
+  </div>
+
+  <meta name="csrf-token" content="{{ csrf_token }}">
+
+  <form method="post" class="okr-form">
+    {% csrf_token %}
+
+    <div class="okr-form-grid">
+      <div class="okr-field">
+        <label for="id_title">Title</label>
+        {{ form.title }}
+      </div>
+
+      <div class="okr-field">
+        <label for="id_role">Role</label>
+        {{ form.role }}
+      </div>
+
+      <div class="okr-field">
+        <label for="id_goal">Goal</label>
+        {{ form.goal }}
+      </div>
+
+      <div class="okr-field">
+        <label for="id_reason">Reason / Benefit</label>
+        {{ form.reason }}
+        <div class="okr-hint">Tip: Keep it outcome-focused. What changes for the user?</div>
+      </div>
+
+      {# If your form includes epic, show it nicely #}
+      {% if form.epic %}
+      <div class="okr-field">
+        <label for="id_epic">Epic</label>
+        {{ form.epic }}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="okr-form-actions">
+      <button type="submit" class="btn btn-primary okr-btn">Save Story</button>
+      <button type="button" class="btn btn-secondary okr-btn" onclick="generateUserStory()">
+        ✨ Write Story with AI
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+function generateUserStory() {
+  const role = document.getElementById("id_role")?.value || "";
+  const goal = document.getElementById("id_goal")?.value || "";
+  const reasonEl = document.getElementById("id_reason");
+
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+
+  fetch("/api/generate-user-story/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": csrfToken
+    },
+    body: JSON.stringify({ role, goal })
+  })
+  .then(async (response) => {
+    if (!response.ok) {
+      console.error("AI story generation failed:", response.status, await response.text());
+      return null;
+    }
+    return response.json();
+  })
+  .then((data) => {
+    if (data && reasonEl) reasonEl.value = data.rewritten || "";
+  })
+  .catch((err) => console.error(err));
+}
+</script>
+{% endblock %}

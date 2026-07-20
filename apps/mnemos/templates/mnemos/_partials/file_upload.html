@@ -1,0 +1,34 @@
+<form method="post" action="{% url 'files-upload-attach' %}" enctype="multipart/form-data" class="neon-glass-card p-3">
+  {% csrf_token %}
+  <input type="hidden" name="app_label" value="okr">
+  <input type="hidden" name="model" value="task">
+  <input type="hidden" name="object_id" value="{{ task.pk }}">
+  <input type="hidden" name="next" value="{% url 'okr:task-detail' task.pk %}">
+
+  <div class="d-flex gap-2 flex-wrap align-items-end">
+    <div>
+      <label class="text-soft">Label</label>
+      <input type="text" name="label" class="form-control" placeholder="PNL / License / Safety Doc">
+    </div>
+    <div>
+      <label class="text-soft">File</label>
+      <input type="file" name="file" class="form-control" required>
+    </div>
+    <button class="btn-glass" type="submit">📎 Upload & attach</button>
+  </div>
+</form>
+
+<div class="neon-glass-card p-3 mt-3">
+  <h4 class="mb-2">Attachments</h4>
+  {% for a in attachments %}
+    <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-soft">
+      <div>
+        <div><strong>{{ a.label|default:"File" }}</strong>: {{ a.file_asset.original_name }}</div>
+        <div class="text-soft small">{{ a.created_at }}</div>
+      </div>
+      <a class="btn-glass" href="{{ a.file_asset.file.url }}" target="_blank">Open</a>
+    </div>
+  {% empty %}
+    <div class="text-soft">No files attached yet.</div>
+  {% endfor %}
+</div>

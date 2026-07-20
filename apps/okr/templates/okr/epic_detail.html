@@ -1,0 +1,112 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div style="max-width: 1100px; margin: 0 auto;">
+
+  <div class="d-flex align-items-end justify-content-between gap-3 mb-3">
+    <div>
+      <h2 class="mb-0">{{ epic.title }}</h2>
+      {% if epic.description %}
+        <div class="text-soft mt-1">{{ epic.description }}</div>
+      {% endif %}
+    </div>
+
+    <a href="{% url 'okr:objective-detail' epic.key_result.objective.id %}" class="btn-glass">
+      ← Back to Objective
+    </a>
+  </div>
+
+  <div class="d-flex align-items-end justify-content-between gap-3 mb-3">
+    <div>
+      <h3 class="mb-0">Stories</h3>
+      <div class="text-soft mt-1">User stories and their tasks for this epic.</div>
+    </div>
+    <div></div>
+  </div>
+
+  <div class="row g-3">
+    {% for story in epic.stories.all %}
+      <div class="col-12">
+        <div class="neon-glass-card p-4">
+          <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+            <div>
+              <h4 class="mb-1">{{ story.title }}</h4>
+              <div class="text-soft">
+                <em>As a {{ story.role }}, I want to {{ story.goal }} so that {{ story.reason }}.</em>
+              </div>
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap">
+
+                <a class="btn btn-secondary okr-btn"
+                   href="{% url 'okr:story-list' %}?epic={{ epic.id }}">
+                  Stories <span class="okr-badge">{{ epic.stories.count }}</span>
+                </a>
+
+              <a href="{% url 'okr:story-detail' story.id %}" class="btn-glass">Kanban</a>
+              <a href="{% url 'okr:story-update' story.id %}" class="btn-glass">Edit</a>
+              <a href="{% url 'okr:story-delete' story.id %}" class="btn-glass" style="border-color: rgba(255,91,122,.45);">
+                Delete
+              </a>
+            </div>
+          </div>
+
+          {% if story.tasks.exists %}
+            <div class="text-soft mt-3"><strong>Tasks</strong></div>
+            <ul class="mt-2" style="padding-left: 1.2rem; margin-bottom: 0;">
+              {% for task in story.tasks.all %}
+                <li class="text-soft" style="margin-bottom:.35rem;">
+                  <span class="text-strong"><strong>{{ task.title }}</strong></span>
+                    {% if task.status == "Done" %}
+                      <span style="color: rgba(45,255,178,.95);"> ({{ task.get_status_display }})</span>
+                    {% elif task.status == "In Progress" %}
+                      <span style="color: rgba(90,200,250,.95);"> ({{ task.get_status_display }})</span>
+                    {% else %}
+                      <span style="color: rgba(255,179,79,.95);"> ({{ task.get_status_display }})</span>
+                    {% endif %}
+                  {% if task.assigned_to %}
+                    <span class="text-soft"> · Assigned to: {{ task.assigned_to }}</span>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="text-soft mt-3"><em>No tasks added.</em></div>
+          {% endif %}
+        </div>
+      </div>
+    {% empty %}
+      <div class="col-12">
+        <div class="neon-glass-card p-4">
+              <form method="get" class="okr-filters">
+      {% if epic_id %}
+        <input type="hidden" name="epic" value="{{ epic_id }}">
+      {% endif %}
+
+      <input
+        type="text"
+        name="q"
+        value="{{ q }}"
+        class="okr-input"
+        placeholder="Search stories…"
+        aria-label="Search stories"
+      />
+
+      <button class="btn btn-primary okr-btn" type="submit">Search</button>
+      <a class="btn btn-secondary okr-btn" href="{% url 'okr:story-list' %}{% if epic_id %}?epic={{ epic_id }}{% endif %}">Reset</a>
+        {% if epic_id %}
+            <a class="btn btn-primary okr-btn" href="{% url 'okr:story-create' %}?epic={{ epic_id }}">+ Add Story</a>
+        {% else %}
+            <a class="btn btn-primary okr-btn" href="{% url 'okr:story-create' %}">+ Add Story</a>
+        {% endif %}
+
+        </form>
+      </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+{% endblock %}

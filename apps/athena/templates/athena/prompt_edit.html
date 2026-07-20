@@ -1,0 +1,38 @@
+{# apps/athena/templates/athena/prompt_edit.html #}
+{% extends "athena/base.html" %}
+{% block athena_content %}
+
+<div class="neon-glass-card p-3">
+  <h3 class="mb-2">{% if prompt %}New Version for {{ prompt.name }}{% else %}New Prompt{% endif %}</h3>
+
+  <form method="post">
+    {% csrf_token %}
+
+    {% if not prompt %}
+      <div class="mb-2">
+        <label class="form-label">Name</label>
+        <input class="form-control" name="name" placeholder="e.g. Janus Gate Summary">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Key</label>
+        <input class="form-control" name="key" placeholder="e.g. janus_gate_summary (optional)">
+      </div>
+      <button class="btn btn-light">Create</button>
+    {% else %}
+      {% if prompt %}
+          <div class="mb-2"><label class="form-label">Changelog</label><input class="form-control" name="changelog"></div>
+
+          <div class="mb-2"><label class="form-label">Goal</label><textarea class="form-control" name="goal" rows="2">{{ latest.goal }}</textarea></div>
+          <div class="mb-2"><label class="form-label">Context</label><textarea class="form-control" name="context" rows="3">{{ latest.context }}</textarea></div>
+          <div class="mb-2"><label class="form-label">Instructions</label><textarea class="form-control" name="instructions" rows="5">{{ latest.instructions }}</textarea></div>
+          <div class="mb-2"><label class="form-label">Output Contract</label><textarea class="form-control" name="output_contract" rows="4">{{ latest.output_contract }}</textarea></div>
+          <div class="mb-2"><label class="form-label">Tone</label><textarea class="form-control" name="tone" rows="2">{{ latest.tone }}</textarea></div>
+          <div class="mb-3"><label class="form-label">Guardrails</label><textarea class="form-control" name="guardrails" rows="3">{{ latest.guardrails }}</textarea></div>
+
+          <button class="btn btn-light">Save v{{ next_version }}</button>
+        {% endif %}
+    {% endif %}
+  </form>
+</div>
+
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "sites_builder/base.html" %}
+{% load site_assets %}
+{% block body %}
+  {% include "sites_builder/sites/default/partials/header.html" %}
+
+  <div class="page-shell">
+    <main class="container my-4">
+      <article class="neon-glass-card">
+        {% if page.hero_image_url %}
+          <picture>
+            <source srcset="{{ page.hero_image_url|to_webp }}" type="image/webp">
+            <img
+              src="{{ page.hero_image_url }}"
+              alt="{{ page.title }}"
+              class="img-fluid mb-4 rounded shadow-sm hero-image"
+              loading="lazy"
+              decoding="async">
+          </picture>
+        {% endif %}
+
+        {% if page.body_html %}
+          {{ page.body_html|safe }}
+        {% endif %}
+      </article>
+
+      {% if children %}
+      <section class="mt-4 neon-glass-card">
+        <h2 class="h5">More in this section</h2>
+        <ul class="mb-0">
+          {% for child in children %}
+          <li><a href="{{ child.slug }}.html">{{ child.title }}</a></li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+
+      {% if parent %}
+      <p class="mt-4">
+        <a class="btn-glass" href="{% if parent.is_root %}index.html{% else %}{{ parent.slug }}.html{% endif %}">
+          &larr; Back to {{ parent.title }}
+        </a>
+      </p>
+      {% endif %}
+    </main>
+  </div>
+
+  {% include "sites_builder/sites/default/partials/footer.html" %}
+{% endblock %}
