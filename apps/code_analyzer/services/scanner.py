@@ -586,6 +586,38 @@ def parse_python_file(project_dir: Path, file_path: Path, project: ProjectIndex)
     if _file_is_probably_django_settings(file_path, tree):
         scan_django_settings(tree, rel, add_security_finding)
 
+    # ---- Django view auth checks: ONE pass over top-level defs per file ----
+    # NB: this must stay OUT of the ast.walk(tree) loop below. Inside it, each
+    # finding was emitted once per AST node in the file (accumulating up to the
+    # per-file cap), so a views.py reported N views x manyNodes duplicates.
+    if file_path.stem.lower() == "views":
+        for top in tree.body:
+            # Function-based views
+            if isinstance(top, ast.FunctionDef):
+                if _is_probable_django_function_view(top) and not _has_login_required_decorator(top):
+                    sev = "LOW" if top.name.lower() in PUBLIC_VIEW_NAME_HINTS else "MED"
+                    add_security_finding(
+                        f"View missing @login_required: {top.name}()",
+                        getattr(top, "lineno", None),
+                        sev,
+                    )
+            # Class-based views
+            elif isinstance(top, ast.ClassDef):
+                # Only flag likely CBVs: name ends with View OR inherits something named *View
+                looks_like_view = top.name.endswith("View") or any(
+                    (_decorator_name(b).endswith("View") or _decorator_name(b).endswith(".View"))
+                    for b in (top.bases or [])
+                )
+                if looks_like_view:
+                    has_guard = _class_uses_login_required_mixin(top) or _class_wrapped_with_login_required(top)
+                    if not has_guard:
+                        sev = "LOW" if top.name.lower().startswith(tuple(PUBLIC_VIEW_NAME_HINTS)) else "MED"
+                        add_security_finding(
+                            f"CBV missing LoginRequiredMixin / method_decorator(login_required): {top.name}",
+                            getattr(top, "lineno", None),
+                            sev,
+                        )
+
     for node in ast.walk(tree):
         # DEBUG = True
         if isinstance(node, ast.Assign):
@@ -609,37 +641,6 @@ def parse_python_file(project_dir: Path, file_path: Path, project: ProjectIndex)
                         # If it looks like a real key/token, scream louder.
                         sev = "HIGH" if _SECRET_VALUE_RE.search(sval) else "MED"
                         add_security_finding(f"Possible hardcoded secret in variable '{name}'", getattr(node, "lineno", None), sev)
-
-        # ---- Django view auth checks (NEW) ----
-        # Run on any views.py across all projects.
-        if file_path.stem.lower() == "views":
-            for top in tree.body:
-                # Function-based views
-                if isinstance(top, ast.FunctionDef):
-                    if _is_probable_django_function_view(top) and not _has_login_required_decorator(top):
-                        sev = "LOW" if top.name.lower() in PUBLIC_VIEW_NAME_HINTS else "MED"
-                        add_security_finding(
-                            f"View missing @login_required: {top.name}()",
-                            getattr(top, "lineno", None),
-                            sev,
-                        )
-
-                # Class-based views
-                if isinstance(top, ast.ClassDef):
-                    # Only flag likely CBVs: name ends with View OR inherits something named *View
-                    looks_like_view = top.name.endswith("View") or any(
-                        (_decorator_name(b).endswith("View") or _decorator_name(b).endswith(".View"))
-                        for b in (top.bases or [])
-                    )
-                    if looks_like_view:
-                        has_guard = _class_uses_login_required_mixin(top) or _class_wrapped_with_login_required(top)
-                        if not has_guard:
-                            sev = "LOW" if top.name.lower().startswith(tuple(PUBLIC_VIEW_NAME_HINTS)) else "MED"
-                            add_security_finding(
-                                f"CBV missing LoginRequiredMixin / method_decorator(login_required): {top.name}",
-                                getattr(top, "lineno", None),
-                                sev,
-                            )
 
         # Dangerous calls + patterns
         if isinstance(node, ast.Call):
