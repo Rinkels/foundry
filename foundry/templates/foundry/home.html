@@ -365,6 +365,32 @@
             </div>
         {% endif %}
     </div>
+    {# Argus (Initiatives portfolio) #}
+    <div class="col">
+        {% if cards.argus %}
+          <a href="{% url 'argus:dashboard' %}"
+             class="text-decoration-none text-white position-relative">
+            <div class="neon-glass-card neon-mnemos h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+              <div class="card-icon">👁️</div>
+              <h4 class="card-title mb-2">{% trans "Argus" %}</h4>
+              <small class="text-white-50 mb-3">
+                {% trans "All-seeing portfolio: every initiative, what shipped this week, and what's next." %}
+              </small>
+              <span class="btn btn-outline-info">{% trans "Open Argus" %}</span>
+            </div>
+          </a>
+        {% else %}
+            <div class="position-relative">
+              <div class="neon-glass-card neon-code card-disabled h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+                <div class="card-icon">👁️</div>
+                <h4 class="card-title mb-2">{% trans "Argus" %}</h4>
+                <small class="text-white-50 mb-3">{% trans "All-seeing portfolio of initiatives." %}</small>
+                <span class="btn btn-outline-secondary disabled">{% trans "Coming soon" %}</span>
+              </div>
+              <div class="coming-soon-badge">Contact Admin for access</div>
+            </div>
+        {% endif %}
+    </div>
   </div>
 </div>
 
