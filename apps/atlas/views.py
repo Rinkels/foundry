@@ -9,8 +9,8 @@ from django.views.decorators.http import require_POST
 
 from django.conf import settings
 
-from .models import CloudProject
-from .services import github, provisioner, webhooks
+from .models import BackupRun, CloudProject
+from .services import backup, github, provisioner, webhooks
 from .services import manage as mgmt
 
 
@@ -18,6 +18,27 @@ from .services import manage as mgmt
 def dashboard(request):
     projects = CloudProject.objects.prefetch_related("resources", "runs")
     return render(request, "atlas/dashboard.html", {"projects": projects})
+
+
+@login_required
+def backups(request):
+    """Backups dashboard: recent BackupRuns + per-project 'back up now'."""
+    runs = BackupRun.objects.select_related("cloud_project").all()[:100]
+    projects = CloudProject.objects.order_by("name")
+    return render(request, "atlas/backups.html", {"runs": runs, "projects": projects})
+
+
+@login_required
+@require_POST
+def backup_now(request, slug):
+    """Create a code-snapshot backup (git bundle) of one project's source."""
+    project = get_object_or_404(CloudProject, slug=slug)
+    run = backup.run_backup(project, user=request.user)
+    if run.status == "success":
+        messages.success(request, f"Backup complete (#{run.pk}) — {run.location}")
+    else:
+        messages.error(request, f"Backup failed (#{run.pk}) — see the log on the Backups page.")
+    return redirect("atlas:backups")
 
 
 @login_required

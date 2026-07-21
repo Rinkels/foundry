@@ -47,7 +47,12 @@ STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "")
 GCP_REGION = os.environ.get("GCP_REGION", "us-central1")
 # Where Atlas clones repos / stages source for builds.
-ATLAS_WORK_ROOT = Path(BASE_DIR) / "output" / "atlas"
+# Atlas clones/git-syncs customer repos here. This MUST live OUTSIDE the Foundry
+# git repo: a nested clone that lacks its own .git lets `git -C <clone> …`
+# escalate to Foundry's .git and reset Foundry to a customer repo (this wiped
+# Foundry twice on 2026-07-20/21). Keep it a sibling of the project.
+ATLAS_WORK_ROOT = Path(BASE_DIR).parent / "_atlas_work"
+ATLAS_BACKUP_ROOT = Path(BASE_DIR).parent / "_atlas_backups"
 # Max seconds to wait for a Cloud Build + Cloud Run deploy.
 ATLAS_DEPLOY_TIMEOUT = int(os.environ.get("ATLAS_DEPLOY_TIMEOUT", "1800"))
 # When True, queued deploys are also processed inline in a background thread
