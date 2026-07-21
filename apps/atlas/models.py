@@ -240,3 +240,49 @@ class DeploymentRun(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_action_display()} #{self.pk} ({self.status})"
+
+
+class BackupRun(models.Model):
+    """A recorded backup of a CloudProject's source (git bundle) and/or database."""
+
+    KIND_CHOICES = [
+        ("code", "Code snapshot"),
+        ("db", "Database"),
+        ("full", "Full"),
+    ]
+    STATUS_CHOICES = [
+        ("running", "Running"),
+        ("success", "Success"),
+        ("failed", "Failed"),
+    ]
+
+    cloud_project = models.ForeignKey(CloudProject, on_delete=models.CASCADE, related_name="backups")
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES, default="code")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="running")
+    location = models.CharField(
+        max_length=700, blank=True, default="",
+        help_text="Path or URI of the backup artifact.",
+    )
+    size_bytes = models.BigIntegerField(default=0)
+    log = models.TextField(blank=True, default="")
+    triggered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL
+    )
+    started_at = models.DateTimeField(default=timezone.now)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-started_at"]
+        indexes = [models.Index(fields=["cloud_project", "-started_at"])]
+
+    def __str__(self) -> str:
+        return f"Backup {self.get_kind_display()} #{self.pk} ({self.status})"
+
+    @property
+    def size_human(self) -> str:
+        n = float(self.size_bytes or 0)
+        for unit in ("B", "KB", "MB"):
+            if n < 1024:
+                return f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}"
+            n /= 1024
+        return f"{n:.1f} GB"

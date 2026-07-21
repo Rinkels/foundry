@@ -1,0 +1,67 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div class="glass-header mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="mb-0">🗄️ Atlas Backups</h1>
+      <div class="text-soft">Point-in-time code snapshots (git bundles) per project.</div>
+    </div>
+    <a class="btn-glass" href="{% url 'atlas:dashboard' %}">← Atlas</a>
+  </div>
+</div>
+
+{% if messages %}
+  {% for m in messages %}
+    <div class="neon-glass-card p-2 mb-2 small">{{ m }}</div>
+  {% endfor %}
+{% endif %}
+
+<div class="neon-glass-card p-3 mb-3">
+  <div class="text-soft small mb-2">Back up a project now (creates a full-history <code>git bundle</code> snapshot)</div>
+  <div class="d-flex flex-wrap gap-2">
+    {% for p in projects %}
+      <form method="post" action="{% url 'atlas:backup_now' p.slug %}"
+            onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Backing up…';">
+        {% csrf_token %}
+        <button class="btn-glass" type="submit">🗄️ {{ p.name }}</button>
+      </form>
+    {% empty %}
+      <div class="text-soft">No projects yet.</div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="neon-glass-card p-0 overflow-hidden">
+  <div class="p-3 text-soft small">Recent backups</div>
+  <table class="table table-dark mb-0">
+    <thead>
+      <tr><th>Project</th><th>Kind</th><th>Status</th><th>Size</th><th>When</th><th>Location</th></tr>
+    </thead>
+    <tbody>
+      {% for b in runs %}
+        <tr>
+          <td><strong>{{ b.cloud_project.name }}</strong></td>
+          <td class="text-soft">{{ b.get_kind_display }}</td>
+          <td>
+            {% if b.status == "success" %}<span class="badge bg-success">success</span>
+            {% elif b.status == "failed" %}<span class="badge bg-danger">failed</span>
+            {% else %}<span class="badge bg-secondary">{{ b.status }}</span>{% endif %}
+          </td>
+          <td class="text-soft">{{ b.size_human }}</td>
+          <td class="text-soft">{{ b.started_at }}</td>
+          <td class="text-soft"><code style="font-size:.78rem">{{ b.location|default:"—" }}</code></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="text-soft p-3">No backups yet — use the buttons above.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="text-soft small mt-3">
+  Bundles are stored under <code>output/atlas/_backups/&lt;slug&gt;/</code> (newest 7 kept).
+  Next step: push bundles off-machine (GCS) so they survive a disk loss.
+</div>
+
+{% endblock %}
