@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 from django.conf import settings
 
 from .models import BackupRun, CloudProject
-from .services import backup, github, provisioner, webhooks
+from .services import backup, backup_health, github, provisioner, webhooks
 from .services import manage as mgmt
 
 
@@ -104,9 +104,11 @@ def project_manage(request, slug):
     cost = None
     if isinstance(metrics, dict) and metrics.get("has_data"):
         cost = metrics.get("billable_instance_sec", 0) * rate + metrics.get("requests", 0) / 1_000_000 * 0.40
+    sql_backup_health = backup_health.project_backup_health(project)
     return render(request, "atlas/manage.html", {
         "project": project, "overview": overview, "health": health,
         "revisions": revisions, "logs": logs, "metrics": metrics, "cost": cost,
+        "backup_health": sql_backup_health,
     })
 
 
