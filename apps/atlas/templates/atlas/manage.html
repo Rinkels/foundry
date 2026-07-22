@@ -89,6 +89,47 @@
   </div>
   {% endif %}
 
+  {# ---- Cloud SQL backup health (READ-ONLY) ---- #}
+  {% for bh in backup_health %}
+  <div class="neon-glass-card p-3 mb-3">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <div>
+        <div class="text-soft small">Database backups — <code>{{ bh.instance }}</code></div>
+        {% if bh.status == 'red' %}<span class="badge bg-danger">⚠ At risk</span>
+        {% elif bh.status == 'amber' %}<span class="badge bg-warning text-dark">Partial</span>
+        {% elif bh.status == 'green' %}<span class="badge bg-success">● Protected</span>
+        {% else %}<span class="badge bg-secondary">Backup status unavailable</span>{% endif %}
+        {% for r in bh.reasons %}<span class="text-soft small ms-2">· {{ r }}</span>{% endfor %}
+      </div>
+      {% if bh.db_version %}<div class="text-soft small text-end">{{ bh.db_version }} · {{ bh.tier }} · {{ bh.state }}</div>{% endif %}
+    </div>
+
+    {% if bh.status == 'red' %}
+      <div class="mt-2 small">
+        <div class="text-danger mb-1">No automated backups on <code>{{ bh.instance }}</code>. Enable in GCP (Atlas does not run this):</div>
+        <pre class="mb-1 p-2" style="background:rgba(0,0,0,.35);border-radius:8px;white-space:pre-wrap;">{{ bh.enable_cmd }}</pre>
+        <div class="text-soft">PITR causes a brief restart.</div>
+      </div>
+    {% endif %}
+
+    {% if bh.status != 'unknown' %}
+    <details class="mt-2">
+      <summary class="text-soft small" style="cursor:pointer;">Details</summary>
+      <table class="table table-dark table-sm mb-0 mt-2">
+        <tbody>
+          <tr><td class="text-soft">Backups enabled</td><td>{% if bh.backups_enabled %}✅ yes{% else %}❌ no{% endif %}</td></tr>
+          <tr><td class="text-soft">PITR enabled</td><td>{% if bh.pitr_enabled %}✅ yes{% else %}❌ no{% endif %}</td></tr>
+          <tr><td class="text-soft">Snapshot retention</td><td>{{ bh.retained_backups|default:"—" }}</td></tr>
+          <tr><td class="text-soft">PITR log window (days)</td><td>{{ bh.log_retention_days|default:"—" }}</td></tr>
+          <tr><td class="text-soft">Backup window</td><td>{{ bh.backup_window|default:"—" }}</td></tr>
+          <tr><td class="text-soft">Last successful backup</td><td>{{ bh.last_successful_backup|default:"— none recorded" }}</td></tr>
+        </tbody>
+      </table>
+    </details>
+    {% endif %}
+  </div>
+  {% endfor %}
+
   {# ---- Revisions + rollback ---- #}
   <div class="neon-glass-card p-0 overflow-hidden mb-3">
     <div class="p-3 text-soft small">Revisions (newest first)</div>
