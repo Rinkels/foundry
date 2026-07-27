@@ -131,10 +131,12 @@ class Site(models.Model):
 class DeploymentTarget(models.Model):
     TYPE_FTP = "ftp"
     TYPE_LOCAL = "local"
+    TYPE_CF_PAGES = "cf_pages"
 
     TYPE_CHOICES = [
         (TYPE_FTP, "FTP"),
         (TYPE_LOCAL, "Local folder"),
+        (TYPE_CF_PAGES, "Cloudflare Pages"),
     ]
 
     site = models.ForeignKey(
@@ -158,6 +160,14 @@ class DeploymentTarget(models.Model):
         max_length=512,
         blank=True,
         help_text="Absolute path on server to copy files to for LOCAL deployment.",
+    )
+
+    # Cloudflare Pages (wrangler-based deployment; auth via wrangler OAuth
+    # login on this host, or CLOUDFLARE_API_TOKEN in the environment)
+    cf_project_name = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Cloudflare Pages project name for CF_PAGES deployment, e.g. gym2x.",
     )
 
     is_default = models.BooleanField(default=True)
