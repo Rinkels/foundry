@@ -76,7 +76,11 @@ FOUNDRY_HOME_CARDS = {
     "mnemos": True,
     "atlas": True,
     "argus": True,
+    "codex": True,
 }
+
+# Codex (markdown library) — directories scanned for .md files.
+MD_LIBRARY_ROOTS = [r"C:\Projects"]
 # Application definition
 
 INSTALLED_APPS = [
@@ -98,6 +102,7 @@ INSTALLED_APPS = [
     "apps.mnemos.apps.MnemosConfig",
     "apps.atlas.apps.AtlasConfig",
     "apps.argus.apps.ArgusConfig",
+    "apps.codex.apps.CodexConfig",
     "platform_apps.apps.tenants",
     "platform_apps.apps.agpay",
 ]

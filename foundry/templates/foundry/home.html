@@ -391,6 +391,29 @@
             </div>
         {% endif %}
     </div>
+    {# Codex (Markdown library) #}
+    <div class="col">
+        {% if cards.codex %}
+          <a href="{% url 'codex:list' %}" class="text-decoration-none text-white position-relative">
+            <div class="neon-glass-card neon-athena h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+              <div class="card-icon">📖</div>
+              <h4 class="card-title mb-2">{% trans "Codex" %}</h4>
+              <small class="text-white-50 mb-3">{% trans "Discover and read every markdown doc across your projects in one library." %}</small>
+              <span class="btn btn-outline-info">{% trans "Open Codex" %}</span>
+            </div>
+          </a>
+        {% else %}
+            <div class="position-relative">
+              <div class="neon-glass-card neon-code card-disabled h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+                <div class="card-icon">📖</div>
+                <h4 class="card-title mb-2">{% trans "Codex" %}</h4>
+                <small class="text-white-50 mb-3">{% trans "Markdown document library." %}</small>
+                <span class="btn btn-outline-secondary disabled">{% trans "Coming soon" %}</span>
+              </div>
+              <div class="coming-soon-badge">Contact Admin for access</div>
+            </div>
+        {% endif %}
+    </div>
   </div>
 </div>
 
