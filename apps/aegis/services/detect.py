@@ -78,6 +78,10 @@ class Detector:
     note: str = ""
     # Optional second pass: (matched_text) -> (severity, note) or None to drop.
     refine: Callable[[str], tuple[str, str] | None] | None = None
+    # Checked against the ~80 chars preceding the match; a hit drops the finding.
+    # Context, not the value, is what distinguishes a leaked key from a public
+    # identifier that happens to share its shape.
+    context_reject: re.Pattern | None = None
     # Which capture group holds the actual credential. Placeholder detection
     # runs against this group only — without it, a real password inside
     # `postgres://u:pw@db.example.com/x` gets discarded because the *hostname*
@@ -176,6 +180,10 @@ DETECTORS: list[Detector] = [
         severity=CRITICAL,
         pattern=re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"),
         search_terms=("AKIA",),
+        # An AKIA in a URL query string is an Amazon affiliate `SubscriptionId`
+        # or a presigned-URL `AWSAccessKeyId` — both public identifiers, not
+        # secrets. Crawl corpora are full of them.
+        context_reject=re.compile(r"[?&][A-Za-z_]{2,30}=$"),
     ),
     Detector(
         key="google_api_key",
@@ -285,6 +293,10 @@ def scan_text(text: str, keywords: list[str] | None = None) -> list[Finding]:
             # Placeholder-check the credential itself, not surrounding context.
             candidate = match.group(det.secret_group) if det.secret_group else value
             if _is_placeholder(candidate or value):
+                continue
+            if det.context_reject and det.context_reject.search(
+                text[max(0, match.start() - 80):match.start()]
+            ):
                 continue
             dedupe = (det.key, value_hash(value))
             if dedupe in seen:

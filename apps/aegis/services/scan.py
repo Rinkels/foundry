@@ -7,6 +7,7 @@ covered less than it claims is worse than no report.
 from __future__ import annotations
 
 import traceback
+from itertools import zip_longest
 
 from django.db import transaction
 from django.utils import timezone
@@ -18,17 +19,55 @@ DEFAULT_MAX_QUERIES = 40
 
 
 def build_queries(profile: WatchProfile, *, max_queries: int) -> tuple[list[str], int]:
-    """Cross scope qualifiers with search terms.
+    """Build the query plan, ordered by signal-to-noise.
 
-    Returns (queries, skipped_count). Terms come back severity-ordered from
-    `detect.search_terms_for`, so truncation drops the least valuable queries.
+    GitHub code search ANDs its terms, which gives us the single most valuable
+    query shape available: `"acme.com" "AKIA"` finds files that contain the
+    customer's identifier *and* a credential marker. That pairing is what makes
+    unscoped searching viable at all — a bare keyword search across all of
+    GitHub returns crawler datasets, while the paired form returns almost
+    nothing that isn't worth reading.
+
+    Order matters because `max_queries` truncates the tail. The two
+    high-value families are **interleaved** rather than concatenated: a global
+    sweep can produce hundreds of paired queries, and if those all ran first a
+    capped run would never reach the customer's own org at all.
+
+        A. global paired      — company identifier + credential marker
+        B. scoped credential  — every credential marker inside known repos
+           (A and B round-robin, so truncation costs both evenly)
+        C. scoped keyword     — identifier mentions inside known repos
+        D. global bare        — identifier anywhere (noisy; last on purpose)
+
+    Returns (queries, skipped_count).
     """
     scopes = profile.scope_qualifiers
-    if not scopes:
-        return [], 0
+    keywords = profile.keyword_list
+    cred_terms = detect.search_terms_for()  # credential markers only
+    go_global = profile.search_globally and bool(keywords)
 
-    terms = detect.search_terms_for(profile.keyword_list)
-    queries = [f'"{term}" {scope}' for term in terms for scope in scopes]
+    bucket_a = (
+        [f'"{kw}" "{term}"' for term in cred_terms for kw in keywords] if go_global else []
+    )
+    bucket_b = [f'"{term}" {scope}' for term in cred_terms for scope in scopes]
+    bucket_c = [f'"{kw}" {scope}' for kw in keywords for scope in scopes]
+    bucket_d = [f'"{kw}"' for kw in keywords] if go_global else []
+
+    queries: list[str] = []
+    seen: set[str] = set()
+
+    def add(q: str) -> None:
+        if q not in seen:
+            seen.add(q)
+            queries.append(q)
+
+    for a, b in zip_longest(bucket_a, bucket_b):
+        if a:
+            add(a)
+        if b:
+            add(b)
+    for q in bucket_c + bucket_d:
+        add(q)
 
     if len(queries) <= max_queries:
         return queries, 0
@@ -106,7 +145,10 @@ def run_scan(
         run.queries_skipped = skipped
 
         if not queries:
-            run.append_log("No scope configured — add a GitHub org or repo to this profile.")
+            run.append_log(
+                "Nothing to search — add a GitHub org/repo, or add keywords and "
+                "tick 'search globally'."
+            )
             run.status = WatchRun.STATUS_OK
             run.finished_at = timezone.now()
             run.save()
@@ -125,6 +167,7 @@ def run_scan(
         seen_files: set[tuple[str, str]] = set()
         new_count = 0
         repeat_count = 0
+        denied_repos: set[str] = set()
 
         for query in queries:
             try:
@@ -147,6 +190,12 @@ def run_scan(
                 file_path = item.get("path", "")
                 url = item.get("html_url", "")
 
+                # Crawler/dataset repos mention every domain that exists; one of
+                # them can bury a genuine finding under hundreds of rows.
+                if profile.is_denied(repo_full_name):
+                    denied_repos.add(repo_full_name)
+                    continue
+
                 key = (repo_full_name, file_path)
                 if key not in seen_files:
                     seen_files.add(key)
@@ -163,6 +212,13 @@ def run_scan(
                         new_count += 1
                     else:
                         repeat_count += 1
+
+        if denied_repos:
+            run.append_log(
+                f"Denylist filtered {len(denied_repos)} repo(s): "
+                f"{', '.join(sorted(denied_repos)[:10])}"
+                f"{' …' if len(denied_repos) > 10 else ''}"
+            )
 
         run.files_examined = len(seen_files)
         run.findings_new = new_count

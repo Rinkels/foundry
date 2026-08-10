@@ -30,6 +30,15 @@ class Command(BaseCommand):
         parser.add_argument("--org", help="Ad-hoc target: a GitHub org or user login.")
         parser.add_argument("--keywords", default="", help="Comma-separated tenant keywords.")
         parser.add_argument(
+            "--global", dest="go_global", action="store_true",
+            help="Also search ALL of public GitHub for the keywords, not just --org/--repo. "
+                 "Finds leaks in repos the customer doesn't own.",
+        )
+        parser.add_argument(
+            "--deny", default="",
+            help="Comma-separated repo-name substrings to drop (adds to the default denylist).",
+        )
+        parser.add_argument(
             "--installation", type=int, default=None,
             help="GitHub App installation_id to authenticate with (ad-hoc targets). "
                  "Defaults to the only installation if there is exactly one.",
@@ -42,7 +51,10 @@ class Command(BaseCommand):
     def handle(self, *args, **opts):
         profiles = self._resolve_profiles(opts)
         if not profiles:
-            raise CommandError("Nothing to scan. Pass --profile, --all, --repo or --org.")
+            raise CommandError(
+                "Nothing to scan. Pass --profile, --all, --repo, --org, "
+                "or --global with --keywords."
+            )
 
         for profile in profiles:
             self.stdout.write(self.style.MIGRATE_HEADING(f"\n▶ {profile.name}"))
@@ -59,7 +71,11 @@ class Command(BaseCommand):
             except WatchProfile.DoesNotExist:
                 raise CommandError(f"No profile with slug '{opts['profile']}'.") from None
 
+        # --global with keywords alone is a valid target: no org, no repo, just
+        # "find these identifiers anywhere on GitHub".
         target = opts.get("repo") or opts.get("org")
+        if not target and opts.get("go_global") and opts.get("keywords"):
+            target = opts["keywords"].split(",")[0].strip()
         if not target:
             return []
 
@@ -72,11 +88,16 @@ class Command(BaseCommand):
         )
         if opts.get("repo"):
             profile.github_repos = opts["repo"]
-        else:
+        elif opts.get("org"):
             profile.github_orgs = opts["org"]
         if opts.get("keywords"):
             profile.keywords = "\n".join(
                 k.strip() for k in opts["keywords"].split(",") if k.strip()
+            )
+        profile.search_globally = bool(opts.get("go_global"))
+        if opts.get("deny"):
+            profile.repo_denylist = "\n".join(
+                d.strip() for d in opts["deny"].split(",") if d.strip()
             )
 
         # Ad-hoc runs have no tenant, so pick an installation explicitly rather

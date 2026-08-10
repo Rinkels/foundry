@@ -72,6 +72,18 @@ class WatchProfile(models.Model):
         blank=True, default="",
         help_text="One per line: company name, internal domains, project codenames.",
     )
+    search_globally = models.BooleanField(
+        default=False,
+        help_text="Also search ALL of public GitHub for these keywords, not just the "
+                  "orgs/repos above. This is how you find a leak in a contractor's "
+                  "personal repo — the case scoped search can never catch.",
+    )
+    repo_denylist = models.TextField(
+        blank=True, default="",
+        help_text="One substring per line. Repos whose full name matches are dropped. "
+                  "Use for dataset/crawler repos that mention every domain on the "
+                  "internet. Added to settings.AEGIS_DEFAULT_REPO_DENYLIST.",
+    )
 
     enabled = models.BooleanField(default=True)
     notify_email = models.EmailField(
@@ -104,6 +116,16 @@ class WatchProfile(models.Model):
     @property
     def keyword_list(self) -> list[str]:
         return _split_lines(self.keywords)
+
+    @property
+    def denylist(self) -> list[str]:
+        from django.conf import settings
+        defaults = list(getattr(settings, "AEGIS_DEFAULT_REPO_DENYLIST", []))
+        return [d.lower() for d in defaults + _split_lines(self.repo_denylist)]
+
+    def is_denied(self, repo_full_name: str) -> bool:
+        name = (repo_full_name or "").lower()
+        return any(d in name for d in self.denylist)
 
     @property
     def scope_qualifiers(self) -> list[str]:

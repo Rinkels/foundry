@@ -15,6 +15,12 @@ class WatchProfileAdmin(admin.ModelAdmin):
         (None, {"fields": ["name", "slug", "enabled", "notify_email"]}),
         ("Tenant", {"fields": ["credential", "cloud_project", "github_installation"]}),
         ("Scope", {"fields": ["github_orgs", "github_repos", "keywords"]}),
+        ("Global search", {
+            "fields": ["search_globally", "repo_denylist"],
+            "description": "Searching all of public GitHub is the only way to catch a "
+                           "leak in a repo you don't own. Pair it with a denylist — "
+                           "crawler datasets match every brand keyword.",
+        }),
     ]
 
 
