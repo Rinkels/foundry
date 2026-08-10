@@ -1,0 +1,124 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div class="glass-header mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="mb-0">🛡️ Aegis</h1>
+      <div class="text-soft">
+        Public exposure monitoring ·
+        {{ profiles|length }} profile{{ profiles|pluralize }} ·
+        {{ total_open }} open finding{{ total_open|pluralize }}
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn-glass" href="/admin/aegis/watchprofile/add/">＋ New profile</a>
+      <a class="btn-glass" href="/">← Home</a>
+    </div>
+  </div>
+</div>
+
+{% if messages %}
+  {% for m in messages %}
+    <div class="alert alert-{{ m.tags|default:'info' }} py-2">{{ m }}</div>
+  {% endfor %}
+{% endif %}
+
+{% if not profiles %}
+  <div class="neon-glass-card p-4 text-center">
+    <p class="mb-2">No watch profiles yet.</p>
+    <p class="text-soft small mb-3">
+      A profile is one customer: which GitHub orgs/repos to check, and which
+      keywords identify them.
+    </p>
+    <a class="btn-glass" href="/admin/aegis/watchprofile/add/">Create the first one</a>
+  </div>
+{% else %}
+  <div class="row g-3">
+    {% for p in profiles %}
+      <div class="col-md-6">
+        <div class="neon-glass-card p-3 h-100">
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <div>
+              <h5 class="mb-1">
+                <a href="{% url 'aegis:profile_detail' p.slug %}">{{ p.name }}</a>
+                {% if not p.enabled %}<span class="badge bg-dark ms-1">disabled</span>{% endif %}
+              </h5>
+              <div class="text-soft small">
+                {% if p.credential %}{{ p.credential.name }} · {% endif %}
+                {% if p.cloud_project %}{{ p.cloud_project.name }}{% else %}no linked app{% endif %}
+              </div>
+            </div>
+            <div class="text-end">
+              {% if p.critical_count %}
+                <span class="badge bg-danger">{{ p.critical_count }} critical</span>
+              {% endif %}
+              {% if p.high_count %}
+                <span class="badge bg-danger">{{ p.high_count }} high</span>
+              {% endif %}
+              {% if not p.open_count %}
+                <span class="badge bg-success">clean</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="text-soft small mt-2">
+            Scope:
+            {% for o in p.org_list %}<code>org:{{ o }}</code> {% endfor %}
+            {% for r in p.repo_list %}<code>{{ r }}</code> {% endfor %}
+            {% if not p.org_list and not p.repo_list %}
+              <span class="text-warning">none configured</span>
+            {% endif %}
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-soft small">
+              {% if p.latest_run %}
+                Last swept {{ p.latest_run.started_at|timesince }} ago
+              {% else %}
+                Never swept
+              {% endif %}
+            </div>
+            <form method="post" action="{% url 'aegis:scan_now' p.slug %}">
+              {% csrf_token %}
+              <button class="btn-glass btn-sm" type="submit">🔍 Scan now</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{% if recent_runs %}
+  <div class="neon-glass-card p-3 mt-3">
+    <h6 class="text-soft mb-2">Recent sweeps</h6>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr>
+          <th>Profile</th><th>When</th><th>Queries</th><th>Files</th>
+          <th>New</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody>
+          {% for r in recent_runs %}
+            <tr>
+              <td>{{ r.profile.name }}</td>
+              <td class="text-soft small">{{ r.started_at|date:"M j, H:i" }}</td>
+              <td>{{ r.queries_run }}{% if r.queries_skipped %}<span class="text-warning" title="skipped by cap">+{{ r.queries_skipped }}↯</span>{% endif %}</td>
+              <td>{{ r.files_examined }}</td>
+              <td>{{ r.findings_new }}</td>
+              <td>
+                {% if r.status == 'failed' %}<span class="badge bg-danger">failed</span>
+                {% elif r.status == 'running' %}<span class="badge bg-info">running</span>
+                {% else %}<span class="badge bg-success">ok</span>{% endif %}
+              </td>
+              <td><a class="small" href="{% url 'aegis:run_log' r.pk %}">log</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}

@@ -63,6 +63,16 @@ ATLAS_INLINE_WORKER = os.environ.get("ATLAS_INLINE_WORKER", "True") == "True"
 GITHUB_APP_ID = os.environ.get("GITHUB_APP_ID", "")
 GITHUB_APP_PRIVATE_KEY_PATH = os.environ.get("GITHUB_APP_PRIVATE_KEY_PATH", "")
 GITHUB_WEBHOOK_SECRET = os.environ.get("GITHUB_WEBHOOK_SECRET", "")
+
+# Aegis (public exposure monitoring). Falls back to a PAT when a watch profile
+# has no GitHub App installation attached; needs only `public_repo` scope.
+AEGIS_GITHUB_TOKEN = os.environ.get("AEGIS_GITHUB_TOKEN", "")
+# GitHub's code_search bucket is ~10 req/min — 7s spacing keeps us under it.
+AEGIS_SEARCH_MIN_INTERVAL = float(os.environ.get("AEGIS_SEARCH_MIN_INTERVAL", "7.0"))
+# Per-run query cap. Each query costs ~7s, so 40 ≈ a 5 minute sweep.
+AEGIS_MAX_QUERIES = int(os.environ.get("AEGIS_MAX_QUERIES", "40"))
+AEGIS_MAX_BACKOFF = int(os.environ.get("AEGIS_MAX_BACKOFF", "120"))
+
 MEDIA_URL = "/uploads/"
 MEDIA_ROOT = BASE_DIR / "uploads"
 FOUNDRY_HOME_CARDS = {
@@ -76,6 +86,7 @@ FOUNDRY_HOME_CARDS = {
     "mnemos": True,
     "atlas": True,
     "argus": True,
+    "aegis": True,
     "codex": True,
 }
 
@@ -102,6 +113,7 @@ INSTALLED_APPS = [
     "apps.mnemos.apps.MnemosConfig",
     "apps.atlas.apps.AtlasConfig",
     "apps.argus.apps.ArgusConfig",
+    "apps.aegis.apps.AegisConfig",
     "apps.codex.apps.CodexConfig",
     "platform_apps.apps.tenants",
     "platform_apps.apps.agpay",

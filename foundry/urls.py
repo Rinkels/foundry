@@ -20,6 +20,7 @@ urlpatterns = [
     path("mnemos/", include("apps.mnemos.urls", namespace="mnemos")),
     path("atlas/", include("apps.atlas.urls", namespace="atlas")),
     path("argus/", include("apps.argus.urls", namespace="argus")),
+    path("aegis/", include("apps.aegis.urls", namespace="aegis")),
     path("codex/", include("apps.codex.urls", namespace="codex")),
     path("agpay/", include("platform_apps.apps.agpay.urls", namespace="agpay")),
     path("common/", include("apps.common.urls", namespace="common")),

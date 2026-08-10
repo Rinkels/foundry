@@ -1,0 +1,144 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div class="glass-header mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="mb-0">🛡️ {{ profile.name }}</h1>
+      <div class="text-soft">
+        {{ total_shown }} {% if show_closed %}total{% else %}open{% endif %}
+        finding{{ total_shown|pluralize }}
+        {% if latest_run %} · last swept {{ latest_run.started_at|timesince }} ago{% endif %}
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <form method="post" action="{% url 'aegis:scan_now' profile.slug %}">
+        {% csrf_token %}
+        <button class="btn-glass" type="submit">🔍 Scan now</button>
+      </form>
+      {% if show_closed %}
+        <a class="btn-glass" href="{% url 'aegis:profile_detail' profile.slug %}">Open only</a>
+      {% else %}
+        <a class="btn-glass" href="?closed=1">Show all</a>
+      {% endif %}
+      <a class="btn-glass" href="/admin/aegis/watchprofile/{{ profile.pk }}/change/">⚙ Edit</a>
+      <a class="btn-glass" href="{% url 'aegis:dashboard' %}">← Aegis</a>
+    </div>
+  </div>
+</div>
+
+{% if messages %}
+  {% for m in messages %}
+    <div class="alert alert-{{ m.tags|default:'info' }} py-2">{{ m }}</div>
+  {% endfor %}
+{% endif %}
+
+{% if latest_run.queries_skipped %}
+  <div class="alert alert-warning py-2">
+    <strong>Partial coverage.</strong>
+    The last sweep hit its query cap and skipped {{ latest_run.queries_skipped }}
+    lower-priority queries. Raise <code>AEGIS_MAX_QUERIES</code> for a full pass.
+  </div>
+{% endif %}
+
+{% if not groups %}
+  <div class="neon-glass-card p-4 text-center">
+    <p class="mb-1">
+      {% if latest_run %}No {% if not show_closed %}open {% endif %}exposures found.
+      {% else %}Not swept yet.{% endif %}
+    </p>
+    <p class="text-soft small mb-0">
+      Scope:
+      {% for o in profile.org_list %}<code>org:{{ o }}</code> {% endfor %}
+      {% for r in profile.repo_list %}<code>{{ r }}</code> {% endfor %}
+      {% if not profile.org_list and not profile.repo_list %}
+        <span class="text-warning">nothing configured — add an org or repo first.</span>
+      {% endif %}
+    </p>
+  </div>
+{% endif %}
+
+{% for severity, exposures in groups.items %}
+  <div class="neon-glass-card p-3 mb-3">
+    <h5 class="mb-3">
+      <span class="badge {% if severity == 'critical' or severity == 'high' %}bg-danger{% elif severity == 'medium' %}bg-warning text-dark{% elif severity == 'low' %}bg-info{% else %}bg-secondary{% endif %}">
+        {{ severity|title }}
+      </span>
+      <span class="text-soft small ms-2">{{ exposures|length }} finding{{ exposures|length|pluralize }}</span>
+    </h5>
+
+    {% for ex in exposures %}
+      <div class="border-top pt-3 mt-3">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div style="min-width:0;">
+            <div class="fw-bold">{{ ex.detector_label|default:ex.detector }}</div>
+            <div class="small">
+              {% if ex.url %}
+                <a href="{{ ex.url }}" target="_blank" rel="noopener noreferrer">
+                  {{ ex.repo_full_name }}/{{ ex.file_path }} ↗
+                </a>
+              {% else %}
+                {{ ex.repo_full_name }}{% if ex.file_path %}/{{ ex.file_path }}{% endif %}
+              {% endif %}
+            </div>
+            {% if ex.redacted_snippet %}
+              <div class="text-soft small mt-1"><code>{{ ex.redacted_snippet }}</code></div>
+            {% endif %}
+            {% if ex.note %}
+              <div class="small mt-1">{{ ex.note }}</div>
+            {% endif %}
+            <div class="text-soft small mt-1">
+              First seen {{ ex.first_seen|date:"M j, Y" }} ·
+              seen {{ ex.times_seen }}×
+              {% if ex.status != 'new' %}
+                · <span class="badge bg-secondary">{{ ex.get_status_display }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <form method="post" action="{% url 'aegis:set_exposure_status' ex.pk %}"
+                class="d-flex gap-1 align-items-center">
+            {% csrf_token %}
+            <select name="status" class="form-select form-select-sm" style="width:auto;">
+              {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if ex.status == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <button class="btn-glass btn-sm" type="submit">Set</button>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endfor %}
+
+{% if runs %}
+  <div class="neon-glass-card p-3">
+    <h6 class="text-soft mb-2">Sweep history</h6>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr>
+          <th>When</th><th>Queries</th><th>Files</th><th>New</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody>
+          {% for r in runs %}
+            <tr>
+              <td class="text-soft small">{{ r.started_at|date:"M j, H:i" }}</td>
+              <td>{{ r.queries_run }}</td>
+              <td>{{ r.files_examined }}</td>
+              <td>{{ r.findings_new }}</td>
+              <td>
+                {% if r.status == 'failed' %}<span class="badge bg-danger">failed</span>
+                {% elif r.status == 'running' %}<span class="badge bg-info">running</span>
+                {% else %}<span class="badge bg-success">ok</span>{% endif %}
+              </td>
+              <td><a class="small" href="{% url 'aegis:run_log' r.pk %}">log</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}
