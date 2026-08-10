@@ -72,6 +72,10 @@ AEGIS_SEARCH_MIN_INTERVAL = float(os.environ.get("AEGIS_SEARCH_MIN_INTERVAL", "7
 # Per-run query cap. Each query costs ~7s, so 40 ≈ a 5 minute sweep.
 AEGIS_MAX_QUERIES = int(os.environ.get("AEGIS_MAX_QUERIES", "40"))
 AEGIS_MAX_BACKOFF = int(os.environ.get("AEGIS_MAX_BACKOFF", "120"))
+# Byline at the foot of the customer-facing one-pager.
+AEGIS_REPORT_FOOTER = os.environ.get(
+    "AEGIS_REPORT_FOOTER", "Prepared by Miventi  ·  ruan@miventi.com"
+)
 # Crawler / dataset / mirror repos that index the whole web. A brand keyword
 # matches these every time and buries real findings. Substring match on
 # "owner/name", case-insensitive.

@@ -85,6 +85,12 @@ class WatchProfile(models.Model):
                   "internet. Added to settings.AEGIS_DEFAULT_REPO_DENYLIST.",
     )
 
+    # Footprint posture, collected by services/posture.py. Not a finding — it's
+    # the governance picture (how many public repos, how many abandoned) that
+    # makes a clean credential report worth reading.
+    posture = models.JSONField(blank=True, default=dict)
+    posture_updated_at = models.DateTimeField(null=True, blank=True)
+
     enabled = models.BooleanField(default=True)
     notify_email = models.EmailField(
         blank=True, default="", help_text="Where new findings are sent. Blank = no email.",
@@ -255,6 +261,11 @@ class Exposure(models.Model):
     # Lifecycle
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default=STATUS_NEW, db_index=True,
+    )
+    triage_note = models.CharField(
+        max_length=400, blank=True, default="",
+        help_text="Why this was dismissed or accepted. Shown verbatim in the customer "
+                  "report — the explanation IS the deliverable, so write it for them.",
     )
     first_seen = models.DateTimeField(default=timezone.now)
     last_seen = models.DateTimeField(default=timezone.now)

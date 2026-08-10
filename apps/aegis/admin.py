@@ -46,3 +46,9 @@ class ExposureAdmin(admin.ModelAdmin):
     search_fields = ["repo_full_name", "file_path", "detector", "matched_keyword", "note"]
     raw_id_fields = ["profile", "first_run"]
     readonly_fields = ["fingerprint", "redacted_snippet", "first_seen", "last_seen", "times_seen"]
+    fields = [
+        "profile", "first_run", "severity", "status", "triage_note",
+        "detector", "detector_label", "repo_full_name", "file_path", "url",
+        "matched_keyword", "note", "redacted_snippet", "fingerprint",
+        "first_seen", "last_seen", "times_seen", "resolved_at",
+    ]

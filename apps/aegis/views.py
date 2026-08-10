@@ -1,11 +1,15 @@
 from collections import OrderedDict
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .models import Exposure, WatchProfile, WatchRun
+from .services import posture as posture_service
+from .services import report as report_service
 from .services import scan as scan_service
 
 SEVERITY_ORDER = [
@@ -100,10 +104,46 @@ def set_exposure_status(request, pk):
     from django.utils import timezone
     exposure.status = new_status
     exposure.resolved_at = timezone.now() if new_status == Exposure.STATUS_RESOLVED else None
-    exposure.save(update_fields=["status", "resolved_at"])
+    # Blank input leaves an existing note alone — the triage rationale is report
+    # content, so losing it to an accidental empty submit would be costly.
+    note = request.POST.get("triage_note", "").strip()
+    if note:
+        exposure.triage_note = note[:400]
+    exposure.save(update_fields=["status", "resolved_at", "triage_note"])
 
     messages.success(request, f"Marked as {exposure.get_status_display().lower()}.")
     return redirect("aegis:profile_detail", slug=exposure.profile.slug)
+
+
+@login_required
+def report_pdf(request, slug):
+    """Download the customer-facing one-pager."""
+    profile = get_object_or_404(WatchProfile, slug=slug)
+    pdf = report_service.build(
+        profile,
+        generated_by=getattr(settings, "AEGIS_REPORT_FOOTER", ""),
+    )
+    resp = HttpResponse(pdf, content_type="application/pdf")
+    resp["Content-Disposition"] = (
+        f'attachment; filename="{report_service.filename_for(profile)}"'
+    )
+    return resp
+
+
+@login_required
+@require_POST
+def refresh_posture(request, slug):
+    """Re-collect public-footprint stats. Cheap — uses the core API, not code search."""
+    profile = get_object_or_404(WatchProfile, slug=slug)
+    if not profile.org_list:
+        messages.error(request, "Add a GitHub org to this profile first.")
+        return redirect("aegis:profile_detail", slug=profile.slug)
+    try:
+        posture_service.collect(profile)
+        messages.success(request, "Footprint posture refreshed.")
+    except Exception as exc:  # noqa: BLE001 - surfaced to the user, not swallowed
+        messages.error(request, f"Posture collection failed: {exc}")
+    return redirect("aegis:profile_detail", slug=profile.slug)
 
 
 @login_required

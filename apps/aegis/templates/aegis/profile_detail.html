@@ -16,6 +16,14 @@
         {% csrf_token %}
         <button class="btn-glass" type="submit">🔍 Scan now</button>
       </form>
+      <a class="btn-glass" href="{% url 'aegis:report_pdf' profile.slug %}">📄 One-pager</a>
+      <form method="post" action="{% url 'aegis:refresh_posture' profile.slug %}">
+        {% csrf_token %}
+        <button class="btn-glass" type="submit"
+                title="Re-collect public repo stats (cheap — core API, not code search)">
+          📊 Footprint
+        </button>
+      </form>
       {% if show_closed %}
         <a class="btn-glass" href="{% url 'aegis:profile_detail' profile.slug %}">Open only</a>
       {% else %}
@@ -97,14 +105,19 @@
           </div>
 
           <form method="post" action="{% url 'aegis:set_exposure_status' ex.pk %}"
-                class="d-flex gap-1 align-items-center">
+                class="d-flex flex-column gap-1" style="min-width:260px;">
             {% csrf_token %}
-            <select name="status" class="form-select form-select-sm" style="width:auto;">
-              {% for value, label in status_choices %}
-                <option value="{{ value }}" {% if ex.status == value %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-            <button class="btn-glass btn-sm" type="submit">Set</button>
+            <div class="d-flex gap-1 align-items-center">
+              <select name="status" class="form-select form-select-sm" style="width:auto;">
+                {% for value, label in status_choices %}
+                  <option value="{{ value }}" {% if ex.status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              <button class="btn-glass btn-sm" type="submit">Set</button>
+            </div>
+            <input type="text" name="triage_note" class="form-control form-control-sm"
+                   maxlength="400" value="{{ ex.triage_note }}"
+                   placeholder="Why? (appears verbatim in the customer report)">
           </form>
         </div>
       </div>
