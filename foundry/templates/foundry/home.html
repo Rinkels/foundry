@@ -36,6 +36,7 @@
   .neon-athena { box-shadow: 0 0 10px #7df9ff, 0 0 20px #b388ff; }
   .neon-hermes { box-shadow: 0 0 10px #00ff99, 0 0 20px #00ffaa; }
   .neon-mnemos { box-shadow: 0 0 10px #00d1ff, 0 0 20px #00ffcc; }
+  .neon-aegis { box-shadow: 0 0 10px #ffd166, 0 0 20px #ef476f; }
 
 
 
@@ -385,6 +386,32 @@
                 <div class="card-icon">👁️</div>
                 <h4 class="card-title mb-2">{% trans "Argus" %}</h4>
                 <small class="text-white-50 mb-3">{% trans "All-seeing portfolio of initiatives." %}</small>
+                <span class="btn btn-outline-secondary disabled">{% trans "Coming soon" %}</span>
+              </div>
+              <div class="coming-soon-badge">Contact Admin for access</div>
+            </div>
+        {% endif %}
+    </div>
+    {# Aegis (Public exposure monitoring) #}
+    <div class="col">
+        {% if cards.aegis %}
+          <a href="{% url 'aegis:dashboard' %}"
+             class="text-decoration-none text-white position-relative">
+            <div class="neon-glass-card neon-aegis h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+              <div class="card-icon">🛡️</div>
+              <h4 class="card-title mb-2">{% trans "Aegis" %}</h4>
+              <small class="text-white-50 mb-3">
+                {% trans "Watch public GitHub for leaked keys and tracked keywords, and issue the customer report." %}
+              </small>
+              <span class="btn btn-outline-info">{% trans "Open Aegis" %}</span>
+            </div>
+          </a>
+        {% else %}
+            <div class="position-relative">
+              <div class="neon-glass-card neon-code card-disabled h-100 p-4 d-flex flex-column justify-content-center align-items-center text-center">
+                <div class="card-icon">🛡️</div>
+                <h4 class="card-title mb-2">{% trans "Aegis" %}</h4>
+                <small class="text-white-50 mb-3">{% trans "Public exposure monitoring for leaked credentials." %}</small>
                 <span class="btn btn-outline-secondary disabled">{% trans "Coming soon" %}</span>
               </div>
               <div class="coming-soon-badge">Contact Admin for access</div>
