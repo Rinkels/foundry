@@ -12,7 +12,7 @@ from django.urls import reverse
 from .models import Developer, EvergreenArticle, Page, Site, SiteTopNavItem
 from .services.generator import SiteGenerator
 from .services.reading_time import estimate_reading_minutes
-from .services.static_builder import StaticBuilder, THEME_CSS_MAP
+from .services.static_builder import StaticBuilder, THEME_CSS_MAP, THEME_FAVICON_MAP
 from .views import _build_page_tree, _site_content_digest
 
 
@@ -55,6 +55,7 @@ class SiteModelTests(SitesBuilderTestCase):
 
         self.assertEqual(set(choices), set(THEME_CSS_MAP))
         self.assertEqual(THEME_CSS_MAP["bauhaus"], "bauhaus.css")
+        self.assertEqual(THEME_FAVICON_MAP["mindsgate"], "mindsgate-favicon.svg")
 
     def test_article_editorial_labels_are_general_and_series_aware(self):
         normal = EvergreenArticle(site=self.site)
@@ -120,6 +121,33 @@ class GeneratorTests(SitesBuilderTestCase):
 
 
 class StaticBuilderTests(SitesBuilderTestCase):
+    def test_mindsgate_favicon_is_injected_with_depth_aware_path(self):
+        builder = StaticBuilder()
+        html = "<html><head><title>Test</title></head><body></body></html>"
+
+        root = builder._inject_theme_favicon(html, "mindsgate")
+        nested = builder._inject_theme_favicon(html, "mindsgate", rel_root="../")
+
+        self.assertIn('href="assets/images/favicon.svg"', root)
+        self.assertIn('href="../assets/images/favicon.svg"', nested)
+        self.assertEqual(
+            builder._inject_theme_favicon(root, "mindsgate").count('rel="icon"'),
+            1,
+        )
+
+    def test_mindsgate_favicon_is_copied_to_generated_assets(self):
+        with TemporaryDirectory() as temp_dir:
+            site_dir = Path(temp_dir) / self.site.slug
+
+            StaticBuilder(Path(temp_dir))._copy_theme_favicon(site_dir, "mindsgate")
+
+            favicon = site_dir / "assets" / "images" / "favicon.svg"
+            favicon_jpg = site_dir / "assets" / "images" / "favicon.jpg"
+            self.assertTrue(favicon.is_file())
+            self.assertIn("HumainX", favicon.read_text(encoding="utf-8"))
+            self.assertTrue(favicon_jpg.is_file())
+            self.assertTrue(favicon_jpg.read_bytes().startswith(b"\xff\xd8\xff"))
+
     def test_article_wrapper_uses_valid_body_and_main_attributes(self):
         article = EvergreenArticle.objects.create(
             site=self.site,

@@ -42,6 +42,10 @@ THEME_CSS_MAP = {
     "mindsgate": "mindsgate.css",
 }
 
+THEME_FAVICON_MAP = {
+    "mindsgate": "mindsgate-favicon.svg",
+}
+
 PAGE_TEMPLATE_MAP = {
     "humainx": "sites_builder/sites/default/humainx.html",
 }
@@ -57,6 +61,32 @@ class StaticBuilder:
         if base_output_dir is None:
             base_output_dir = Path(settings.BASE_DIR) / "output" / "sites"
         self.base_output_dir = base_output_dir
+
+    def _inject_theme_favicon(self, html: str, theme: str, rel_root: str = "") -> str:
+        """Add the configured theme favicon to generated and locked HTML."""
+        if theme not in THEME_FAVICON_MAP or re.search(
+            r'<link\b[^>]*\brel=["\'][^"\']*\bicon\b', html, re.IGNORECASE
+        ):
+            return html
+        favicon = (
+            f'  <link rel="icon" type="image/svg+xml" '
+            f'href="{rel_root}assets/images/favicon.svg">\n'
+        )
+        return re.sub(r"</head>", f"{favicon}</head>", html, count=1, flags=re.IGNORECASE)
+
+    def _copy_theme_favicon(self, site_dir: Path, theme: str) -> None:
+        source_name = THEME_FAVICON_MAP.get(theme)
+        if not source_name:
+            return
+        source = Path(settings.BASE_DIR) / "static" / "themes" / source_name
+        if not source.is_file():
+            raise FileNotFoundError(f"Theme favicon not found: {source}")
+        destination_dir = site_dir / "assets" / "images"
+        destination_dir.mkdir(parents=True, exist_ok=True)
+        copyfile(source, destination_dir / "favicon.svg")
+        jpeg_source = source.with_suffix(".jpg")
+        if jpeg_source.is_file():
+            copyfile(jpeg_source, destination_dir / "favicon.jpg")
 
     def _normalize_landing_href(
         self, site: Site, href: str, known_slugs: set[str], fallback_text: str = ""
@@ -593,6 +623,7 @@ class StaticBuilder:
                 styled_html = self._apply_theme_classes(styled_html, theme)  # ✅ add this
                 styled_html = self._relativize_root_internal_links(site, styled_html)
                 styled_html = self._localize_absolute_assets(styled_html, site_dir, asset_cache)
+                styled_html = self._inject_theme_favicon(styled_html, theme)
                 out_path.write_text(styled_html, encoding="utf-8")
             else:
                 context = {
@@ -620,6 +651,7 @@ class StaticBuilder:
                     html = cardify_subsections(html)
                 html = self._relativize_root_internal_links(site, html)
                 html = self._localize_absolute_assets(html, site_dir, asset_cache)
+                html = self._inject_theme_favicon(html, theme)
                 out_path.write_text(html, encoding="utf-8")
 
             sitelinks.append({
@@ -646,6 +678,7 @@ class StaticBuilder:
             html = self._render_article_html(site=site, article=a, build_id=build_id)
             html = cardify_subsections(html)
             html = self._relativize_root_internal_links(site, html, prefix="../")
+            html = self._inject_theme_favicon(html, theme, rel_root="../")
             out_path.write_text(html, encoding="utf-8")
 
             sitelinks.append({
@@ -661,6 +694,7 @@ class StaticBuilder:
         ).exists()
         if not has_insights_landing:
             insights_index = self._render_insights_index(site=site, articles=list(articles), build_id=build_id)
+            insights_index = self._inject_theme_favicon(insights_index, theme)
             (site_dir / "insights.html").write_text(insights_index, encoding="utf-8")
 
             # Add to sitelinks near the top (optional)
@@ -688,6 +722,7 @@ class StaticBuilder:
 
         theme_key = getattr(site, "theme_css", "neon_glass") or "neon_glass"
         theme_file = THEME_CSS_MAP.get(theme_key, "neon_glass.css")
+        self._copy_theme_favicon(site_dir, theme_key)
 
         # Prefer /static/themes/<file>, fallback to /static/<file>
         src_css_candidates = [

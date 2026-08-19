@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>HumainX</title>
+  <defs>
+    <linearGradient id="x-gradient" x1="12" y1="52" x2="52" y2="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4fd8c4"/>
+      <stop offset="1" stop-color="#7c8cf8"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#070b13"/>
+  <rect x="2.75" y="2.75" width="58.5" height="58.5" rx="13.25" fill="none" stroke="#273044" stroke-width="1.5"/>
+  <path d="M17 15 47 49M47 15 17 49" fill="none" stroke="url(#x-gradient)" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="32" cy="32" r="3.25" fill="#d9b36b"/>
+</svg>
