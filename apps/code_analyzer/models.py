@@ -76,6 +76,21 @@ class ScanItem(models.Model):
     is_duplicate_name = models.BooleanField(default=False, db_index=True)
     is_large = models.BooleanField(default=False, db_index=True)
 
+    # --- AI triage (populated by services.ai_triage; empty until reviewed) ---
+    AI_VERDICTS = [
+        ("", "—"), ("real", "Real"), ("false_positive", "False positive"), ("uncertain", "Uncertain"),
+    ]
+    STATUS_CHOICES = [
+        ("open", "Open"), ("confirmed", "Confirmed"), ("false_positive", "False positive"),
+        ("fixed", "Fixed"), ("suppressed", "Suppressed"),
+    ]
+    ai_verdict = models.CharField(max_length=20, blank=True, default="", choices=AI_VERDICTS, db_index=True)
+    ai_confidence = models.CharField(max_length=8, blank=True, default="")   # low / medium / high
+    ai_explanation = models.TextField(blank=True, default="")
+    ai_fix = models.TextField(blank=True, default="")
+    ai_reviewed_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=16, default="open", choices=STATUS_CHOICES, db_index=True)
+
     class Meta:
         indexes = [
             models.Index(fields=["scan_project", "bucket"]),

@@ -9,9 +9,62 @@ from django.utils.text import slugify
 from collections import defaultdict
 from pathlib import Path
 
+from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_POST
+
 from .services.persistence import persist_scan
 from .services.scanner import compute_stats, scan_path, scan_projects
+from .services import ai_triage
+from .models import ScanRun
 from apps.athena.models import AppContextSnapshot
+
+
+@login_required
+def ai_review(request, run_id):
+    """Triaged report for a saved scan: security findings + AI verdicts."""
+    from .services import ranking, deploy_gate
+    run = get_object_or_404(ScanRun, pk=run_id)
+    items = ai_triage.security_items(run)
+    buckets = defaultdict(list)
+    for it in items:
+        buckets[it.scan_project.name].append(it)
+    groups = []
+    for name, its in buckets.items():
+        its = ranking.annotate_and_sort(its)
+        sp = its[0].scan_project if its else None
+        d = deploy_gate.diff_scanned(sp) if sp else {"new_fps": set(), "new_count": 0,
+                                                     "resolved_count": 0, "baseline": True}
+        for it in its:
+            it.is_new = deploy_gate._fp(it) in d["new_fps"]
+        groups.append({"name": name, "items": its, "top": its[0].priority if its else 0,
+                       "new_count": d["new_count"], "resolved_count": d["resolved_count"],
+                       "baseline": d["baseline"]})
+    # projects with new findings first, then by top risk
+    groups.sort(key=lambda g: (-int(bool(g["new_count"])), -g["top"]))
+    return render(request, "code_analyzer/ai_review.html", {
+        "run": run,
+        "groups": groups,
+        "estimate": ai_triage.estimate(run),
+        "total": items.count(),
+        "reviewed": items.exclude(ai_verdict="").count(),
+        "new_total": sum(g["new_count"] for g in groups),
+    })
+
+
+@login_required
+@require_POST
+def ai_verify(request, run_id):
+    run = get_object_or_404(ScanRun, pk=run_id)
+    raw_limit = request.POST.get("limit", "")
+    limit = int(raw_limit) if raw_limit.isdigit() else None
+    s = ai_triage.run_triage(run, user=request.user, limit=limit)
+    messages.success(
+        request,
+        f"AI review complete — {s['reviewed']} findings: {s['real']} real, "
+        f"{s['false_positive']} false-positive, {s['uncertain']} uncertain "
+        f"(${s['cost_usd']})."
+    )
+    return redirect("code_analyzer:ai_review", run_id=run.id)
 
 
 BUCKET_LABELS = {

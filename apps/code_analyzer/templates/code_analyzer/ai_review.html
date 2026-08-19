@@ -1,0 +1,87 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div class="glass-header mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="mb-0">🧠 Achilles — AI Review</h1>
+      <div class="text-soft">
+        Scan #{{ run.id }} · {{ run.created_at|date:"Y-m-d H:i" }} ·
+        {{ total }} security finding{{ total|pluralize }} · {{ reviewed }} reviewed
+      </div>
+    </div>
+    <a class="btn-glass" href="{% url 'code_analyzer:dashboard' %}">← Achilles</a>
+  </div>
+</div>
+
+{# ---- Run AI verification (cost shown up front) ---- #}
+<div class="neon-glass-card p-3 mb-3">
+  <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between">
+    <div>
+      <div class="text-white">Validate findings with AI — real vs false-positive, with an explanation and a suggested fix.</div>
+      <div class="text-soft small">
+        {{ estimate.count }} finding{{ estimate.count|pluralize }} · model <code>{{ estimate.model }}</code> ·
+        estimated cost <strong class="text-info">${{ estimate.est_cost_usd }}</strong>
+        (~{{ estimate.est_input_tokens }} in / {{ estimate.est_output_tokens }} out tokens)
+      </div>
+      <div class="text-soft small mt-1">
+        Ranked by <strong>exposure &times; severity</strong> — routed views, settings &amp; secrets first;
+        tests/migrations last. "Verify sample" reviews the top 5 by risk.
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <form method="post" action="{% url 'code_analyzer:ai_verify' run.id %}"
+            onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Reviewing…';">
+        {% csrf_token %}<input type="hidden" name="limit" value="5">
+        <button class="btn-glass" type="submit">🧪 Verify sample (5)</button>
+      </form>
+      <form method="post" action="{% url 'code_analyzer:ai_verify' run.id %}"
+            onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Reviewing…';">
+        {% csrf_token %}
+        <button class="btn-glass" type="submit">🧠 Verify all (~${{ estimate.est_cost_usd }})</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# ---- Findings grouped by project ---- #}
+{% for g in groups %}
+  <div class="d-flex align-items-center gap-2 mt-4 mb-2 flex-wrap">
+    <h5 class="text-white mb-0">{{ g.name }} <span class="text-soft">({{ g.items|length }})</span></h5>
+    {% if g.baseline %}<span class="badge bg-dark" title="First scan — no prior run to compare">baseline</span>
+    {% elif g.new_count %}<span class="badge bg-warning text-dark">🆕 {{ g.new_count }} new since last scan</span>
+    {% else %}<span class="badge bg-success">no regressions</span>{% endif %}
+    {% if g.resolved_count %}<span class="badge bg-secondary">✓ {{ g.resolved_count }} resolved</span>{% endif %}
+  </div>
+  {% for it in g.items %}
+    <div class="neon-glass-card p-3 mb-2{% if it.is_new %} border border-warning{% endif %}">
+      <div class="d-flex justify-content-between align-items-start gap-2">
+        <div class="flex-grow-1">
+          <div>
+            {% if it.is_new %}<span class="badge bg-warning text-dark">NEW</span>{% endif %}
+            <span class="badge {% if it.exposure == 'high' %}bg-danger{% elif it.exposure == 'med' %}bg-secondary{% else %}bg-dark{% endif %}"
+                  title="Exposure / reachability — routed/settings/secret = high; tests/migrations = low">🎯 {{ it.exposure }}</span>
+            {% if it.ai_verdict == "real" %}<span class="badge bg-danger">✔ real</span>
+            {% elif it.ai_verdict == "false_positive" %}<span class="badge bg-secondary">✖ false positive</span>
+            {% elif it.ai_verdict == "uncertain" %}<span class="badge bg-warning text-dark">? uncertain</span>
+            {% else %}<span class="badge bg-dark">not reviewed</span>{% endif %}
+            {% if it.ai_confidence %}<span class="text-soft small">· {{ it.ai_confidence }} confidence</span>{% endif %}
+            <span class="text-white ms-1">{{ it.name }}</span>
+          </div>
+          <div class="text-soft small mt-1"><code style="font-size:.8rem">{{ it.file }}{% if it.lineno %}:{{ it.lineno }}{% endif %}</code></div>
+          {% if it.ai_explanation %}<div class="text-white-50 small mt-2">{{ it.ai_explanation }}</div>{% endif %}
+          {% if it.ai_fix %}
+            <div class="mt-2">
+              <div class="text-soft small">Suggested fix</div>
+              <pre class="mb-0" style="white-space:pre-wrap; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:10px 12px; font-size:.82rem;">{{ it.ai_fix }}</pre>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+{% empty %}
+  <div class="neon-glass-card p-4 text-soft">No security findings in this scan. Nothing to review. 🎉</div>
+{% endfor %}
+
+{% endblock %}

@@ -57,6 +57,36 @@
   </div>
 </div>
 
+{# ---- Achilles deploy gate (advisory) ---- #}
+{% if gate.scanned %}
+<div class="neon-glass-card p-3 mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <div class="text-soft small">🛡 Achilles gate</div>
+      <div>
+        {% if gate.status == "block" %}<span class="badge bg-danger">⛔ BLOCK</span>
+        {% elif gate.status == "warn" %}<span class="badge bg-warning text-dark">⚠ WARN</span>
+        {% elif gate.status == "pass" %}<span class="badge bg-success">✓ PASS</span>
+        {% elif gate.status == "baseline" %}<span class="badge bg-secondary">baseline</span>{% endif %}
+        <span class="text-white ms-1">
+          {% if gate.status == "baseline" %}First scan — {{ gate.total }} finding{{ gate.total|pluralize }} (no prior scan to compare).
+          {% elif gate.new_count %}{{ gate.new_count }} new finding{{ gate.new_count|pluralize }} since scan #{{ gate.prev_run_id }}{% if gate.new_high_exposure %} · {{ gate.new_high_exposure }} high-risk{% endif %}.
+          {% else %}No new findings since scan #{{ gate.prev_run_id }}.{% endif %}
+        </span>
+        {% if gate.resolved_count %}<span class="text-soft small">· {{ gate.resolved_count }} resolved</span>{% endif %}
+      </div>
+    </div>
+    <a class="btn-glass" href="{% url 'code_analyzer:ai_review' gate.run_id %}">🧠 Review findings</a>
+  </div>
+</div>
+{% else %}
+<div class="neon-glass-card p-3 mb-3">
+  <div class="text-soft small">🛡 Achilles gate</div>
+  <div class="text-soft">No Achilles scan found for this project yet — run one in
+    <a href="{% url 'code_analyzer:dashboard' %}">Achilles</a> to enable the deploy gate.</div>
+</div>
+{% endif %}
+
 <div class="neon-glass-card p-3 mb-3">
   <div class="text-soft small">Source</div>
   <div>

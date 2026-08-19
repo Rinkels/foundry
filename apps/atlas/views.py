@@ -44,6 +44,7 @@ def backup_now(request, slug):
 @login_required
 def project_detail(request, slug):
     project = get_object_or_404(CloudProject, slug=slug)
+    from apps.code_analyzer.services import deploy_gate
     return render(
         request,
         "atlas/project_detail.html",
@@ -51,6 +52,7 @@ def project_detail(request, slug):
             "project": project,
             "resources": project.resources.all(),
             "runs": project.runs.all()[:20],
+            "gate": deploy_gate.gate_for_cloudproject(project),
         },
     )
 
@@ -71,6 +73,12 @@ def deploy(request, slug):
     if request.method != "POST":
         return HttpResponseBadRequest("POST required")
     project = get_object_or_404(CloudProject, slug=slug)
+    from apps.code_analyzer.services import deploy_gate
+    gate = deploy_gate.gate_for_cloudproject(project)
+    if gate.get("status") == "block":
+        messages.warning(request, f"⚠ Achilles gate: {gate.get('new_high_exposure', 0)} NEW high-risk finding(s) since the last scan — review before relying on this deploy.")
+    elif gate.get("status") == "warn":
+        messages.warning(request, f"⚠ Achilles gate: {gate.get('new_count', 0)} new finding(s) since the last scan.")
     run = provisioner.enqueue_deploy(project, user=request.user)
     messages.success(request, f"Deploy queued (run #{run.pk}). Watch the run log below for progress.")
     return redirect("atlas:project_detail", slug=project.slug)
