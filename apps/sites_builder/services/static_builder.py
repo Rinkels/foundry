@@ -34,12 +34,16 @@ _ABS_IMG_RE = re.compile(
 
 THEME_CSS_MAP = {
     "neon_glass": "neon_glass.css",
-    "minimal": "minimal.css",
     "startup": "startup.css",
     "aurora": "aurora.css",
     "verdant": "verdant.css",
+    "bauhaus": "bauhaus.css",
     "editorial": "editorial.css",
     "mindsgate": "mindsgate.css",
+}
+
+PAGE_TEMPLATE_MAP = {
+    "humainx": "sites_builder/sites/default/humainx.html",
 }
 
 
@@ -264,15 +268,13 @@ class StaticBuilder:
         }
 
     def _render_article_html(self, site: Site, article: EvergreenArticle, build_id: str) -> str:
-        """
-        Render a standalone static HTML page for an article.
-        Includes automatic Cornerstone/Supporting linking sections using ArticleCornerstoneLink.
-        """
-        title = (article.meta_title or article.title or "").strip()
-        meta_desc = (article.meta_description or article.excerpt or "").strip()
-
+        """Render an Insight using the shared article system and optional series metadata."""
         body = (article.body_md or "").strip()
-        if md is not None and body:
+        if body.startswith("<"):
+            # Curated article source may already be semantic HTML. Passing it
+            # through Markdown can subtly alter component markup and spacing.
+            body_html = body
+        elif md is not None and body:
             try:
                 body_html = md.markdown(body, extensions=["extra", "tables", "toc"])
             except Exception:
@@ -280,10 +282,6 @@ class StaticBuilder:
         else:
             body_html = body
 
-        # ----------------------------
-        # Cluster linking via join table
-        # ----------------------------
-        # Supporting -> cornerstones (many)
         cornerstone_links = (
             ArticleCornerstoneLink.objects
             .filter(site=site, supporting=article, cornerstone__status=EvergreenArticle.STATUS_PUBLISHED)
@@ -291,7 +289,6 @@ class StaticBuilder:
             .order_by("-is_primary", "cornerstone__title")
         )
 
-        # Cornerstone -> supporting (many)
         supporting_links = []
         if getattr(article, "is_cornerstone", False):
             supporting_links = (
@@ -301,125 +298,59 @@ class StaticBuilder:
                 .order_by("-is_primary", "-supporting__published_at", "supporting__title")
             )
 
-        # We are inside /insights/<slug>.html so sibling links are just "<other>.html"
-        def sib_url(slug: str) -> str:
-            return f"{slug}.html"
-
-        cornerstone_box = ""
-        if cornerstone_links:
-            items = []
-            for link in cornerstone_links:
-                cs = link.cornerstone
-                label = (cs.title or "").strip() or "Cornerstone"
-                desc = (link.anchor_text or "").strip()
-
-                if desc:
-                    items.append(
-                        f'<li><a href="{sib_url(cs.slug)}">{label}</a>'
-                        f'<div class="text-soft small" style="margin-top:4px;">{desc}</div></li>'
-                    )
-                else:
-                    items.append(f'<li><a href="{sib_url(cs.slug)}">{label}</a></li>')
-            cornerstone_box = f"""
-              <div class="neon-glass-card p-3" style="margin-bottom:14px;">
-                <div class="text-soft small" style="margin-bottom:6px;"><b>Part of:</b></div>
-                <ul style="margin:0; padding-left:18px;">{''.join(items)}</ul>
-              </div>
-            """
-
-        supporting_section = ""
-        if supporting_links:
-            items = []
-            for link in supporting_links:
-                sup = link.supporting
-                anchor = (link.anchor_text or sup.title).strip()
-                items.append(f'<li><a href="{sib_url(sup.slug)}">{anchor}</a></li>')
-            supporting_section = f"""
-              <hr style="border-color: rgba(255,255,255,.10); margin: 22px 0;">
-              <h3>Supporting articles</h3>
-              <ul style="padding-left:18px;">{''.join(items)}</ul>
-            """
-
         body_html = re.sub(r"^\s*<h1[^>]*>.*?</h1>\s*", "", body_html, flags=re.IGNORECASE | re.DOTALL)
         theme = (getattr(site, "theme_css", None) or "aurora").strip()
-
-        # ----------------------------
-        # HTML wrapper
-        # ----------------------------
-        theme = (getattr(site, "theme_css", None) or "aurora").strip()
-
-        # relative paths because articles live in /insights/
-        rel_root = "../"
-
         latest_articles = (
             EvergreenArticle.objects
             .filter(site=site, status=EvergreenArticle.STATUS_PUBLISHED)
             .order_by("-published_at", "-updated_at")[:5]
         )
+        canonical_url = article.canonical_url
+        if not canonical_url and site.base_url:
+            canonical_url = f"{site.base_url}/insights/{article.slug}.html"
 
-        ctx = {
+        hero_url = (article.hero_image_url or "").strip()
+        article_hero_page_url = hero_url
+        article_hero_meta_url = hero_url
+        parsed_hero_url = urlparse(hero_url)
+        if hero_url and not parsed_hero_url.scheme and not parsed_hero_url.netloc:
+            asset_path = hero_url.lstrip("/")
+            article_hero_page_url = (
+                hero_url if hero_url.startswith("../") else f"../{asset_path}"
+            )
+            if site.base_url:
+                article_hero_meta_url = (
+                    article_hero_page_url
+                    if asset_path.startswith("../")
+                    else f"{site.base_url}/{asset_path}"
+                )
+            else:
+                article_hero_meta_url = article_hero_page_url
+
+            local_asset = self.base_output_dir / site.slug / asset_path
+            if asset_path.startswith("../") or not local_asset.is_file():
+                # A missing optional hero must not create a broken link in every
+                # generated article build. Editors can restore it by supplying
+                # the asset (or an absolute URL).
+                article_hero_page_url = ""
+                article_hero_meta_url = ""
+
+        context = {
             "site": site,
             "build_id": build_id,
             "theme": theme,
-            "rel_root": rel_root,
+            "rel_root": "../",
             "article": article,
+            "article_body_html": body_html,
+            "canonical_url": canonical_url,
+            "article_hero_page_url": article_hero_page_url,
+            "article_hero_meta_url": article_hero_meta_url,
+            "cornerstone_links": cornerstone_links,
+            "supporting_links": supporting_links,
             "latest_articles": latest_articles,
+            "is_humainx": (article.series or "").casefold() == "humainx",
         }
-
-        header_html = render_to_string(
-            "sites_builder/sites/default/partials/header.html",
-            ctx
-        )
-
-        footer_html = render_to_string(
-            "sites_builder/sites/default/partials/footer.html",
-            ctx
-        )
-        html = f"""<!doctype html>
-        <html lang="en" class="theme-{theme}">
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width,initial-scale=1">
-          <title>{title}</title>
-          {"<meta name='description' content='" + meta_desc.replace('"', "&quot;") + "'>" if meta_desc else ""}
-          {"<link rel='canonical' href='" + (article.canonical_url or '').replace('"', "%22") + "'>" if getattr(article, "canonical_url", "") else ""}
-          <link rel="stylesheet" href="{rel_root}assets/css/landing.css?v={build_id}">
-          <link rel="stylesheet" href="{rel_root}assets/css/site.css?v={build_id}">
-        </head>
-
-        <body class="theme-{theme} article-page"; display: flex>
-          {header_html}
-
-          <main id="article-main"; flex: 1 0 auto; class="container" style="max-width:1100px; margin:0 auto; padding:18px 16px 48px;">
-            <div class="article-shell">
-              <div class="neon-glass-card p-4">
-
-                <div class="text-soft small" style="margin-bottom:10px;">
-                  <a href="{rel_root}insights.html" class="text-soft">← Back to Insights</a>
-                  <a href="https://www.mindsgate.com" class="text-soft" style="margin-left:12px;">• Mindsgate.com</a>
-                </div>
-
-                <h1 style="margin-bottom:10px;">{article.title}</h1>
-                {"<div class='text-soft' style='margin-bottom:14px;'>" + article.excerpt + "</div>" if article.excerpt else ""}
-
-                <hr style="border-color: rgba(255,255,255,.10); margin: 16px 0;">
-
-                <div class="article-body">
-                  {cornerstone_box}
-                  {body_html}
-                  {supporting_section}
-                </div>
-
-              </div>
-            </div>
-          </main>
-
-          {footer_html}
-        </body>
-        </html>
-        """
-
-        return html
+        return render_to_string("sites_builder/sites/default/article.html", context)
 
     def _apply_theme_classes(self, html: str, theme: str) -> str:
         """
@@ -512,8 +443,14 @@ class StaticBuilder:
             slug = a.slug
             url = f"insights/{slug}.html"
             excerpt = (a.excerpt or "").strip()
+            feature_class = " humainx-insight-feature" if (a.series or "").casefold() == "humainx" else ""
+            published = a.published_at.strftime("%B %Y") if a.published_at else ""
+            metadata = f"{a.editorial_label} · {a.reading_minutes} min read"
+            if published:
+                metadata += f" · {published}"
             cards.append(f"""
-              <div class="neon-glass-card p-4 mb-3">
+              <div class="neon-glass-card p-4 mb-3{feature_class}">
+                <div class="insight-card__meta">{metadata}</div>
                 <h3 class="mb-2"><a href="{url}" style="text-decoration:none;">{a.title}</a></h3>
                 <div class="text-soft small">{excerpt}</div>
                 <div class="mt-3">
@@ -527,11 +464,6 @@ class StaticBuilder:
             <div class="text-soft small">No insights published yet.</div>
           </div>
         """
-
-        # Hero image candidates (prefer webp if present)
-        hero_webp = "assets/images/hero-insights.webp"
-        hero_png = "assets/images/hero-insights.png"
-        hero_jpg = "assets/images/hero-insights.jpg"
 
         return f"""<!doctype html>
     <html lang="en" class="theme-{theme}">
@@ -673,7 +605,10 @@ class StaticBuilder:
                     "theme": theme,  # ✅ add this
                 }
 
-                if getattr(page, "page_type", "article") == "landing":
+                template_name = PAGE_TEMPLATE_MAP.get(getattr(page, "template_variant", ""))
+                if template_name:
+                    html = render_to_string(template_name, context)
+                elif getattr(page, "page_type", "article") == "landing":
                     # Composed marketing layout — section blocks, no cardify.
                     page.landing_sections = self._normalize_landing_section_links(
                         site, page.landing_sections
@@ -753,7 +688,6 @@ class StaticBuilder:
 
         theme_key = getattr(site, "theme_css", "neon_glass") or "neon_glass"
         theme_file = THEME_CSS_MAP.get(theme_key, "neon_glass.css")
-        print("=====> Theme file:", theme_file, " theme_key:", theme_key)
 
         # Prefer /static/themes/<file>, fallback to /static/<file>
         src_css_candidates = [

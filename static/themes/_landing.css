@@ -290,3 +290,30 @@
   .lp .lp-form__field--wide { grid-column: auto; }
   .lp .lp-form__foot .btn { width: 100%; }
 }
+
+/* Reusable Insights metadata + native newsletter form -------------------- */
+.article-meta, .insight-card__meta {
+  color: var(--site-muted, #8b93a7); font-size: 0.76rem; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+}
+.article-meta { margin: 10px 0 20px; }
+.insight-card__meta { margin-bottom: 8px; }
+.newsletter-form {
+  display: flex; gap: 10px; align-items: stretch; max-width: 660px; margin-top: 24px;
+}
+.newsletter-form__input {
+  flex: 1 1 280px; min-width: 0; padding: 12px 15px; border-radius: 10px;
+  border: 1px solid var(--site-border, rgba(148,163,199,0.2));
+  background: var(--site-surface, rgba(255,255,255,0.03));
+  color: var(--site-text, #dfe4ee); font: inherit;
+}
+.newsletter-form__input:focus {
+  outline: none; border-color: var(--site-accent, #5dd6c6);
+  box-shadow: 0 0 0 3px var(--site-focus-ring, rgba(93,214,198,0.16));
+}
+.newsletter-form__button { flex: 0 0 auto; }
+@media (max-width: 620px) {
+  .newsletter-form { flex-direction: column; }
+  .newsletter-form__input { flex-basis: auto; width: 100%; }
+  .newsletter-form__button { width: 100%; }
+}

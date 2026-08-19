@@ -1,207 +1,54 @@
-from pathlib import Path
-from urllib.parse import urljoin, urlparse, urldefrag
 import io
-import re
-import time
+import json
+import logging
 import random
-from django.db.models import Max
-from urllib.parse import urlparse, urljoin, urldefrag
+import re
 import socket
+import time
+import zipfile
+from collections import defaultdict
+from datetime import date, datetime, timedelta, timezone as dt_timezone
 from html.parser import HTMLParser
-from datetime import datetime, timezone as dt_timezone
+from pathlib import Path
+from urllib.parse import urldefrag, urljoin, urlparse
+
+import requests
+from bs4 import BeautifulSoup
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
-
-import logging
-logger = logging.getLogger(__name__)
-
-from .models import DeploymentTarget, Page, Site, SiteAuditRun, SiteAuditIssue
-from .services.deployment import Deployer
-from .services.generator import SiteGenerator
-from .services.static_builder import StaticBuilder
-from .services.image_generator import ImageGenerator
-from .services.hero_image_regenerator import regenerate_site_hero_images
-from pathlib import Path
-import zipfile
-import requests
-from bs4 import BeautifulSoup
-from django.http import HttpResponse
-from .forms import WebsiteDownloadForm
-from datetime import date, timedelta
 from django.core.cache import cache
-import json
-from django.views.decorators.http import require_http_methods
-from apps.common.chat_r1 import chat_with_gpt_json
-from .services.ga4_service import fetch_summary
-from .models import EvergreenArticle, ArticleCornerstoneLink
-from django.views.decorators.http import require_http_methods
-from django.utils.text import slugify
 from django.db import transaction
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.db.models import Max
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
-
-from .models import Site, EvergreenArticle
-from collections import defaultdict
-from django.contrib.auth.decorators import login_required
 from django.urls import reverse
+from django.utils import timezone
+from django.utils.text import slugify
+from django.views.decorators.http import require_http_methods, require_POST
+
+from apps.common.chat_r1 import chat_with_gpt_json
+
+from .forms import WebsiteDownloadForm
+from .models import (
+    ArticleCornerstoneLink,
+    DeploymentTarget,
+    EvergreenArticle,
+    Page,
+    Site,
+    SiteAuditIssue,
+    SiteAuditRun,
+)
+from .services.deployment import Deployer
+from .services.ga4_service import fetch_summary
+from .services.generator import SiteGenerator
+from .services.hero_image_regenerator import regenerate_site_hero_images
+from .services.image_generator import ImageGenerator
+from .services.static_builder import StaticBuilder
 
 
-def _build_page_tree(pages):
-    """
-    Build a nested tree structure for display:
-
-    Returns a list of nodes:
-    [
-      { "page": Page, "children": [...] },
-      ...
-    ]
-    """
-    by_id = {p.id: {"page": p, "children": []} for p in pages}
-    roots = []
-
-    for p in pages:
-        node = by_id[p.id]
-        if p.parent_id and p.parent_id in by_id:
-            by_id[p.parent_id]["children"].append(node)
-        else:
-            roots.append(node)
-
-    return roots
-
-
-@login_required
-def site_dashboard(request):
-    """
-    List all sites with basic stats and quick links.
-    """
-    sites = Site.objects.all().prefetch_related("pages").order_by("name")
-
-    site_infos = []
-    for s in sites:
-        pages = s.pages.all()
-        site_infos.append(
-            {
-                "site": s,
-                "page_count": pages.count(),
-                "root_count": pages.filter(is_root=True).count(),
-            }
-        )
-
-    context = {"site_infos": site_infos}
-    return render(request, "sites_builder/ui/site_dashboard.html", context)
-
-@login_required
-def site_expand(request, pk: int):
-    site = get_object_or_404(Site, pk=pk)
-    gen = SiteGenerator()
-
-    try:
-        if getattr(site, "structure_locked", False):
-            updated = gen.fill_missing_content(site, limit=50)
-            messages.success(request, f"Structure locked: filled {updated} blank page(s).")
-        else:
-            created = gen.expand_site(site, max_new_pages=10)
-            messages.success(request, f"Expanded site: created/updated {created} page(s).")
-    except Exception as e:
-        messages.error(request, f"Expansion failed: {e}")
-
-    return redirect("sites_builder:site_detail", pk=site.pk)
-
-
-@login_required
-def site_build(request, pk):
-    """
-    Build static files for this site.
-    """
-    site = get_object_or_404(Site, pk=pk)
-
-    if request.method != "POST":
-        return redirect(reverse("sites_builder:site_detail", args=[pk]))
-
-    builder = StaticBuilder()
-    out_dir = builder.build_site(site)
-
-    messages.success(
-        request,
-        f"Built static site for '{site.slug}' at: {out_dir}",
-    )
-    return redirect(reverse("sites_builder:site_detail", args=[pk]))
-
-
-@login_required
-def site_deploy(request, pk):
-    """
-    Deploy the site's built files via selected DeploymentTarget.
-    """
-    site = get_object_or_404(Site, pk=pk)
-
-    if request.method != "POST":
-        return redirect(reverse("sites_builder:site_detail", args=[pk]))
-
-    target_id = request.POST.get("target_id")
-    if not target_id:
-        messages.error(request, "No deployment target selected.")
-        return redirect(reverse("sites_builder:site_detail", args=[pk]))
-
-    target = get_object_or_404(DeploymentTarget, pk=target_id, site=site)
-
-    deployer = Deployer()
-    try:
-        deployer.deploy(target)
-        messages.success(
-            request,
-            f"Deployed site '{site.slug}' using target '{target.name}' ({target.type}).",
-        )
-    except Exception as e:
-        messages.error(request, f"Deployment failed: {e}")
-
-    return redirect(reverse("sites_builder:site_detail", args=[pk]))
-
-
-@login_required
-def site_backfill_hero_images(request, pk):
-    """
-    Generate hero images for pages in this site that don't have one yet.
-    """
-    site = get_object_or_404(Site, pk=pk)
-
-    if request.method != "POST":
-        return redirect(reverse("sites_builder:site_detail", args=[pk]))
-
-    base_dir = Path(settings.BASE_DIR) / "output" / "sites"
-    image_gen = ImageGenerator(base_dir)
-
-    pages = site.pages.filter(hero_image_url="")  # no hero image yet
-    total = 0
-    for page in pages:
-        hero_context = f"Page title: {page.title}. Site description: {site.description}."
-        try:
-            url = image_gen.generate_page_hero(site.slug, page.slug, hero_context)
-            page.hero_image_url = url
-            page.save(update_fields=["hero_image_url"])
-            total += 1
-        except Exception as e:
-            # Don't fail the whole run; just log a warning
-            print(f"[WARN] Failed to generate hero image for page '{page.slug}': {e}")
-
-    if total:
-        messages.success(
-            request,
-            f"Generated hero images for {total} page(s) with missing images.",
-        )
-    else:
-        messages.info(
-            request,
-            "No pages were missing hero images; nothing to do.",
-        )
-
-    return redirect(reverse("sites_builder:site_detail", args=[pk]))
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -623,15 +470,12 @@ def site_detail(request, pk):
 
         # ✅ treat falsy as a miss AND do not cache None/empty
         if not ga_summary:
-            print(f"[GA4] fetching for properties/{site.ga4_property_id} {start}..{end}")
             ga_summary = fetch_summary(site.ga4_property_id, start, end)
-            print(f"[GA4] got: {ga_summary!r}")
 
             if ga_summary and (ga_summary.active_users or ga_summary.sessions or ga_summary.page_views):
                 cache.set(cache_key, ga_summary, 15 * 60)
 
-    logger.warning("GA4 property id on site=%s is %s", site.id, site.ga4_property_id)
-    logger.warning("GA4 summary computed: %r", ga_summary)
+    logger.debug("GA4 summary computed for site=%s: %r", site.id, ga_summary)
     articles = site.evergreen_articles.all()
     evergreen_stats = {
         "total": articles.count(),
@@ -671,7 +515,7 @@ def site_expand(request, pk):
     if site.structure_locked:
         created = gen.fill_missing_content(site, limit=50)
     else:
-        created = gen.expand_site(site, max_new_pages=10)
+        created = gen.expand_site(site, max_new_pages=max_new)
 
     messages.success(
         request,
@@ -832,8 +676,6 @@ def site_backfill_hero_images(request, pk):
 
     return redirect(reverse("sites_builder:site_detail", args=[pk]))
 
-from django.views.decorators.http import require_POST
-
 @require_POST
 @login_required
 def page_regenerate(request, site_pk, page_pk):
@@ -926,12 +768,10 @@ def website_download_view(request):
 @require_POST
 def plan_menu(request, site_id: int):
     site = get_object_or_404(Site, id=site_id)
-    print("run plan menu for: ", site)
     gen = SiteGenerator()
     try:
         gen.ensure_root_page(site)
-        res = gen._ensure_site_ia(site)
-        print("Ensure site ia is valid")
+        gen._ensure_site_ia(site)
         # optional: lock immediately (turbo mode)
         site.structure_locked = True
         site.save(update_fields=["structure_locked"])
@@ -1102,14 +942,6 @@ def article_edit(request, pk, article_id):
         "selected_cornerstone_ids": selected_cornerstone_ids,
     })
 
-    return render(request, "sites_builder/ui/article_form.html", {
-        "site": site,
-        "article": a,
-        "cornerstones": cornerstones,
-        "selected_cornerstone_ids": selected_cornerstone_ids,
-    })
-
-
 @login_required
 def article_publish(request, pk, article_id):
     site = get_object_or_404(Site, pk=pk)
@@ -1132,13 +964,6 @@ def article_archive(request, pk, article_id):
         messages.success(request, "Archived.")
     return redirect("sites_builder:article_list", pk=site.pk)
 
-from django.contrib import messages
-from django.shortcuts import get_object_or_404, redirect, render
-from django.utils.text import slugify
-
-from .models import Site, EvergreenArticle
-
-
 def _site_content_digest(site: Site, max_chars: int = 6000) -> str:
     """
     Builds a compact digest from existing site pages to ground title suggestions.
@@ -1148,7 +973,7 @@ def _site_content_digest(site: Site, max_chars: int = 6000) -> str:
     pages = site.pages.all().order_by("is_root", "depth", "nav_order", "title")[:30]
     for p in pages:
         title = (p.title or p.slug or "").strip()
-        body = (getattr(p, "body", "") or "").strip()
+        body = (p.body_html or "").strip()
         if body:
             body = " ".join(body.split())
             body = body[:280]
@@ -1400,17 +1225,6 @@ def cluster_publish_all(request, pk, cornerstone_id):
 
     messages.success(request, f"Published cornerstone and {count} supporting article(s).")
     return redirect("sites_builder:article_clusters", pk=site.pk)
-
-
-def _site_content_digest(site: Site, max_chars: int = 6000) -> str:
-    parts = []
-    pages = site.pages.all().order_by("is_root", "depth", "nav_order", "title")[:30]
-    for p in pages:
-        title = (p.title or p.slug or "").strip()
-        body = (getattr(p, "body", "") or "").strip()
-        body = " ".join(body.split())[:280] if body else ""
-        parts.append(f"- {title}: {body}")
-    return "\n".join(parts)[:max_chars]
 
 
 @login_required

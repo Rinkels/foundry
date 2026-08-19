@@ -2,15 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Optional, Dict, Any
+import os
 
 from django.conf import settings
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from google.analytics.data_v1beta.types import DateRange, Metric, RunReportRequest
-from google.oauth2 import service_account
-import os
-from django.conf import settings
-from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from google.oauth2 import service_account
 
 @dataclass

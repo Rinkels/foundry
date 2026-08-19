@@ -1,8 +1,8 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.sites_builder.models import Site
-from apps.sites_builder.services.generator import SiteGenerator
-from apps.sites_builder.services.static_builder import StaticBuilder
+from ...models import Site
+from ...services.generator import SiteGenerator
+from ...services.static_builder import StaticBuilder
 
 
 class Command(BaseCommand):

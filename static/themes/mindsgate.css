@@ -196,7 +196,7 @@ body.theme-mindsgate {
 .humainx-next-grid p { color:var(--site-muted); margin:8px 0 0; }
 .humainx-open-ended { color:var(--mg-gold); margin:32px 0 0; font-family:"Space Grotesk",sans-serif; }
 .humainx-insight-feature { border-color:rgba(217,179,107,.35)!important; background:linear-gradient(135deg,rgba(217,179,107,.045),var(--mg-ink-800))!important; }
-.humainx-insight-kicker { color:var(--mg-gold); text-transform:uppercase; letter-spacing:.14em; font-size:.72rem; font-weight:600; margin-bottom:8px; }
+.humainx-insight-feature .insight-card__meta { color:var(--mg-gold); }
 .humainx-inline-link { display:inline-flex; align-items:center; color:var(--mg-gold)!important; text-decoration:none!important; padding:.5rem .5rem; font-weight:600; }
 .humainx-article-shell { max-width:900px; margin:0 auto; padding:30px 0 56px; }
 .humainx-breadcrumbs { display:flex; flex-wrap:wrap; gap:18px; margin-bottom:22px; }

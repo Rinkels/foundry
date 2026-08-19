@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
-from sites_builder.models import Site
-from sites_builder.services.generator import SiteGenerator
+
+from ...models import Site
+from ...services.generator import SiteGenerator
 
 
 class Command(BaseCommand):
@@ -28,7 +29,7 @@ class Command(BaseCommand):
         if site.structure_locked:
             created = gen.fill_missing_content(site, limit=50)
         else:
-            created = gen.expand_site(site, max_new_pages=10)
+            created = gen.expand_site(site, max_new_pages=max_new_pages)
 
         self.stdout.write(
             self.style.SUCCESS(
