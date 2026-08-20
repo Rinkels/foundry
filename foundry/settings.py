@@ -138,6 +138,10 @@ FOUNDRY_HOME_CARDS = {
 
 # Codex (markdown library) — directories scanned for .md files.
 MD_LIBRARY_ROOTS = [r"C:\Projects"]
+
+# Token the Sentry posture platform uses to pull the Achilles findings export
+# (GET /code_analyzer/export/sentry/). Blank = require an authenticated session.
+SENTRY_EXPORT_TOKEN = os.environ.get("SENTRY_EXPORT_TOKEN", "")
 # Application definition
 
 INSTALLED_APPS = [

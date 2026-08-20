@@ -32,7 +32,7 @@
 
         <h1>{{ article.title }}</h1>
         <div class="article-meta{% if is_humainx %} humainx-article-marker{% endif %}">
-          <span>{{ article.editorial_label }} &middot; {{ article.reading_minutes }} min read{% if article.published_at %} &middot; {{ article.published_at|date:"F Y" }}{% endif %}</span>
+          <span>{{ article.editorial_label }} &middot; {{ article.reading_minutes }} min read{% if article.published_at %} &middot; {{ article.published_at|date:"F Y" }}{% endif %}{% if article_follow %} &middot; <a class="article-meta__follow" href="#{{ article_follow.anchor }}">{{ article_follow.label }}</a>{% endif %}</span>
           {% if is_humainx %}<span>Looking toward 2036</span>{% endif %}
         </div>
 
@@ -56,7 +56,17 @@
             </div>
           {% endif %}
 
-          {{ article_body_html|safe }}
+          {{ article_body_before_feedback|safe }}
+
+          {% if article.reader_question %}
+            {% include "sites_builder/sites/default/partials/article_reader_response.html" %}
+          {% endif %}
+
+          {% if article_follow %}
+            {% include "sites_builder/sites/default/partials/article_newsletter.html" %}
+          {% endif %}
+
+          {{ article_body_after_feedback|safe }}
 
           {% if supporting_links %}
             <hr style="border-color:rgba(255,255,255,.10); margin:22px 0;">

@@ -95,6 +95,14 @@ class Site(models.Model):
             "provider, username, form_action, button_label, and success_url."
         ),
     )
+    reader_feedback_config = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            "Public reader-feedback configuration. Expected keys include enabled, "
+            "provider, form_url, and button_label. No API credentials are required."
+        ),
+    )
     hide_builder_credit = models.BooleanField(
         default=False,
         help_text="Hide the Mindsgate builder credit in the generated site footer.",
@@ -419,6 +427,20 @@ class EvergreenArticle(models.Model):
         max_length=20,
         blank=True,
         help_text="Optional hypothesis identifier, for example H1.",
+    )
+    feedback_identifier = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="Stable public feedback identifier, for example HX01.",
+    )
+    reader_question = models.TextField(
+        blank=True,
+        help_text="Optional reader-response question displayed at the end of the article.",
+    )
+    reader_answer_options = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Optional ordered list of display-only reader answer options.",
     )
 
     # content

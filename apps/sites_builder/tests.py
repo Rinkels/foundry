@@ -11,6 +11,7 @@ from django.urls import reverse
 
 from .models import Developer, EvergreenArticle, Page, Site, SiteTopNavItem
 from .services.generator import SiteGenerator
+from .services.reader_feedback import build_reader_feedback_context
 from .services.reading_time import estimate_reading_minutes
 from .services.static_builder import StaticBuilder, THEME_CSS_MAP, THEME_FAVICON_MAP
 from .views import _build_page_tree, _site_content_digest
@@ -226,6 +227,122 @@ class StaticBuilderTests(SitesBuilderTestCase):
         self.assertIn('name="email"', html)
         self.assertIn("Follow HumainX", html)
 
+    def test_humainx_article_gets_feedback_and_newsletter_components(self):
+        self.site.newsletter_config = {
+            "enabled": True,
+            "provider": "buttondown",
+            "form_action": "https://buttondown.com/example",
+            "button_label": "Follow HumainX",
+            "series": "HumainX",
+            "article_anchor": "follow-humainx",
+            "article_link_label": "Follow HumainX",
+            "section_description": "Follow the evidence toward 2036.",
+        }
+        self.site.reader_feedback_config = {
+            "enabled": True,
+            "provider": "tally",
+            "form_url": "https://tally.so/r/example?ref=mindsgate",
+            "button_label": "Share your reasoning →",
+        }
+        self.site.save()
+        article = EvergreenArticle.objects.create(
+            site=self.site,
+            title="A HumainX argument",
+            status=EvergreenArticle.STATUS_PUBLISHED,
+            series="HumainX",
+            series_number=1,
+            hypothesis="H1",
+            feedback_identifier="HX01",
+            reader_question="What happens next?",
+            reader_answer_options=["Option one", "Option two"],
+            body_md=(
+                "<p>Argument.</p><!-- reader-response -->"
+                '<h2 class="humainx-sources-title">Sources</h2>'
+            ),
+        )
+
+        html = StaticBuilder()._render_article_html(self.site, article, "test-build")
+
+        self.assertIn('href="#follow-humainx">Follow HumainX</a>', html)
+        self.assertIn('id="follow-humainx"', html)
+        self.assertIn('action="https://buttondown.com/example"', html)
+        self.assertIn("What happens next?", html)
+        self.assertIn("Option one", html)
+        self.assertIn("Share your reasoning →", html)
+        self.assertIn("article=HX01", html)
+        self.assertIn("series=HumainX", html)
+        self.assertIn("hypothesis=H1", html)
+        self.assertLess(html.index("What happens next?"), html.index('id="follow-humainx"'))
+        self.assertLess(html.index('id="follow-humainx"'), html.index("Sources"))
+
+    def test_feedback_cta_remains_visible_until_tally_url_is_configured(self):
+        self.site.newsletter_config = {
+            "enabled": True,
+            "provider": "buttondown",
+            "form_action": "https://buttondown.com/example",
+            "series": "HumainX",
+        }
+        self.site.reader_feedback_config = {
+            "enabled": False,
+            "provider": "tally",
+            "form_url": "",
+            "button_label": "Share your reasoning →",
+        }
+        self.site.save()
+        article = EvergreenArticle.objects.create(
+            site=self.site,
+            title="Pending feedback form",
+            status=EvergreenArticle.STATUS_PUBLISHED,
+            series="HumainX",
+            reader_question="What do you think?",
+        )
+
+        html = StaticBuilder()._render_article_html(self.site, article, "test-build")
+
+        self.assertIn("Share your reasoning →", html)
+        self.assertIn('aria-disabled="true"', html)
+
+
+class ReaderFeedbackTests(SitesBuilderTestCase):
+    def test_tally_hidden_fields_are_appended_without_discarding_existing_query(self):
+        article = EvergreenArticle(
+            site=self.site,
+            series="HumainX",
+            hypothesis="H1",
+            feedback_identifier="HX01",
+        )
+
+        feedback = build_reader_feedback_context(
+            article,
+            {
+                "enabled": True,
+                "provider": "tally",
+                "form_url": "https://tally.so/r/example?ref=mindsgate",
+                "button_label": "Share your reasoning →",
+            },
+        )
+
+        self.assertTrue(feedback["enabled"])
+        self.assertEqual(
+            feedback["url"],
+            "https://tally.so/r/example?ref=mindsgate&article=HX01&series=HumainX&hypothesis=H1",
+        )
+
+    def test_feedback_link_requires_enabled_tally_https_configuration(self):
+        article = EvergreenArticle(site=self.site, feedback_identifier="HX01")
+
+        disabled = build_reader_feedback_context(
+            article,
+            {"enabled": False, "provider": "tally", "form_url": "https://tally.so/r/x"},
+        )
+        invalid = build_reader_feedback_context(
+            article,
+            {"enabled": True, "provider": "tally", "form_url": "javascript:alert(1)"},
+        )
+
+        self.assertFalse(disabled["enabled"])
+        self.assertFalse(invalid["enabled"])
+
 
 class SiteViewTests(SitesBuilderTestCase):
     def setUp(self):
@@ -295,7 +412,10 @@ class ManagementCommandTests(SitesBuilderTestCase):
 
     def test_setup_humainx_is_idempotent_and_populates_foundry_content(self):
         self.site.newsletter_config = {"analytics_label": "keep-me"}
-        self.site.save(update_fields=["newsletter_config"])
+        self.site.reader_feedback_config = {"tracking_label": "keep-feedback"}
+        self.site.save(
+            update_fields=["newsletter_config", "reader_feedback_config"]
+        )
         Page.objects.create(
             site=self.site,
             title="Home",
@@ -326,9 +446,22 @@ class ManagementCommandTests(SitesBuilderTestCase):
         self.assertEqual(nav.url, "humainx.html")
         self.assertEqual(article.editorial_label, "HUMAINX / 01")
         self.assertEqual(article.hypothesis, "H1")
+        self.assertEqual(article.feedback_identifier, "HX01")
+        self.assertEqual(len(article.reader_answer_options), 5)
+        self.assertIn("single employer", article.reader_question)
         self.assertIn("Before the factory", article.body_md)
+        self.assertIn("<!-- reader-response -->", article.body_md)
         self.assertEqual(
             self.site.newsletter_config["form_action"],
             "https://buttondown.com/api/emails/embed-subscribe/HumainX",
         )
         self.assertEqual(self.site.newsletter_config["analytics_label"], "keep-me")
+        self.assertEqual(self.site.reader_feedback_config["provider"], "tally")
+        self.assertEqual(
+            self.site.reader_feedback_config["tracking_label"], "keep-feedback"
+        )
+        self.assertTrue(self.site.reader_feedback_config["enabled"])
+        self.assertEqual(
+            self.site.reader_feedback_config["form_url"],
+            "https://tally.so/r/kd8gJZ",
+        )

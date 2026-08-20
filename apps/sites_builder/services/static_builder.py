@@ -20,6 +20,7 @@ from ..models import Site, ArticleCornerstoneLink, EvergreenArticle
 from .seo_files import write_seo_files
 from .image_optimizer import optimize_images_dir
 from .content_styler import cardify_subsections
+from .reader_feedback import build_reader_feedback_context
 
 try:
     import markdown as md
@@ -49,6 +50,8 @@ THEME_FAVICON_MAP = {
 PAGE_TEMPLATE_MAP = {
     "humainx": "sites_builder/sites/default/humainx.html",
 }
+
+ARTICLE_READER_RESPONSE_MARKER = "<!-- reader-response -->"
 
 
 class StaticBuilder:
@@ -329,6 +332,13 @@ class StaticBuilder:
             )
 
         body_html = re.sub(r"^\s*<h1[^>]*>.*?</h1>\s*", "", body_html, flags=re.IGNORECASE | re.DOTALL)
+        article_body_before_feedback = body_html
+        article_body_after_feedback = ""
+        if ARTICLE_READER_RESPONSE_MARKER in body_html:
+            article_body_before_feedback, article_body_after_feedback = body_html.split(
+                ARTICLE_READER_RESPONSE_MARKER, 1
+            )
+
         theme = (getattr(site, "theme_css", None) or "aurora").strip()
         latest_articles = (
             EvergreenArticle.objects
@@ -365,20 +375,51 @@ class StaticBuilder:
                 article_hero_page_url = ""
                 article_hero_meta_url = ""
 
+        is_humainx = (article.series or "").casefold() == "humainx"
+        newsletter = site.newsletter_config or {}
+        configured_series = str(newsletter.get("series") or "").strip()
+        series_matches = not configured_series or (
+            configured_series.casefold() == (article.series or "").casefold()
+        )
+        article_follow = None
+        if (
+            article.series
+            and series_matches
+            and newsletter.get("enabled")
+            and str(newsletter.get("provider") or "").casefold() == "buttondown"
+            and newsletter.get("form_action")
+        ):
+            article_follow = {
+                "anchor": str(newsletter.get("article_anchor") or "").strip()
+                or f"follow-{slugify(article.series)}",
+                "label": str(newsletter.get("article_link_label") or "").strip()
+                or f"Follow {article.series}",
+                "eyebrow": str(newsletter.get("section_eyebrow") or "").strip()
+                or "Follow the exploration",
+                "description": str(newsletter.get("section_description") or "").strip(),
+            }
+
+        reader_feedback = build_reader_feedback_context(
+            article, site.reader_feedback_config
+        )
+
         context = {
             "site": site,
             "build_id": build_id,
             "theme": theme,
             "rel_root": "../",
             "article": article,
-            "article_body_html": body_html,
+            "article_body_before_feedback": article_body_before_feedback,
+            "article_body_after_feedback": article_body_after_feedback,
             "canonical_url": canonical_url,
             "article_hero_page_url": article_hero_page_url,
             "article_hero_meta_url": article_hero_meta_url,
             "cornerstone_links": cornerstone_links,
             "supporting_links": supporting_links,
             "latest_articles": latest_articles,
-            "is_humainx": (article.series or "").casefold() == "humainx",
+            "is_humainx": is_humainx,
+            "article_follow": article_follow,
+            "reader_feedback": reader_feedback,
         }
         return render_to_string("sites_builder/sites/default/article.html", context)
 

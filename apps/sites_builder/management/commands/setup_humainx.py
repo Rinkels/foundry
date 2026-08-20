@@ -12,10 +12,11 @@ ARTICLE_SLUG = "the-second-cottage-revolution"
 ARTICLE_TEMPLATE = (
     "sites_builder/content/humainx/the_second_cottage_revolution.html"
 )
+READER_FEEDBACK_FORM_URL = "https://tally.so/r/kd8gJZ"
 
 
 class Command(BaseCommand):
-    help = "Configure HumainX 0.1 for a Mindsgate site and optionally build it."
+    help = "Configure HumainX for a Mindsgate site and optionally build it."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -53,8 +54,35 @@ class Command(BaseCommand):
             ),
             "button_label": "Follow HumainX",
             "success_url": "",
+            "series": "HumainX",
+            "article_anchor": "follow-humainx",
+            "article_link_label": "Follow HumainX",
+            "section_eyebrow": "Follow the exploration",
+            "section_description": (
+                "New arguments, counterarguments, reader predictions and evidence "
+                "as we work toward understanding the economy of 2036."
+            ),
         }
-        site.save(update_fields=["newsletter_config", "updated_at"])
+        existing_feedback = site.reader_feedback_config or {}
+        feedback_form_url = (
+            str(existing_feedback.get("form_url") or "").strip()
+            or READER_FEEDBACK_FORM_URL
+        )
+        site.reader_feedback_config = {
+            **existing_feedback,
+            "enabled": bool(feedback_form_url),
+            "provider": existing_feedback.get("provider") or "tally",
+            "form_url": feedback_form_url,
+            "button_label": (
+                existing_feedback.get("button_label")
+                or "Share your reasoning →"
+            ),
+        }
+        site.save(
+            update_fields=[
+                "newsletter_config", "reader_feedback_config", "updated_at"
+            ]
+        )
 
         page, page_created = Page.objects.update_or_create(
             site=site,
@@ -105,6 +133,18 @@ class Command(BaseCommand):
                 "series": "HumainX",
                 "series_number": 1,
                 "hypothesis": "H1",
+                "feedback_identifier": "HX01",
+                "reader_question": (
+                    "Ten years from now, will most people still earn the majority "
+                    "of their income from a single employer?"
+                ),
+                "reader_answer_options": [
+                    "Yes, largely unchanged",
+                    "Yes, but companies will employ far fewer people",
+                    "No, multiple income sources will become the norm",
+                    "No, traditional employment itself will become much less important",
+                    "I have absolutely no idea",
+                ],
                 "excerpt": (
                     "The Industrial Revolution pulled production into "
                     "organizations. Could AI push it back toward the individual?"

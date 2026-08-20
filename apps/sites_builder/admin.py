@@ -306,6 +306,18 @@ class EvergreenArticleAdmin(admin.ModelAdmin):
     list_filter = ("status", "series", "site")
     search_fields = ("title", "slug", "excerpt", "body_md")
     prepopulated_fields = {"slug": ("title",)}
+    fieldsets = (
+        (None, {"fields": ("site", "title", "slug", "status", "is_cornerstone")}),
+        ("Series", {"fields": ("series", "series_number", "hypothesis")}),
+        ("Reader response", {
+            "fields": (
+                "feedback_identifier", "reader_question", "reader_answer_options",
+            )
+        }),
+        ("Content", {"fields": ("excerpt", "body_md", "hero_image_url")}),
+        ("SEO", {"fields": ("meta_title", "meta_description", "canonical_url")}),
+        ("Publishing", {"fields": ("published_at",)}),
+    )
 
 @admin.register(ArticleCornerstoneLink)
 class ArticleCornerstoneLinkAdmin(admin.ModelAdmin):
@@ -346,6 +358,7 @@ class SiteAdmin(admin.ModelAdmin):
             )
         }),
         ("Newsletter", {"fields": ("newsletter_config",)}),
+        ("Reader feedback", {"fields": ("reader_feedback_config",)}),
         ("Analytics (GA4)", {"fields": ("ga4_property_id", "ga4_measurement_id")}),
     )
 

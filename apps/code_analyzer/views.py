@@ -51,6 +51,24 @@ def ai_review(request, run_id):
     })
 
 
+def sentry_export(request):
+    """Read-only Achilles findings export for the Sentry posture platform to pull.
+    Auth: X-Achilles-Token header (or ?token=) matching settings.SENTRY_EXPORT_TOKEN,
+    OR an authenticated session (for browsing). Optional ?run_id=<n> (default: latest)."""
+    from django.conf import settings as _s
+    from django.http import HttpResponseForbidden, JsonResponse
+    token = request.headers.get("X-Achilles-Token") or request.GET.get("token")
+    expected = getattr(_s, "SENTRY_EXPORT_TOKEN", "")
+    if not ((expected and token == expected) or request.user.is_authenticated):
+        return HttpResponseForbidden("forbidden — set X-Achilles-Token or sign in")
+    from .services import sentry_export as se
+    run = None
+    rid = request.GET.get("run_id")
+    if rid:
+        run = ScanRun.objects.filter(pk=rid).first()
+    return JsonResponse(se.build_export(run), json_dumps_params={"indent": 2})
+
+
 @login_required
 @require_POST
 def ai_verify(request, run_id):
