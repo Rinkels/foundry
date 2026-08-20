@@ -11,9 +11,13 @@
   {% if canonical_url %}<meta property="og:url" content="{{ canonical_url }}">{% endif %}
   {% if article_hero_meta_url %}<meta property="og:image" content="{{ article_hero_meta_url }}">{% endif %}
   {% if article.published_at %}<meta property="article:published_time" content="{{ article.published_at|date:'c' }}">{% endif %}
+  {% if article_modified_at %}<meta property="article:modified_time" content="{{ article_modified_at|date:'c' }}">{% endif %}
+  {% if article_author.name %}<meta name="author" content="{{ article_author.name }}">{% endif %}
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{{ article.meta_title|default:article.title }}">
   {% if article.meta_description %}<meta name="twitter:description" content="{{ article.meta_description }}">{% endif %}
+  {% if article_hero_meta_url %}<meta name="twitter:image" content="{{ article_hero_meta_url }}">{% endif %}
+  {% if article_schema_json %}<script type="application/ld+json">{{ article_schema_json|safe }}</script>{% endif %}
 {% endblock %}
 
 {% block body_class %}article-page{% if is_humainx %} humainx-article-page{% endif %}{% endblock %}
@@ -32,7 +36,7 @@
 
         <h1>{{ article.title }}</h1>
         <div class="article-meta{% if is_humainx %} humainx-article-marker{% endif %}">
-          <span>{{ article.editorial_label }} &middot; {{ article.reading_minutes }} min read{% if article.published_at %} &middot; {{ article.published_at|date:"F Y" }}{% endif %}{% if article_follow %} &middot; <a class="article-meta__follow" href="#{{ article_follow.anchor }}">{{ article_follow.label }}</a>{% endif %}</span>
+          <span>{{ article.editorial_label }} &middot; {{ article.reading_minutes }} min read{% if article.published_at %} &middot; {{ article.published_at|date:"F Y" }}{% endif %}{% if article_author.name %} &middot; {% if article_author.url %}<a href="{{ article_author.url }}" rel="author">{{ article_author.name }}</a>{% else %}{{ article_author.name }}{% endif %}{% endif %}{% if article_follow %} &middot; <a class="article-meta__follow" href="#{{ article_follow.anchor }}">{{ article_follow.label }}</a>{% endif %}</span>
           {% if is_humainx %}<span>Looking toward 2036</span>{% endif %}
         </div>
 
@@ -41,7 +45,10 @@
         {% endif %}
 
         {% if article_hero_page_url %}
-          <img src="{{ article_hero_page_url }}" alt="{{ article.title }}" style="width:100%; border-radius:16px; margin:12px 0 20px;">
+          <picture>
+            {% if article_hero_webp_page_url %}<source srcset="{{ article_hero_webp_page_url }}" type="image/webp">{% endif %}
+            <img src="{{ article_hero_page_url }}" alt="Abstract visualization of the Neo-Cottage economy distributing productive power from large firms to AI-enabled individuals and small teams" width="1732" height="908" fetchpriority="high" style="width:100%; height:auto; border-radius:16px; margin:12px 0 20px;">
+          </picture>
         {% endif %}
 
         <div class="article-body">

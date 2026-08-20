@@ -1,4 +1,5 @@
 from io import StringIO
+from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
@@ -149,6 +150,20 @@ class StaticBuilderTests(SitesBuilderTestCase):
             self.assertTrue(favicon_jpg.is_file())
             self.assertTrue(favicon_jpg.read_bytes().startswith(b"\xff\xd8\xff"))
 
+    def test_mindsgate_editorial_social_asset_is_copied(self):
+        with TemporaryDirectory() as temp_dir:
+            site_dir = Path(temp_dir) / self.site.slug
+
+            StaticBuilder(Path(temp_dir))._copy_theme_content_assets(
+                site_dir, "mindsgate"
+            )
+
+            social_image = (
+                site_dir / "assets" / "images" / "neo-cottage-revolution-og.png"
+            )
+            self.assertTrue(social_image.is_file())
+            self.assertGreater(social_image.stat().st_size, 100_000)
+
     def test_article_wrapper_uses_valid_body_and_main_attributes(self):
         article = EvergreenArticle.objects.create(
             site=self.site,
@@ -201,6 +216,113 @@ class StaticBuilderTests(SitesBuilderTestCase):
             'property="og:image" content="https://example.com/assets/images/insights.png"',
             html,
         )
+
+    def test_article_has_author_dates_social_image_and_structured_data(self):
+        self.site.domain = "example.com"
+        self.site.save()
+        article = EvergreenArticle.objects.create(
+            site=self.site,
+            title="The Neo-Cottage Revolution",
+            slug="neo-cottage-revolution",
+            status=EvergreenArticle.STATUS_PUBLISHED,
+            body_md="<p>Argument.</p>",
+            meta_description="A test description.",
+            author_name="HumainX",
+            author_url="https://example.com/humainx.html",
+            published_at=datetime(2026, 8, 18, tzinfo=timezone.utc),
+            content_updated_at=datetime(2026, 8, 20, tzinfo=timezone.utc),
+        )
+
+        html = StaticBuilder()._render_article_html(self.site, article, "test-build")
+
+        self.assertIn('<meta name="author" content="HumainX">', html)
+        self.assertIn('property="article:modified_time"', html)
+        self.assertIn('rel="author">HumainX</a>', html)
+        self.assertIn('<script type="application/ld+json">', html)
+        self.assertIn('"@type":"Article"', html)
+        self.assertIn('"@type":"BreadcrumbList"', html)
+        self.assertIn('"dateModified":"2026-08-20T00:00:00+00:00"', html)
+
+    def test_full_document_article_body_does_not_nest_document_or_duplicate_h1(self):
+        self.site.domain = "example.com"
+        self.site.save()
+        article = EvergreenArticle.objects.create(
+            site=self.site,
+            title="Canonical title",
+            slug="canonical-title",
+            status=EvergreenArticle.STATUS_PUBLISHED,
+            body_md=(
+                '<!doctype html><html><head><title>Old</title>'
+                '<link rel="canonical" href="https://wrong.example/old">'
+                '</head><body><h1>Old duplicate title</h1><p>Kept body.</p>'
+                '</body></html>'
+            ),
+        )
+
+        html = StaticBuilder()._render_article_html(self.site, article, "test-build")
+        lowered = html.lower()
+
+        self.assertEqual(lowered.count("<!doctype html>"), 1)
+        self.assertEqual(lowered.count("<head>"), 1)
+        self.assertEqual(lowered.count("<h1"), 1)
+        self.assertNotIn("wrong.example", html)
+        self.assertIn("Kept body.", html)
+
+    def test_article_redirects_preserve_existing_htaccess_rules(self):
+        self.site.domain = "example.com"
+        self.site.save()
+        article = EvergreenArticle.objects.create(
+            site=self.site,
+            title="The Neo-Cottage Revolution",
+            slug="neo-cottage-revolution",
+            status=EvergreenArticle.STATUS_PUBLISHED,
+            legacy_slugs=["the-second-cottage-revolution"],
+        )
+        with TemporaryDirectory() as temp_dir:
+            site_dir = Path(temp_dir) / self.site.slug
+            (site_dir / "insights").mkdir(parents=True)
+            (site_dir / ".htaccess").write_text(
+                "ErrorDocument 404 /404.html\n", encoding="utf-8"
+            )
+
+            StaticBuilder(Path(temp_dir))._write_article_redirects(
+                site_dir, self.site, [article]
+            )
+
+            redirects = (site_dir / ".htaccess").read_text(encoding="utf-8")
+            fallback = (
+                site_dir / "insights" / "the-second-cottage-revolution.html"
+            ).read_text(encoding="utf-8")
+            self.assertIn("ErrorDocument 404 /404.html", redirects)
+            self.assertIn(
+                "Redirect 301 /insights/the-second-cottage-revolution.html "
+                "https://example.com/insights/neo-cottage-revolution.html",
+                redirects,
+            )
+            self.assertIn('content="noindex,follow"', fallback)
+            self.assertIn("neo-cottage-revolution.html", fallback)
+
+    def test_insights_index_has_search_and_collection_metadata(self):
+        self.site.domain = "example.com"
+        self.site.save()
+        article = EvergreenArticle.objects.create(
+            site=self.site,
+            title="One insight",
+            slug="one-insight",
+            status=EvergreenArticle.STATUS_PUBLISHED,
+            excerpt="Summary.",
+        )
+
+        html = StaticBuilder()._render_insights_index(
+            self.site, [article], "test-build"
+        )
+
+        self.assertIn(
+            '<link rel="canonical" href="https://example.com/insights.html">', html
+        )
+        self.assertIn('<meta name="description"', html)
+        self.assertIn('"@type":"CollectionPage"', html)
+        self.assertIn('"@type":"ItemList"', html)
 
     def test_humainx_landing_uses_native_configured_newsletter_form(self):
         self.site.newsletter_config = {
@@ -422,6 +544,13 @@ class ManagementCommandTests(SitesBuilderTestCase):
             slug="home",
             is_root=True,
         )
+        legacy_article = EvergreenArticle.objects.create(
+            site=self.site,
+            title="The Second Cottage Revolution",
+            slug="the-second-cottage-revolution",
+            status=EvergreenArticle.STATUS_PUBLISHED,
+            body_md="Old body",
+        )
 
         for _ in range(2):
             call_command(
@@ -433,16 +562,27 @@ class ManagementCommandTests(SitesBuilderTestCase):
 
         self.site.refresh_from_db()
         page = self.site.pages.get(slug="humainx")
+        pillar = self.site.pages.get(slug="neo-cottage-economy")
         article = self.site.evergreen_articles.get(
-            slug="the-second-cottage-revolution"
+            slug="neo-cottage-revolution"
         )
         nav = SiteTopNavItem.objects.get(site=self.site, label="HumainX")
 
         self.assertEqual(self.site.pages.filter(slug="humainx").count(), 1)
+        self.assertEqual(self.site.pages.filter(slug="neo-cottage-economy").count(), 1)
         self.assertEqual(
             self.site.evergreen_articles.filter(slug=article.slug).count(), 1
         )
+        self.assertEqual(article.pk, legacy_article.pk)
+        self.assertFalse(
+            self.site.evergreen_articles.filter(
+                slug="the-second-cottage-revolution"
+            ).exists()
+        )
         self.assertEqual(page.template_variant, Page.TEMPLATE_HUMAINX)
+        self.assertEqual(pillar.template_variant, Page.TEMPLATE_NEO_COTTAGE)
+        self.assertEqual(pillar.focus_keyword, "neo-cottage economy")
+        self.assertIn('"@type":"DefinedTerm"', pillar.schema_jsonld)
         self.assertEqual(nav.url, "humainx.html")
         self.assertEqual(article.editorial_label, "HUMAINX / 01")
         self.assertEqual(article.hypothesis, "H1")
@@ -452,6 +592,15 @@ class ManagementCommandTests(SitesBuilderTestCase):
         self.assertIn("Before the factory", article.body_md)
         self.assertIn("neo-cottage economy", article.body_md)
         self.assertEqual(article.title, "The Neo-Cottage Revolution")
+        self.assertEqual(article.author_name, "HumainX")
+        self.assertEqual(
+            article.legacy_slugs, ["the-second-cottage-revolution"]
+        )
+        self.assertEqual(
+            article.hero_image_url,
+            "assets/images/neo-cottage-revolution-og.png",
+        )
+        self.assertEqual(article.content_updated_at.date().isoformat(), "2026-08-20")
         self.assertIn("<!-- reader-response -->", article.body_md)
         self.assertEqual(
             self.site.newsletter_config["form_action"],

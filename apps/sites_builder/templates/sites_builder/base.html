@@ -42,6 +42,7 @@
   <meta name="twitter:title" content="{{ page.meta_title|default:page.title }}">
   {% if page.meta_description %}<meta name="twitter:description" content="{{ page.meta_description }}">{% endif %}
   {% if page.hero_image_url %}<meta name="twitter:image" content="{{ page.hero_image_url }}">{% endif %}
+  {% if page.schema_jsonld %}<script type="application/ld+json">{{ page.schema_jsonld|safe }}</script>{% endif %}
   {% endblock %}
 
   <!-- Bootstrap CSS via CDN -->

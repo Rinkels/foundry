@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone as datetime_timezone
 
 from django.core.management.base import BaseCommand, CommandError
@@ -8,7 +9,8 @@ from ...models import EvergreenArticle, Page, Site, SiteTopNavItem
 from ...services.static_builder import StaticBuilder
 
 
-ARTICLE_SLUG = "the-second-cottage-revolution"
+ARTICLE_SLUG = "neo-cottage-revolution"
+LEGACY_ARTICLE_SLUG = "the-second-cottage-revolution"
 ARTICLE_TEMPLATE = (
     "sites_builder/content/humainx/the_second_cottage_revolution.html"
 )
@@ -104,6 +106,87 @@ class Command(BaseCommand):
                     "increasingly abundant."
                 ),
                 "focus_keyword": "future of work and AI",
+                "hero_image_url": (
+                    f"{site.base_url}/assets/images/neo-cottage-revolution-og.png"
+                    if site.base_url
+                    else ""
+                ),
+                "schema_jsonld": json.dumps(
+                    {
+                        "@context": "https://schema.org",
+                        "@type": "CollectionPage",
+                        "name": "HumainX",
+                        "description": (
+                            "An exploration of work, ownership and economic life "
+                            "as AI makes intelligence increasingly abundant."
+                        ),
+                        "url": f"{site.base_url}/humainx.html" if site.base_url else "",
+                    },
+                    separators=(",", ":"),
+                ),
+                "last_generated_at": datetime(
+                    2026, 8, 20, tzinfo=datetime_timezone.utc
+                ),
+            },
+        )
+
+        pillar, pillar_created = Page.objects.update_or_create(
+            site=site,
+            slug="neo-cottage-economy",
+            defaults={
+                "title": "What Is the Neo-Cottage Economy?",
+                "parent": root,
+                "depth": root.depth + 1,
+                "is_root": False,
+                "nav_order": 36,
+                "page_type": Page.PAGE_TYPE_LANDING,
+                "template_variant": Page.TEMPLATE_NEO_COTTAGE,
+                "meta_title": "What Is the Neo-Cottage Economy? | HumainX",
+                "meta_description": (
+                    "The neo-cottage economy describes a future where AI makes "
+                    "individuals and tiny teams viable units of production. "
+                    "Explore the evidence and implications."
+                ),
+                "focus_keyword": "neo-cottage economy",
+                "hero_image_url": (
+                    f"{site.base_url}/assets/images/neo-cottage-revolution-og.png"
+                    if site.base_url
+                    else ""
+                ),
+                "schema_jsonld": json.dumps(
+                    {
+                        "@context": "https://schema.org",
+                        "@graph": [
+                            {
+                                "@type": "WebPage",
+                                "@id": (
+                                    f"{site.base_url}/neo-cottage-economy.html"
+                                    if site.base_url
+                                    else "neo-cottage-economy.html"
+                                ),
+                                "name": "What Is the Neo-Cottage Economy?",
+                                "description": (
+                                    "A working definition and evidence framework "
+                                    "for the AI-enabled neo-cottage economy."
+                                ),
+                            },
+                            {
+                                "@type": "DefinedTerm",
+                                "name": "Neo-cottage economy",
+                                "description": (
+                                    "An emerging model in which AI makes individuals "
+                                    "and very small teams economically viable units of "
+                                    "production at a scale that once required larger firms."
+                                ),
+                                "inDefinedTermSet": "HumainX economic concepts",
+                            },
+                        ],
+                    },
+                    separators=(",", ":"),
+                ),
+                "last_generated_at": datetime(
+                    2026, 8, 20, tzinfo=datetime_timezone.utc
+                ),
             },
         )
 
@@ -123,10 +206,22 @@ class Command(BaseCommand):
         nav.save()
 
         article_body = render_to_string(ARTICLE_TEMPLATE).strip()
-        article, article_created = EvergreenArticle.objects.update_or_create(
-            site=site,
-            slug=ARTICLE_SLUG,
-            defaults={
+        article = site.evergreen_articles.filter(slug=ARTICLE_SLUG).first()
+        legacy_article = site.evergreen_articles.filter(
+            slug=LEGACY_ARTICLE_SLUG
+        ).first()
+        article_created = article is None and legacy_article is None
+        if article is None:
+            article = legacy_article or EvergreenArticle(site=site)
+        elif legacy_article is not None and legacy_article.pk != article.pk:
+            # A partially migrated database can contain both slugs. Keep the
+            # canonical record and retire the duplicate so it cannot re-enter
+            # the sitemap or overwrite the redirect fallback.
+            legacy_article.status = EvergreenArticle.STATUS_ARCHIVED
+            legacy_article.save(update_fields=["status", "updated_at"])
+
+        article_values = {
+                "slug": ARTICLE_SLUG,
                 "title": "The Neo-Cottage Revolution",
                 "status": EvergreenArticle.STATUS_PUBLISHED,
                 "is_cornerstone": False,
@@ -154,22 +249,33 @@ class Command(BaseCommand):
                     "The Neo-Cottage Revolution | HumainX by Mindsgate"
                 ),
                 "meta_description": (
-                    "The Industrial Revolution pulled production into "
-                    "organizations. Could AI push economic capability back "
-                    "toward individuals and small teams? HumainX explores the "
-                    "economy of 2036."
+                    "The Neo-Cottage Revolution: how AI could shrink firms, "
+                    "distribute productive power, and reshape work and "
+                    "ownership by 2036."
                 ),
                 "canonical_url": "",
+                "hero_image_url": "assets/images/neo-cottage-revolution-og.png",
+                "author_name": "HumainX",
+                "author_url": (
+                    f"{site.base_url}/humainx.html" if site.base_url else ""
+                ),
+                "content_updated_at": datetime(
+                    2026, 8, 20, tzinfo=datetime_timezone.utc
+                ),
+                "legacy_slugs": [LEGACY_ARTICLE_SLUG],
                 "published_at": datetime(
                     2026, 8, 18, tzinfo=datetime_timezone.utc
                 ),
-            },
-        )
+            }
+        for field, value in article_values.items():
+            setattr(article, field, value)
+        article.save()
 
         self.stdout.write(
             self.style.SUCCESS(
                 "HumainX configured: "
                 f"page={'created' if page_created else 'updated'}, "
+                f"pillar={'created' if pillar_created else 'updated'}, "
                 f"navigation={'created' if nav_created else 'updated'}, "
                 f"article={'created' if article_created else 'updated'} "
                 f"({article.reading_minutes} min read)."

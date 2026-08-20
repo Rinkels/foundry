@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List
 from django.template.loader import render_to_string
 from django.conf import settings
+from django.utils.html import escape
 from django.utils.text import slugify
 from datetime import datetime
 from shutil import copyfile
@@ -622,6 +623,39 @@ class StaticBuilder:
         cards = []
 
         theme = (getattr(site, "theme_css", None) or "aurora").strip()
+        canonical_url = f"{site.base_url}/insights.html" if site.base_url else ""
+        title = f"{site.name} | Insights"
+        description = (
+            "Insights from Mindsgate on AI, autonomous systems, software delivery, "
+            "business architecture, and the future of work."
+        )
+        insights_schema = json.dumps(
+            {
+                "@context": "https://schema.org",
+                "@type": "CollectionPage",
+                "name": title,
+                "description": description,
+                "url": canonical_url,
+                "mainEntity": {
+                    "@type": "ItemList",
+                    "itemListElement": [
+                        {
+                            "@type": "ListItem",
+                            "position": position,
+                            "name": article.title,
+                            "url": (
+                                f"{site.base_url}/insights/{article.slug}.html"
+                                if site.base_url
+                                else f"insights/{article.slug}.html"
+                            ),
+                        }
+                        for position, article in enumerate(articles, start=1)
+                    ],
+                },
+            },
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).replace("</", "<\\/")
 
         latest_articles = (
             EvergreenArticle.objects
@@ -658,11 +692,11 @@ class StaticBuilder:
                 metadata += f" · {published}"
             cards.append(f"""
               <div class="neon-glass-card p-4 mb-3{feature_class}">
-                <div class="insight-card__meta">{metadata}</div>
-                <h3 class="mb-2"><a href="{url}" style="text-decoration:none;">{a.title}</a></h3>
-                <div class="text-soft small">{excerpt}</div>
+                <div class="insight-card__meta">{escape(metadata)}</div>
+                <h3 class="mb-2"><a href="{escape(url)}" style="text-decoration:none;">{escape(a.title)}</a></h3>
+                <div class="text-soft small">{escape(excerpt)}</div>
                 <div class="mt-3">
-                  <a class="btn-glass" href="{url}">Read</a>
+                  <a class="btn-glass" href="{escape(url)}">Read</a>
                 </div>
               </div>
             """)
@@ -678,7 +712,18 @@ class StaticBuilder:
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
-      <title>{site.name} | Insights</title>
+      <title>{escape(title)}</title>
+      <meta name="description" content="{escape(description)}">
+      <meta name="robots" content="index,follow">
+      {f'<link rel="canonical" href="{escape(canonical_url)}">' if canonical_url else ''}
+      <meta property="og:type" content="website">
+      <meta property="og:title" content="{escape(title)}">
+      <meta property="og:description" content="{escape(description)}">
+      {f'<meta property="og:url" content="{escape(canonical_url)}">' if canonical_url else ''}
+      <meta name="twitter:card" content="summary">
+      <meta name="twitter:title" content="{escape(title)}">
+      <meta name="twitter:description" content="{escape(description)}">
+      <script type="application/ld+json">{insights_schema}</script>
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
       <link rel="stylesheet" href="assets/css/landing.css?v={build_id}">
       <link rel="stylesheet" href="assets/css/site.css?v={build_id}">
@@ -717,6 +762,75 @@ class StaticBuilder:
             "links": links,
         }
         (site_dir / "sitelinks.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
+
+    def _write_article_redirects(
+        self, site_dir: Path, site: Site, articles: list[EvergreenArticle]
+    ) -> None:
+        """Write Apache 301 rules plus crawl-safe HTML fallbacks for old slugs."""
+        redirect_rules = []
+        insights_dir = site_dir / "insights"
+        for article in articles:
+            current_slug = (article.slug or slugify(article.title)).strip()
+            for raw_slug in article.legacy_slugs or []:
+                legacy_slug = slugify(str(raw_slug))
+                if not legacy_slug or legacy_slug == current_slug:
+                    continue
+
+                source_path = f"/insights/{legacy_slug}.html"
+                destination_path = f"/insights/{current_slug}.html"
+                canonical_url = (
+                    f"{site.base_url}{destination_path}"
+                    if site.base_url
+                    else destination_path
+                )
+                redirect_rules.append(
+                    f"Redirect 301 {source_path} {canonical_url}"
+                )
+
+                relative_target = f"{current_slug}.html"
+                fallback_html = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Moved: {escape(article.title)}</title>
+  <meta name="robots" content="noindex,follow">
+  <link rel="canonical" href="{escape(canonical_url)}">
+  <meta http-equiv="refresh" content="0;url={escape(relative_target)}">
+  <script>window.location.replace({json.dumps(relative_target)});</script>
+</head>
+<body>
+  <p>This article has moved to <a href="{escape(relative_target)}">{escape(article.title)}</a>.</p>
+</body>
+</html>
+"""
+                (insights_dir / f"{legacy_slug}.html").write_text(
+                    fallback_html, encoding="utf-8"
+                )
+
+        htaccess = site_dir / ".htaccess"
+        marker_pattern = re.compile(
+            r"(?:^|\n)# BEGIN FOUNDRY REDIRECTS\n.*?"
+            r"# END FOUNDRY REDIRECTS\n?",
+            flags=re.DOTALL,
+        )
+        existing_rules = (
+            htaccess.read_text(encoding="utf-8", errors="ignore")
+            if htaccess.is_file()
+            else ""
+        )
+        preserved_rules = marker_pattern.sub("\n", existing_rules).strip()
+        sections = [preserved_rules] if preserved_rules else []
+        if redirect_rules:
+            unique_rules = list(dict.fromkeys(redirect_rules))
+            sections.append(
+                "# BEGIN FOUNDRY REDIRECTS\n"
+                + "\n".join(unique_rules)
+                + "\n# END FOUNDRY REDIRECTS"
+            )
+        if sections:
+            htaccess.write_text("\n\n".join(sections) + "\n", encoding="utf-8")
+        elif htaccess.is_file():
+            htaccess.unlink()
 
     def _localize_absolute_assets(self, html: str, site_dir: Path, cache: dict) -> str:
         """Make the built page self-contained: download any absolute http(s) image
@@ -777,6 +891,10 @@ class StaticBuilder:
             .order_by("-published_at", "-updated_at")[:3]
         )
         theme = (getattr(site, "theme_css", None) or "aurora").strip()
+        self._copy_theme_content_assets(site_dir, theme)
+        # Create modern-format siblings before rendering so article templates can
+        # emit a <picture> source on the first build, not only subsequent builds.
+        optimize_images_dir(site_dir / "assets" / "images")
         for page in pages:
             parent = page.parent
             children = list(page.children.all().order_by("nav_order", "title", "id"))
@@ -864,6 +982,8 @@ class StaticBuilder:
                 "url": f"insights/{filename}",
                 "type": "evergreen_article",
             })
+
+        self._write_article_redirects(site_dir, site, list(articles))
 
         # Build insights.html auto blog-index — UNLESS the site owns a deliberate
         # landing page at that slug (then that page wins; don't clobber it).
