@@ -127,7 +127,7 @@ class Command(BaseCommand):
             site=site,
             slug=ARTICLE_SLUG,
             defaults={
-                "title": "The Second Cottage Revolution",
+                "title": "The Neo-Cottage Revolution",
                 "status": EvergreenArticle.STATUS_PUBLISHED,
                 "is_cornerstone": False,
                 "series": "HumainX",
@@ -151,7 +151,7 @@ class Command(BaseCommand):
                 ),
                 "body_md": article_body,
                 "meta_title": (
-                    "The Second Cottage Revolution | HumainX by Mindsgate"
+                    "The Neo-Cottage Revolution | HumainX by Mindsgate"
                 ),
                 "meta_description": (
                     "The Industrial Revolution pulled production into "

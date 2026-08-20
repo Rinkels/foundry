@@ -450,6 +450,8 @@ class ManagementCommandTests(SitesBuilderTestCase):
         self.assertEqual(len(article.reader_answer_options), 5)
         self.assertIn("single employer", article.reader_question)
         self.assertIn("Before the factory", article.body_md)
+        self.assertIn("neo-cottage economy", article.body_md)
+        self.assertEqual(article.title, "The Neo-Cottage Revolution")
         self.assertIn("<!-- reader-response -->", article.body_md)
         self.assertEqual(
             self.site.newsletter_config["form_action"],
