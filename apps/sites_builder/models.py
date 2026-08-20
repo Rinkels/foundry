@@ -250,9 +250,11 @@ class Page(models.Model):
     )
     TEMPLATE_DEFAULT = ""
     TEMPLATE_HUMAINX = "humainx"
+    TEMPLATE_NEO_COTTAGE = "neo_cottage"
     TEMPLATE_VARIANT_CHOICES = [
         (TEMPLATE_DEFAULT, "Default for page type"),
         (TEMPLATE_HUMAINX, "HumainX landing page"),
+        (TEMPLATE_NEO_COTTAGE, "Neo-Cottage definition page"),
     ]
     template_variant = models.CharField(
         max_length=50,
@@ -454,6 +456,20 @@ class EvergreenArticle(models.Model):
 
     # optional visuals
     hero_image_url = models.URLField(blank=True)
+
+    # authorship and URL-history signals used by public article metadata
+    author_name = models.CharField(max_length=200, blank=True)
+    author_url = models.URLField(blank=True)
+    content_updated_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Date of the most recent significant editorial update.",
+    )
+    legacy_slugs = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Previous article slugs that should permanently redirect here.",
+    )
 
     published_at = models.DateTimeField(blank=True, null=True)
 

@@ -315,8 +315,9 @@ class EvergreenArticleAdmin(admin.ModelAdmin):
             )
         }),
         ("Content", {"fields": ("excerpt", "body_md", "hero_image_url")}),
+        ("Authorship", {"fields": ("author_name", "author_url")}),
         ("SEO", {"fields": ("meta_title", "meta_description", "canonical_url")}),
-        ("Publishing", {"fields": ("published_at",)}),
+        ("Publishing", {"fields": ("published_at", "content_updated_at", "legacy_slugs")}),
     )
 
 @admin.register(ArticleCornerstoneLink)

@@ -47,8 +47,13 @@ THEME_FAVICON_MAP = {
     "mindsgate": "mindsgate-favicon.svg",
 }
 
+THEME_CONTENT_ASSET_MAP = {
+    "mindsgate": ("neo-cottage-revolution-og.png",),
+}
+
 PAGE_TEMPLATE_MAP = {
     "humainx": "sites_builder/sites/default/humainx.html",
+    "neo_cottage": "sites_builder/sites/default/neo_cottage.html",
 }
 
 ARTICLE_READER_RESPONSE_MARKER = "<!-- reader-response -->"
@@ -90,6 +95,111 @@ class StaticBuilder:
         jpeg_source = source.with_suffix(".jpg")
         if jpeg_source.is_file():
             copyfile(jpeg_source, destination_dir / "favicon.jpg")
+
+    def _copy_theme_content_assets(self, site_dir: Path, theme: str) -> None:
+        """Copy curated, theme-owned editorial assets into the static build."""
+        source_dir = Path(settings.BASE_DIR) / "static" / "themes"
+        destination_dir = site_dir / "assets" / "images"
+        for source_name in THEME_CONTENT_ASSET_MAP.get(theme, ()):
+            source = source_dir / source_name
+            if not source.is_file():
+                raise FileNotFoundError(f"Theme content asset not found: {source}")
+            destination_dir.mkdir(parents=True, exist_ok=True)
+            copyfile(source, destination_dir / source_name)
+
+    @staticmethod
+    def _normalize_article_body_markup(body: str) -> str:
+        """Keep only article-body markup and prevent nested document headings."""
+        body = (body or "").strip()
+        document_body = re.search(
+            r"<body\b[^>]*>(.*?)</body>", body, flags=re.IGNORECASE | re.DOTALL
+        )
+        if document_body:
+            body = document_body.group(1).strip()
+        return re.sub(
+            r"<h1\b[^>]*>.*?</h1>",
+            "",
+            body,
+            count=1,
+            flags=re.IGNORECASE | re.DOTALL,
+        ).strip()
+
+    @staticmethod
+    def _build_article_schema(
+        site: Site,
+        article: EvergreenArticle,
+        canonical_url: str,
+        image_url: str,
+        author_name: str,
+        author_url: str,
+        modified_at,
+    ) -> str:
+        if not canonical_url:
+            return ""
+
+        author_type = (
+            "Organization"
+            if author_name.casefold() in {site.name.casefold(), "humainx"}
+            else "Person"
+        )
+        author = {"@type": author_type, "name": author_name}
+        if author_url:
+            author["url"] = author_url
+
+        article_node = {
+            "@type": "Article",
+            "@id": f"{canonical_url}#article",
+            "headline": article.title,
+            "description": article.meta_description or article.excerpt,
+            "mainEntityOfPage": {"@type": "WebPage", "@id": canonical_url},
+            "author": author,
+            "publisher": {
+                "@type": "Organization",
+                "name": site.name,
+                "url": site.base_url,
+            },
+        }
+        if article.published_at:
+            article_node["datePublished"] = article.published_at.isoformat()
+        if modified_at:
+            article_node["dateModified"] = modified_at.isoformat()
+        if image_url:
+            article_node["image"] = [image_url]
+        if article.series:
+            article_node["isPartOf"] = {
+                "@type": "CreativeWorkSeries",
+                "name": article.series,
+                "url": f"{site.base_url}/{slugify(article.series)}.html",
+            }
+
+        breadcrumb = {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {
+                    "@type": "ListItem",
+                    "position": 1,
+                    "name": site.name,
+                    "item": f"{site.base_url}/",
+                },
+                {
+                    "@type": "ListItem",
+                    "position": 2,
+                    "name": "Insights",
+                    "item": f"{site.base_url}/insights.html",
+                },
+                {
+                    "@type": "ListItem",
+                    "position": 3,
+                    "name": article.title,
+                    "item": canonical_url,
+                },
+            ],
+        }
+        return json.dumps(
+            {"@context": "https://schema.org", "@graph": [article_node, breadcrumb]},
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
 
     def _normalize_landing_href(
         self, site: Site, href: str, known_slugs: set[str], fallback_text: str = ""
@@ -331,7 +441,7 @@ class StaticBuilder:
                 .order_by("-is_primary", "-supporting__published_at", "supporting__title")
             )
 
-        body_html = re.sub(r"^\s*<h1[^>]*>.*?</h1>\s*", "", body_html, flags=re.IGNORECASE | re.DOTALL)
+        body_html = self._normalize_article_body_markup(body_html)
         article_body_before_feedback = body_html
         article_body_after_feedback = ""
         if ARTICLE_READER_RESPONSE_MARKER in body_html:
@@ -352,6 +462,7 @@ class StaticBuilder:
         hero_url = (article.hero_image_url or "").strip()
         article_hero_page_url = hero_url
         article_hero_meta_url = hero_url
+        article_hero_webp_page_url = ""
         parsed_hero_url = urlparse(hero_url)
         if hero_url and not parsed_hero_url.scheme and not parsed_hero_url.netloc:
             asset_path = hero_url.lstrip("/")
@@ -374,6 +485,28 @@ class StaticBuilder:
                 # the asset (or an absolute URL).
                 article_hero_page_url = ""
                 article_hero_meta_url = ""
+            else:
+                webp_asset = local_asset.with_suffix(".webp")
+                if webp_asset.is_file():
+                    webp_path = Path(asset_path).with_suffix(".webp").as_posix()
+                    article_hero_webp_page_url = f"../{webp_path}"
+
+        article_modified_at = (
+            article.content_updated_at or article.updated_at or article.published_at
+        )
+        article_author = {
+            "name": (article.author_name or site.name).strip(),
+            "url": (article.author_url or site.base_url).strip(),
+        }
+        article_schema_json = self._build_article_schema(
+            site=site,
+            article=article,
+            canonical_url=canonical_url,
+            image_url=article_hero_meta_url,
+            author_name=article_author["name"],
+            author_url=article_author["url"],
+            modified_at=article_modified_at,
+        )
 
         is_humainx = (article.series or "").casefold() == "humainx"
         newsletter = site.newsletter_config or {}
@@ -414,6 +547,10 @@ class StaticBuilder:
             "canonical_url": canonical_url,
             "article_hero_page_url": article_hero_page_url,
             "article_hero_meta_url": article_hero_meta_url,
+            "article_hero_webp_page_url": article_hero_webp_page_url,
+            "article_modified_at": article_modified_at,
+            "article_author": article_author,
+            "article_schema_json": article_schema_json,
             "cornerstone_links": cornerstone_links,
             "supporting_links": supporting_links,
             "latest_articles": latest_articles,

@@ -840,6 +840,16 @@ def article_create(request, pk):
             meta_description=request.POST.get("meta_description", "").strip(),
             canonical_url=request.POST.get("canonical_url", "").strip(),
             hero_image_url=request.POST.get("hero_image_url", "").strip(),
+            author_name=request.POST.get("author_name", "").strip(),
+            author_url=request.POST.get("author_url", "").strip(),
+            legacy_slugs=[
+                slugify(value)
+                for value in re.split(
+                    r"[,\n]", request.POST.get("legacy_slugs", "")
+                )
+                if slugify(value)
+            ],
+            content_updated_at=timezone.now(),
             status=request.POST.get("status", EvergreenArticle.STATUS_DRAFT),
         )
         if not a.title:
@@ -873,6 +883,14 @@ def article_edit(request, pk, article_id):
     a = get_object_or_404(EvergreenArticle, pk=article_id, site=site)
 
     if request.method == "POST":
+        previous_editorial_content = (
+            a.title,
+            a.excerpt,
+            a.body_md,
+            a.meta_title,
+            a.meta_description,
+            a.hero_image_url,
+        )
         a.title = request.POST.get("title", "").strip()
         a.slug = request.POST.get("slug", "").strip() or a.slug
         a.excerpt = request.POST.get("excerpt", "").strip()
@@ -881,7 +899,25 @@ def article_edit(request, pk, article_id):
         a.meta_description = request.POST.get("meta_description", "").strip()
         a.canonical_url = request.POST.get("canonical_url", "").strip()
         a.hero_image_url = request.POST.get("hero_image_url", "").strip()
+        a.author_name = request.POST.get("author_name", "").strip()
+        a.author_url = request.POST.get("author_url", "").strip()
+        a.legacy_slugs = [
+            slugify(value)
+            for value in re.split(r"[,\n]", request.POST.get("legacy_slugs", ""))
+            if slugify(value)
+        ]
         a.is_cornerstone = bool(request.POST.get("is_cornerstone"))
+
+        current_editorial_content = (
+            a.title,
+            a.excerpt,
+            a.body_md,
+            a.meta_title,
+            a.meta_description,
+            a.hero_image_url,
+        )
+        if current_editorial_content != previous_editorial_content:
+            a.content_updated_at = timezone.now()
 
         status = request.POST.get("status", a.status)
         if status in dict(EvergreenArticle.STATUS_CHOICES):
