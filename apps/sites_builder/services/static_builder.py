@@ -42,18 +42,22 @@ THEME_CSS_MAP = {
     "bauhaus": "bauhaus.css",
     "editorial": "editorial.css",
     "mindsgate": "mindsgate.css",
+    "humainx": "humainx.css",
 }
 
 THEME_FAVICON_MAP = {
     "mindsgate": "mindsgate-favicon.svg",
+    "humainx": "../HumainX.svg",
 }
 
 THEME_CONTENT_ASSET_MAP = {
     "mindsgate": ("neo-cottage-revolution-og.png",),
+    "humainx": ("neo-cottage-revolution-og.png",),
 }
 
 PAGE_TEMPLATE_MAP = {
     "humainx": "sites_builder/sites/default/humainx.html",
+    "humainx_home": "sites_builder/sites/default/humainx_home.html",
     "neo_cottage": "sites_builder/sites/default/neo_cottage.html",
 }
 
@@ -990,7 +994,7 @@ class StaticBuilder:
         has_insights_landing = site.pages.filter(
             slug="insights", page_type="landing"
         ).exists()
-        if not has_insights_landing:
+        if not has_insights_landing and articles.exists():
             insights_index = self._render_insights_index(site=site, articles=list(articles), build_id=build_id)
             insights_index = self._inject_theme_favicon(insights_index, theme)
             (site_dir / "insights.html").write_text(insights_index, encoding="utf-8")

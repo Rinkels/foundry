@@ -60,6 +60,7 @@ class Site(models.Model):
     THEME_CSS_BAUHAUS = "bauhaus"
     THEME_CSS_EDITORIAL = "editorial"
     THEME_CSS_MINDSGATE = "mindsgate"
+    THEME_CSS_HUMAINX = "humainx"
     THEME_CSS_CHOICES = [
         (THEME_CSS_NEON, "Neon Glass"),
         (THEME_CSS_STARTUP, "Startup Modern"),
@@ -68,6 +69,7 @@ class Site(models.Model):
         (THEME_CSS_BAUHAUS, "Bauhaus"),
         (THEME_CSS_EDITORIAL, "Editorial"),
         (THEME_CSS_MINDSGATE, "Mindsgate (dark premium)"),
+        (THEME_CSS_HUMAINX, "HumainX (research publication)"),
     ]
 
     theme_css = models.CharField(
@@ -250,10 +252,12 @@ class Page(models.Model):
     )
     TEMPLATE_DEFAULT = ""
     TEMPLATE_HUMAINX = "humainx"
+    TEMPLATE_HUMAINX_HOME = "humainx_home"
     TEMPLATE_NEO_COTTAGE = "neo_cottage"
     TEMPLATE_VARIANT_CHOICES = [
         (TEMPLATE_DEFAULT, "Default for page type"),
         (TEMPLATE_HUMAINX, "HumainX landing page"),
+        (TEMPLATE_HUMAINX_HOME, "HumainX standalone home page"),
         (TEMPLATE_NEO_COTTAGE, "Neo-Cottage definition page"),
     ]
     template_variant = models.CharField(

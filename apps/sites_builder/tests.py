@@ -10,7 +10,14 @@ from django.template.loader import render_to_string
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Developer, EvergreenArticle, Page, Site, SiteTopNavItem
+from .models import (
+    DeploymentTarget,
+    Developer,
+    EvergreenArticle,
+    Page,
+    Site,
+    SiteTopNavItem,
+)
 from .services.generator import SiteGenerator
 from .services.reader_feedback import build_reader_feedback_context
 from .services.reading_time import estimate_reading_minutes
@@ -163,6 +170,46 @@ class StaticBuilderTests(SitesBuilderTestCase):
             )
             self.assertTrue(social_image.is_file())
             self.assertGreater(social_image.stat().st_size, 100_000)
+
+    def test_humainx_theme_reuses_brand_mark_as_favicon(self):
+        with TemporaryDirectory() as temp_dir:
+            site_dir = Path(temp_dir) / "humainx"
+
+            StaticBuilder(Path(temp_dir))._copy_theme_favicon(site_dir, "humainx")
+
+            favicon = site_dir / "assets" / "images" / "favicon.svg"
+            favicon_jpg = site_dir / "assets" / "images" / "favicon.jpg"
+            self.assertIn("HumainX", favicon.read_text(encoding="utf-8"))
+            self.assertTrue(favicon_jpg.read_bytes().startswith(b"\xff\xd8\xff"))
+
+    def test_standalone_humainx_home_has_research_and_conversion_content(self):
+        self.site.name = "HumainX"
+        self.site.theme_css = Site.THEME_CSS_HUMAINX
+        self.site.newsletter_config = {
+            "enabled": True,
+            "form_action": "https://buttondown.com/example",
+            "button_label": "Follow HumainX",
+        }
+        self.site.save()
+        page = Page.objects.create(
+            site=self.site,
+            title="HumainX",
+            slug="home",
+            is_root=True,
+            page_type=Page.PAGE_TYPE_LANDING,
+            template_variant=Page.TEMPLATE_HUMAINX_HOME,
+        )
+
+        html = render_to_string(
+            "sites_builder/sites/default/humainx_home.html",
+            {"site": self.site, "page": page, "theme": "humainx"},
+        )
+
+        self.assertIn("What happens when intelligence is", html)
+        self.assertIn("The Neo-Cottage Revolution", html)
+        self.assertIn('action="https://buttondown.com/example"', html)
+        self.assertIn('id="questions"', html)
+        self.assertIn('id="method"', html)
 
     def test_article_wrapper_uses_valid_body_and_main_attributes(self):
         article = EvergreenArticle.objects.create(
@@ -616,3 +663,33 @@ class ManagementCommandTests(SitesBuilderTestCase):
             self.site.reader_feedback_config["form_url"],
             "https://tally.so/r/kd8gJZ",
         )
+
+    def test_setup_humainx_site_is_idempotent_and_cloudflare_ready(self):
+        for _ in range(2):
+            call_command(
+                "setup_humainx_site",
+                no_build=True,
+                stdout=StringIO(),
+            )
+
+        site = Site.objects.get(slug="humainx")
+        home = site.pages.get(slug="home")
+        target = site.deployment_targets.get(
+            name="Cloudflare Pages (humainx.com)"
+        )
+
+        self.assertEqual(Site.objects.filter(slug="humainx").count(), 1)
+        self.assertEqual(site.domain, "humainx.com")
+        self.assertEqual(site.theme_css, Site.THEME_CSS_HUMAINX)
+        self.assertTrue(site.structure_locked)
+        self.assertEqual(site.pages.count(), 1)
+        self.assertTrue(home.is_root)
+        self.assertEqual(home.template_variant, Page.TEMPLATE_HUMAINX_HOME)
+        self.assertIn('"@type":"WebSite"', home.schema_jsonld)
+        self.assertEqual(
+            site.newsletter_config["form_action"],
+            "https://buttondown.com/api/emails/embed-subscribe/HumainX",
+        )
+        self.assertEqual(target.type, DeploymentTarget.TYPE_CF_PAGES)
+        self.assertEqual(target.cf_project_name, "humainx")
+        self.assertTrue(target.is_default)
