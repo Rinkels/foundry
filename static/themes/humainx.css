@@ -83,7 +83,7 @@ body.theme-humainx {
 .hx-orbit__ring--one::after { top: 14%; right: 15%; }
 .hx-orbit__ring--two { inset: 22%; border-style: dashed; animation: hx-spin-reverse 24s linear infinite; }
 .hx-orbit__ring--two::after { bottom: 1%; left: 48%; background: var(--hx-gold); box-shadow: 0 0 16px var(--hx-gold); }
-.hx-orbit__ring--three { inset: 34%; }
+.hx-orbit__ring--three { inset: 34%; animation: hx-spin 18s linear infinite; }
 .hx-orbit__ring--three::after { top: 45%; left: -4px; background: var(--hx-violet); box-shadow: 0 0 16px var(--hx-violet); }
 .hx-orbit__mark { position: absolute; width: 31%; height: 31%; inset: 34.5%; border-radius: 24%; filter: drop-shadow(0 24px 45px rgba(0, 0, 0, .5)); }
 .hx-orbit__label { position: absolute; padding: 7px 12px; border: 1px solid var(--hx-line-strong); border-radius: 999px; background: rgba(9, 13, 23, .82); color: var(--hx-text); font-size: .66rem; letter-spacing: .14em; text-transform: uppercase; backdrop-filter: blur(10px); }
