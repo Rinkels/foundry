@@ -1,4 +1,4 @@
-<section class="lp-section lp-cards-band">
+<section class="lp-section lp-cards-band"{% if s.anchor %} id="{{ s.anchor }}"{% endif %}>
   <div class="lp-container">
     {% if s.eyebrow %}<div class="lp-section__eyebrow">{{ s.eyebrow }}</div>{% endif %}
     {% if s.heading %}<h2 class="lp-section__heading">{{ s.heading }}</h2>{% endif %}
@@ -12,7 +12,7 @@
             {% if item.badge %}<span class="lp-card__badge lp-card__badge--{{ item.badge_color|default:'accent' }}">{{ item.badge }}</span>{% endif %}
             <h3 class="lp-card__title">{{ item.title }}</h3>
             {% if item.text %}<p class="lp-card__text">{{ item.text }}</p>{% endif %}
-            {% if item.href %}<a class="lp-card__link" href="{{ item.href }}">{{ item.link_label|default:"Learn more" }} &rarr;</a>{% endif %}
+            {% if item.href %}{% if item.href|slice:":4" == "http" %}<a class="lp-card__link" href="{{ item.href }}" target="_blank" rel="noopener">{{ item.link_label|default:"Learn more" }} &nearr;</a>{% else %}<a class="lp-card__link" href="{{ item.href }}">{{ item.link_label|default:"Learn more" }} &rarr;</a>{% endif %}{% endif %}
           </div>
         </div>
       {% endfor %}
