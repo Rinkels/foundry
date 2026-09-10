@@ -122,6 +122,143 @@ Otherwise “Run agent” returns a clear *“export a design doc first”* mess
 
 ---
 
+## Worked example — add a “Wishlist” to `bookstore`
+
+Say you want to add a **Wishlist** feature to an existing app called
+`bookstore`, which is a `CloudProject` in Atlas whose `source_path` is
+`C:\Projects\bookstore`. *(IDs below are illustrative.)*
+
+### 0. One-time: an approved prompt exists
+
+In the library you already have a `feature_designer` prompt with an **approved**
+version — say `feature_designer@v4`. If not: open the template, edit the body,
+then Admin → *“Approve current version”*.
+
+### 1. Get an approved App Context for `bookstore`
+
+Code Analyzer scans the repo and posts a snapshot:
+
+```
+POST /athena/api/snapshots/ingest/    # body: the analyzed bookstore context
+```
+
+That creates `AppContextSnapshot(key="bookstore", version=1, is_approved=False)`.
+Review it, then Admin → *“Approve selected snapshots”* → `is_approved=True`.
+**Snapshot id = 12.**
+
+### 2. Studio: design the feature
+
+Open `/athena/studio/`, start a thread (“Bookstore wishlist”). In the sidebar
+pick App Context → **bookstore v1** and your model settings. Click
+**🎨 Feature Designer**. It renders `feature_designer@v4` against the context
+and produces a design doc:
+
+```markdown
+## Patch Plan
+Add a Wishlist so a customer can save books for later.
+
+## New/Updated Models
+- Wishlist(customer FK, created_at)
+- WishlistItem(wishlist FK, book FK, added_at) — unique (wishlist, book)
+
+## Migrations
+- 0007_wishlist ...
+## Views/URLs/Templates
+- wishlist_detail, add_to_wishlist (POST) ...
+## Tests
+- add/remove item, dedupe, login-required ...
+```
+
+Saved on the thread (`last_design_doc`) and recorded as **AthenaStudioRun #45**,
+which pins `feature_designer@v4` + snapshot 12 together.
+
+### 3. Export context + design doc into the repo
+
+Click **📤 Export context to repo** (posts `snapshot_id=12`, `run_id=45`). Two
+files are written into `C:\Projects\bookstore`:
+
+```
+CLAUDE.md                          # managed block with the bookstore context
+docs/design/bookstore-45.md        # the wishlist design doc
+```
+
+plus two sha256-audited `ContextExport` rows (`context` + `design_doc`, the
+latter linked to StudioRun #45). Re-exporting is byte-identical, and notes you
+hand-wrote in `CLAUDE.md` outside the managed block are untouched. CLI
+equivalent:
+
+```bash
+python manage.py athena_export_context --key bookstore --design-doc
+```
+
+### 4. Commit the exported files
+
+The agent refuses a dirty tree, so commit what you exported **in the bookstore
+repo**:
+
+```bash
+git -C C:/Projects/bookstore add CLAUDE.md docs/design/bookstore-45.md
+git -C C:/Projects/bookstore commit -m "Add Foundry context + wishlist design doc"
+```
+
+### 5. Run the agent
+
+Click **🤖 Run agent**. It finds the latest design-doc export for snapshot 12
+and enqueues **AgentRun #7**:
+
+1. **Preflight** — git tree ✓, clean ✓, `claude` on PATH ✓.
+2. **Isolate** — record base commit, then
+   `git worktree add -b foundry/agent/7 ..\_athena_agent_worktrees\7 HEAD`.
+3. **Run headless** (arg-list, narrow tools, never `--dangerously-skip-permissions`):
+   ```
+   claude -p "Read docs/design/bookstore-45.md and implement it. Follow CLAUDE.md.
+              Do not commit, push, merge, or run any deploy commands."
+          --allowedTools Read,Edit,Write,Grep,Glob,Bash(git status:*),Bash(git diff:*)
+          --output-format json
+   ```
+   Claude writes the models, migration, views, and tests into the **worktree**
+   — not your main checkout.
+4. **Record** — commit the work onto `foundry/agent/7`; capture result commit,
+   `diff --stat`, tokens, and estimated cost.
+
+You are redirected to `/athena/agent-runs/7/`.
+
+### 6. Review the run
+
+`/athena/agent-runs/7/` shows, from stored fields alone:
+
+| Field | Value |
+| --- | --- |
+| Status | `success` (exit 0) |
+| Prompt | `feature_designer @ v4` |
+| Snapshot | `bookstore v1` |
+| Design doc | `…\bookstore\docs\design\bookstore-45.md` |
+| Branch | `foundry/agent/7` |
+| Base → result | `a1b2c3d` → `9f8e7d6` |
+| Diff stat | `models.py \| 18 ++`, `migrations/0007… \| 30 ++`, `tests/test_wishlist.py \| 46 ++` … |
+| Cost | ~`$0.14` (100k in / 40k out) |
+
+plus the full agent log.
+
+### 7. Adopt the work (you, not Athena)
+
+Athena stops at an isolated branch. You decide:
+
+```bash
+git -C C:/Projects/bookstore diff main..foundry/agent/7   # inspect
+git -C C:/Projects/bookstore checkout main
+git -C C:/Projects/bookstore merge foundry/agent/7        # if you like it
+```
+
+If the diff is wrong, throw the branch away and rerun — `main` was never
+touched.
+
+> **The point in one line:** AgentRun #7 permanently answers *which prompt
+> version, which app snapshot, which design doc, and which commits produced this
+> code* — the governance seam between Athena's prompts and Claude Code's edits.
+
+---
+
 ## Production / operations
 
 In dev, exports and agent runs process **inline** in a background thread
