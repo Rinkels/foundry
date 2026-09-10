@@ -1,0 +1,75 @@
+{# apps/athena/templates/athena/agent_run_detail.html #}
+{% extends "athena/base.html" %}
+{% block athena_content %}
+
+<div class="neon-glass-card p-3 mb-3">
+  <div class="d-flex justify-content-between align-items-start">
+    <div>
+      <h3 class="mb-1">Agent run #{{ run.pk }}</h3>
+      <div class="text-muted">
+        {{ run.started_at }} • <span class="pill">{{ run.status }}</span>
+        {% if run.exit_code is not None %} • exit {{ run.exit_code }}{% endif %}
+        {% if run.finished_at %} • finished {{ run.finished_at }}{% endif %}
+      </div>
+    </div>
+    <a class="btn btn-sm btn-outline-light" href="{% url 'athena:agent_run_list' %}">Back</a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="neon-glass-card p-3 h-100">
+      <div class="fw-semibold mb-2">Provenance</div>
+      <table class="table table-sm mb-0">
+        <tbody>
+          <tr><th>Prompt</th><td>{% if run.template %}{{ run.template.key }} @ v{{ run.version.version }}{% else %}—{% endif %}</td></tr>
+          <tr><th>Snapshot</th><td>{% if run.snapshot %}{{ run.snapshot.key }} v{{ run.snapshot.version }}{% else %}—{% endif %}</td></tr>
+          <tr><th>Studio run</th><td>{% if run.studio_run %}#{{ run.studio_run.id }}{% else %}—{% endif %}</td></tr>
+          <tr><th>Design doc</th><td>{% if run.context_export %}<code>{{ run.context_export.target_path }}</code>{% else %}—{% endif %}</td></tr>
+          <tr><th>Cloud project</th><td>{% if run.cloud_project %}{{ run.cloud_project.slug }}{% else %}—{% endif %}</td></tr>
+          <tr><th>Triggered by</th><td>{{ run.triggered_by|default:"—" }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="neon-glass-card p-3 h-100">
+      <div class="fw-semibold mb-2">Isolation &amp; result</div>
+      <table class="table table-sm mb-0">
+        <tbody>
+          <tr><th>Repo</th><td><code>{{ run.target_path }}</code></td></tr>
+          <tr><th>Brief</th><td><code>{{ run.brief_path|default:"—" }}</code></td></tr>
+          <tr><th>Branch</th><td><code>{{ run.branch|default:"—" }}</code></td></tr>
+          <tr><th>Base commit</th><td><code>{{ run.base_commit|default:"—" }}</code></td></tr>
+          <tr><th>Result commit</th><td><code>{{ run.result_commit|default:"—" }}</code></td></tr>
+          <tr><th>Tokens</th><td>{{ run.input_tokens|default:"—" }} in / {{ run.output_tokens|default:"—" }} out</td></tr>
+          <tr><th>Est. cost</th><td>{% if run.cost_usd is not None %}${{ run.cost_usd }}{% else %}—{% endif %}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="neon-glass-card p-3">
+      <div class="fw-semibold mb-2">Diff stat</div>
+      <pre class="mb-0" style="white-space:pre-wrap;">{{ run.diff_stat|default:"(none)" }}</pre>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="neon-glass-card p-3">
+      <div class="fw-semibold mb-2">Command</div>
+      <pre class="mb-0" style="white-space:pre-wrap;">{{ run.command|default:"(none)" }}</pre>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="neon-glass-card p-3">
+      <div class="fw-semibold mb-2">Log</div>
+      <pre class="mb-0" style="white-space:pre-wrap; max-height:480px; overflow:auto;">{{ run.log }}</pre>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

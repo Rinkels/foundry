@@ -311,3 +311,112 @@ class AppContextSnapshot(models.Model):
 
     def __str__(self) -> str:
         return f"{self.title} v{self.version} ({'approved' if self.is_approved else 'draft'})"
+
+
+class ContextExport(models.Model):
+    """Audit record of an Athena context / design-doc export into a target repo's
+    working tree. Follows the field conventions of atlas.DeploymentRun — one row
+    per successful export, immutable."""
+
+    KIND_CONTEXT = "context"
+    KIND_DESIGN_DOC = "design_doc"
+    KIND_CHOICES = [
+        (KIND_CONTEXT, "Context (CLAUDE.md)"),
+        (KIND_DESIGN_DOC, "Design doc"),
+    ]
+
+    snapshot = models.ForeignKey(
+        AppContextSnapshot, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="context_exports",
+    )
+    studio_run = models.ForeignKey(
+        AthenaStudioRun, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="context_exports",
+    )
+    kind = models.CharField(max_length=16, choices=KIND_CHOICES, default=KIND_CONTEXT)
+
+    target_path = models.CharField(max_length=700)
+    bytes_written = models.PositiveIntegerField(default=0)
+    sha256 = models.CharField(max_length=64, blank=True, default="")
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="athena_context_exports",
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["snapshot", "-created_at"])]
+
+    def __str__(self) -> str:
+        return f"{self.get_kind_display()} -> {self.target_path} ({self.sha256[:8]})"
+
+
+class AgentRun(models.Model):
+    """Phase 2 — a headless Claude Code run against an exported brief, in an
+    isolated git worktree. The FKs ARE the point: a finished run answers, from
+    stored fields alone, which prompt version / snapshot / design doc / branch /
+    commits produced the code. Async lifecycle mirrors atlas.DeploymentRun."""
+
+    STATUS_PENDING = "pending"
+    STATUS_RUNNING = "running"
+    STATUS_SUCCESS = "success"
+    STATUS_FAILED = "failed"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_RUNNING, "Running"),
+        (STATUS_SUCCESS, "Success"),
+        (STATUS_FAILED, "Failed"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    # --- provenance chain ---
+    thread = models.ForeignKey(AthenaThread, on_delete=models.CASCADE, related_name="agent_runs")
+    studio_run = models.ForeignKey(
+        AthenaStudioRun, null=True, blank=True, on_delete=models.SET_NULL, related_name="agent_runs")
+    template = models.ForeignKey("PromptTemplate", on_delete=models.PROTECT, related_name="agent_runs")
+    version = models.ForeignKey("PromptVersion", on_delete=models.PROTECT, related_name="agent_runs")
+    snapshot = models.ForeignKey(
+        AppContextSnapshot, null=True, blank=True, on_delete=models.SET_NULL, related_name="agent_runs")
+    context_export = models.ForeignKey(
+        ContextExport, null=True, blank=True, on_delete=models.SET_NULL, related_name="agent_runs")
+
+    # --- target / execution ---
+    cloud_project = models.ForeignKey(
+        "atlas.CloudProject", null=True, blank=True, on_delete=models.SET_NULL, related_name="agent_runs")
+    target_path = models.CharField(max_length=700)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
+    brief_path = models.CharField(max_length=700, blank=True, default="")
+    command = models.TextField(blank=True, default="")
+    log = models.TextField(blank=True, default="")
+    exit_code = models.IntegerField(null=True, blank=True)
+    timeout_seconds = models.PositiveIntegerField(null=True, blank=True, help_text="Per-run override; blank = settings default.")
+
+    # --- git isolation record ---
+    branch = models.CharField(max_length=200, blank=True, default="")
+    base_commit = models.CharField(max_length=64, blank=True, default="")
+    result_commit = models.CharField(max_length=64, blank=True, default="")
+    diff_stat = models.TextField(blank=True, default="")
+
+    # --- cost (best-effort, via ai_pricing) ---
+    input_tokens = models.IntegerField(null=True, blank=True)
+    output_tokens = models.IntegerField(null=True, blank=True)
+    cost_usd = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True)
+
+    triggered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="athena_agent_runs")
+    started_at = models.DateTimeField(default=timezone.now)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-started_at"]
+        indexes = [
+            models.Index(fields=["status", "-started_at"]),
+            models.Index(fields=["thread", "-started_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"AgentRun #{self.pk} ({self.status}) on {self.branch or self.target_path}"

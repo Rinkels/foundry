@@ -107,3 +107,38 @@ class AppContextSnapshotAdmin(admin.ModelAdmin):
     search_fields = ("title", "key", "app_path")
     actions = [approve_snapshots]
     readonly_fields = ("version", "created_at", "approved_at", "approved_by")
+
+
+# --- Athena → Claude Code context export (Phase 1) ---
+from .models import ContextExport
+
+
+@admin.register(ContextExport)
+class ContextExportAdmin(admin.ModelAdmin):
+    list_display = ("id", "kind", "target_path", "bytes_written", "sha256_short", "snapshot", "created_by", "created_at")
+    list_filter = ("kind", "created_at")
+    search_fields = ("target_path", "sha256", "snapshot__key")
+    readonly_fields = ("snapshot", "studio_run", "kind", "target_path", "bytes_written", "sha256", "created_by", "created_at")
+
+    @admin.display(description="sha256")
+    def sha256_short(self, obj):
+        return (obj.sha256 or "")[:12]
+
+
+# --- Athena → Claude Code agent invocation (Phase 2) ---
+from .models import AgentRun
+
+
+@admin.register(AgentRun)
+class AgentRunAdmin(admin.ModelAdmin):
+    list_display = ("id", "status", "template", "version", "snapshot", "branch",
+                    "exit_code", "cost_usd", "triggered_by", "started_at")
+    list_filter = ("status", "started_at", "template")
+    search_fields = ("branch", "target_path", "brief_path", "base_commit", "result_commit")
+    readonly_fields = (
+        "thread", "studio_run", "template", "version", "snapshot", "context_export",
+        "cloud_project", "target_path", "brief_path", "command", "log", "exit_code",
+        "branch", "base_commit", "result_commit", "diff_stat",
+        "input_tokens", "output_tokens", "cost_usd", "triggered_by",
+        "started_at", "finished_at",
+    )
