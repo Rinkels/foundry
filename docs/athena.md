@@ -137,8 +137,9 @@ the agent's own diff.
 5. **🤖 Run agent** → inspect the resulting branch/diff at **📜 Agent runs**.
    (No need to commit the exports first — the agent seeds them into its own
    worktree; see *“What about committing the exports?”* below.)
-6. **Merge the agent's branch yourself** if you like the diff — Athena
-   deliberately stops short of merging.
+6. **Adopt the diff** — click **🔀 Merge branch** on the run detail page to
+   merge the result branch into the target repo's current branch (the *agent*
+   never merges itself; a reviewer does). Or merge from the command line.
 
 ---
 
@@ -260,7 +261,17 @@ plus the full agent log.
 
 ### 6. Adopt the work (you, not Athena)
 
-Athena stops at an isolated branch. You decide:
+Athena stops at an isolated branch — *you* decide whether to take it.
+
+**From the UI:** on `/athena/agent-runs/7/`, click **🔀 Merge branch**. It merges
+`foundry/agent/7` into the target repo's **current** branch, after committing the
+still-uncommitted exported files (`CLAUDE.md`, the design doc) for you. It
+refuses if the tree has other uncommitted changes, aborts cleanly on a conflict
+(leaving the repo untouched), and **never pushes**. The run detail page then
+shows a **merged** badge with the merge commit. The agent itself never merges —
+this is always a human action.
+
+**From the command line**, equivalently:
 
 ```bash
 git -C C:/Projects/bookstore diff main..foundry/agent/7   # inspect

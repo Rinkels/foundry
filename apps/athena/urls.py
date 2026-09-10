@@ -38,6 +38,7 @@ urlpatterns = [
     path("studio/<int:thread_id>/run-agent/", views.studio_run_agent, name="studio_run_agent"),
     path("agent-runs/", views.agent_run_list, name="agent_run_list"),
     path("agent-runs/<int:pk>/", views.agent_run_detail, name="agent_run_detail"),
+    path("agent-runs/<int:pk>/merge/", views.agent_run_merge, name="agent_run_merge"),
 
     # ✅ NEW: per-thread UI state + rename
     path("thread/<int:thread_id>/ui-state/", views.thread_ui_state, name="thread_ui_state"),

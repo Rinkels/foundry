@@ -139,6 +139,7 @@ class AgentRunAdmin(admin.ModelAdmin):
         "thread", "studio_run", "template", "version", "snapshot", "context_export",
         "cloud_project", "target_path", "brief_path", "command", "log", "exit_code",
         "branch", "base_commit", "result_commit", "diff_stat",
+        "merged_at", "merged_into", "merge_commit",
         "input_tokens", "output_tokens", "cost_usd", "triggered_by",
         "started_at", "finished_at",
     )

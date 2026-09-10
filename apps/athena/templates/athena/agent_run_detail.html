@@ -12,8 +12,19 @@
         {% if run.finished_at %} • finished {{ run.finished_at }}{% endif %}
       </div>
     </div>
-    <a class="btn btn-sm btn-outline-light" href="{% url 'athena:agent_run_list' %}">Back</a>
+    <div class="d-flex gap-2">
+      {% if run.status == 'success' and run.branch and not run.merged_at %}
+        <button class="btn btn-sm btn-success" type="button" onclick="mergeRun()"
+                title="Merge {{ run.branch }} into the target repo's current branch">🔀 Merge branch</button>
+      {% endif %}
+      <a class="btn btn-sm btn-outline-light" href="{% url 'athena:agent_run_list' %}">Back</a>
+    </div>
   </div>
+  {% if run.merged_at %}
+    <div class="mt-2"><span class="pill">merged</span>
+      into <code>{{ run.merged_into }}</code> as <code>{{ run.merge_commit }}</code>
+      on {{ run.merged_at }} (not pushed).</div>
+  {% endif %}
 </div>
 
 <div class="row g-3">
@@ -71,5 +82,24 @@
     </div>
   </div>
 </div>
+
+<script>
+  async function mergeRun(){
+    if(!confirm("Merge {{ run.branch }} into the target repo's current branch? "
+               + "This changes the repo on disk (it is not pushed).")) return;
+    try{
+      const resp = await fetch("{% url 'athena:agent_run_merge' run.pk %}", {
+        method:'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+      });
+      const j = await resp.json();
+      if(j.ok){
+        alert(`Merged into ${j.merged_into} as ${j.merge_commit} (not pushed).`);
+        window.location.reload();
+      } else {
+        alert(j.error || "Merge failed");
+      }
+    }catch(e){ alert("Merge error: " + e); }
+  }
+</script>
 
 {% endblock %}

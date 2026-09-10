@@ -399,6 +399,11 @@ class AgentRun(models.Model):
     base_commit = models.CharField(max_length=64, blank=True, default="")
     result_commit = models.CharField(max_length=64, blank=True, default="")
     diff_stat = models.TextField(blank=True, default="")
+    # Human-initiated adopt: the agent NEVER merges itself (brief), but a
+    # reviewer may merge the result branch from the run detail page.
+    merged_at = models.DateTimeField(null=True, blank=True)
+    merged_into = models.CharField(max_length=200, blank=True, default="")
+    merge_commit = models.CharField(max_length=64, blank=True, default="")
 
     # --- cost (best-effort, via ai_pricing) ---
     input_tokens = models.IntegerField(null=True, blank=True)
