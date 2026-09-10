@@ -59,6 +59,28 @@ ATLAS_DEPLOY_TIMEOUT = int(os.environ.get("ATLAS_DEPLOY_TIMEOUT", "1800"))
 # (zero-setup dev). Set False in production and run `manage.py atlas_worker`.
 ATLAS_INLINE_WORKER = os.environ.get("ATLAS_INLINE_WORKER", "True") == "True"
 
+# Athena → Claude Code context export (Phase 1). Extra directories Athena may
+# write CLAUDE.md / design docs into, beyond CloudProject.source_path values and
+# ATLAS_WORK_ROOT. Comma-separated absolute paths; empty by default.
+ATHENA_EXPORT_ROOTS = [
+    p.strip() for p in os.environ.get("ATHENA_EXPORT_ROOTS", "").split(os.pathsep) if p.strip()
+]
+
+# Athena → Claude Code agent invocation (Phase 2).
+# Worktrees for isolated agent runs (sibling of the project, never inside a repo).
+ATHENA_AGENT_WORKTREE_ROOT = Path(BASE_DIR).parent / "_athena_agent_worktrees"
+# Max seconds for a single headless agent run.
+ATHENA_AGENT_TIMEOUT = int(os.environ.get("ATHENA_AGENT_TIMEOUT", "1800"))
+# Inline worker for zero-setup dev; set False in prod and run `manage.py athena_agent_worker`.
+ATHENA_INLINE_WORKER = os.environ.get("ATHENA_INLINE_WORKER", str(ATLAS_INLINE_WORKER)) == "True"
+# Tools the agent may use WITHOUT interactive approval. Explicit + narrow, and
+# reviewable here (never --dangerously-skip-permissions).
+ATHENA_AGENT_ALLOWED_TOOLS = [
+    "Read", "Edit", "Write", "Grep", "Glob", "Bash(git status:*)", "Bash(git diff:*)",
+]
+# Model name reported for cost estimation (ai_pricing). Adjust to the CLI's model.
+ATHENA_AGENT_MODEL = os.environ.get("ATHENA_AGENT_MODEL", "claude-opus-4-8")
+
 # Atlas GitHub App (for webhook-driven auto-deploy)
 GITHUB_APP_ID = os.environ.get("GITHUB_APP_ID", "")
 GITHUB_APP_PRIVATE_KEY_PATH = os.environ.get("GITHUB_APP_PRIVATE_KEY_PATH", "")

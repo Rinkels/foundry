@@ -870,3 +870,109 @@ def thread_rename(request, thread_id: int):
     thread.title = title
     thread.save(update_fields=["title", "updated_at"])
     return JsonResponse({"ok": True, "title": thread.title})
+
+
+# --- Phase 1: export approved context / design doc into a target repo ---
+from pathlib import Path as _Path
+from .services import context_export as _ctx_export
+
+
+@login_required
+@require_POST
+def studio_export_context(request, thread_id: int):
+    """Write the selected approved snapshot into <target>/CLAUDE.md (managed
+    block), and — when a run_id is given — its design doc into docs/design/.
+    Returns the same {"ok": ...} shape as the other Studio endpoints."""
+    thread = get_object_or_404(AthenaThread, pk=thread_id)
+    snapshot_id = request.POST.get("snapshot_id") or (thread.ui_state or {}).get("snapshot_id")
+    if not snapshot_id:
+        return JsonResponse({"ok": False, "error": "Select an approved App Context snapshot first."}, status=400)
+    snap = AppContextSnapshot.objects.filter(pk=snapshot_id).first()
+    if snap is None:
+        return JsonResponse({"ok": False, "error": "Snapshot not found."}, status=404)
+
+    try:
+        target = _Path(request.POST["target"]) if request.POST.get("target") else \
+            _ctx_export.resolve_target_for_snapshot(snap)
+        ce = _ctx_export.export_context(snap, target, user=request.user)
+        result = {
+            "ok": True, "export_id": ce.id, "kind": ce.kind,
+            "target_path": ce.target_path, "bytes": ce.bytes_written, "sha256": ce.sha256,
+        }
+        run_id = request.POST.get("run_id")
+        if run_id:
+            run = AthenaStudioRun.objects.filter(pk=run_id).first()
+            if run is not None:
+                de = _ctx_export.export_design_doc(run, target, user=request.user)
+                result["design_doc"] = {"export_id": de.id, "target_path": de.target_path}
+        return JsonResponse(result)
+    except _ctx_export.ExportError as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=400)
+
+
+# --- Athena → Claude Code agent invocation (Phase 2) ---
+from .models import ContextExport, AgentRun
+from .services import agent_runner as _agent_runner
+
+
+@login_required
+@require_POST
+def studio_run_agent(request, thread_id: int):
+    """Enqueue a headless Claude Code run against the latest design-doc export for
+    the thread's snapshot. Enabled only once such a design doc has been exported
+    (it carries the prompt version / snapshot provenance). Returns {"ok": ...}."""
+    thread = get_object_or_404(AthenaThread, pk=thread_id)
+    snapshot_id = request.POST.get("snapshot_id") or (thread.ui_state or {}).get("snapshot_id")
+    if not snapshot_id:
+        return JsonResponse({"ok": False, "error": "Select an approved App Context snapshot first."}, status=400)
+
+    export = (ContextExport.objects
+              .filter(kind=ContextExport.KIND_DESIGN_DOC, snapshot_id=snapshot_id,
+                      studio_run__isnull=False)
+              .order_by("-created_at").first())
+    if export is None:
+        return JsonResponse(
+            {"ok": False, "error": "Export a design doc to the repo first (📤), then run the agent."},
+            status=400,
+        )
+
+    snap = AppContextSnapshot.objects.filter(pk=snapshot_id).first()
+    try:
+        if request.POST.get("target"):
+            target = _Path(request.POST["target"])
+        elif snap is not None:
+            target = _ctx_export.resolve_target_for_snapshot(snap)
+        else:
+            return JsonResponse({"ok": False, "error": "Could not resolve the target repo."}, status=400)
+
+        timeout = request.POST.get("timeout_seconds")
+        run = _agent_runner.enqueue_agent_run(
+            export, target, user=request.user,
+            timeout_seconds=int(timeout) if timeout else None,
+        )
+        return JsonResponse({
+            "ok": True, "agent_run_id": run.id, "status": run.status,
+            "branch": run.branch, "detail_url": f"/athena/agent-runs/{run.id}/",
+        })
+    except (_agent_runner.AgentRunError, _ctx_export.ExportError) as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=400)
+
+
+@login_required
+def agent_run_list(request):
+    runs = (AgentRun.objects
+            .select_related("template", "version", "snapshot", "triggered_by")
+            .order_by("-started_at")[:200])
+    return render(request, "athena/agent_run_list.html", {"runs": runs})
+
+
+@login_required
+def agent_run_detail(request, pk: int):
+    run = get_object_or_404(
+        AgentRun.objects.select_related(
+            "template", "version", "snapshot", "studio_run", "context_export",
+            "cloud_project", "triggered_by", "thread",
+        ),
+        pk=pk,
+    )
+    return render(request, "athena/agent_run_detail.html", {"run": run})

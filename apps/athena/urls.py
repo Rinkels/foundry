@@ -32,6 +32,12 @@ urlpatterns = [
 
     # ✅ Existing: one-click Implementation Generator creation
     path("studio/<int:thread_id>/create-impl-prompt/", views.studio_create_impl_prompt, name="studio_create_impl_prompt"),
+    path("studio/<int:thread_id>/export-context/", views.studio_export_context, name="studio_export_context"),
+
+    # ✅ NEW (Phase 2): headless Claude Code agent runs
+    path("studio/<int:thread_id>/run-agent/", views.studio_run_agent, name="studio_run_agent"),
+    path("agent-runs/", views.agent_run_list, name="agent_run_list"),
+    path("agent-runs/<int:pk>/", views.agent_run_detail, name="agent_run_detail"),
 
     # ✅ NEW: per-thread UI state + rename
     path("thread/<int:thread_id>/ui-state/", views.thread_ui_state, name="thread_ui_state"),

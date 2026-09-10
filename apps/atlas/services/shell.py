@@ -36,6 +36,9 @@ def resolve_tool(name: str) -> str:
     if not found and name == "gcloud":
         # On Windows the SDK installs gcloud.cmd
         found = shutil.which("gcloud.cmd")
+    if not found and name == "claude":
+        # On Windows the Claude Code CLI installs claude.cmd
+        found = shutil.which("claude.cmd")
     if not found:
         raise ToolNotFound(f"`{name}` was not found on PATH. Install it or fix PATH.")
     return found
@@ -47,6 +50,7 @@ def run(
     cwd: Optional[Path | str] = None,
     timeout: int = 1800,
     env: Optional[Mapping[str, str]] = None,
+    input_text: Optional[str] = None,
 ) -> CommandResult:
     """Run a command, capturing combined stdout/stderr.
 
@@ -56,6 +60,10 @@ def run(
     `env`, if given, is merged over the current environment (not a full
     replacement), so callers can inject per-invocation credentials without
     losing PATH etc.
+
+    `input_text`, if given, is written to the child's stdin. This lets callers
+    pass long text (that would exceed the command-line length limit) without
+    building it into `args`. Additive: default None keeps existing behaviour.
     """
     args = list(args)
     args[0] = resolve_tool(args[0])
@@ -73,6 +81,7 @@ def run(
             text=True,
             timeout=timeout,
             env=proc_env,
+            input=input_text,
         )
     except subprocess.TimeoutExpired as exc:
         return CommandResult(

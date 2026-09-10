@@ -326,6 +326,15 @@
                 <button class="btn btn-warn" type="button" onclick="createImplementationGenerator()">🛠 Create Implementation Generator</button>
               </div>
 
+              <div style="display:flex; gap:8px; margin-top:8px;">
+                <button class="btn" type="button" onclick="exportContextToRepo()"
+                        title="Write the approved App Context into the target repo's CLAUDE.md">📤 Export context to repo</button>
+                <button class="btn" type="button" onclick="runAgent()"
+                        title="Run Claude Code headlessly against the exported design doc in an isolated git worktree">🤖 Run agent</button>
+                <a class="btn" href="{% url 'athena:agent_run_list' %}"
+                   title="View past agent runs">📜 Agent runs</a>
+              </div>
+
               <div class="tiny">
                 Flow: App Context → Feature Designer (saves design_doc) → Implementation Generator uses that design_doc.
               </div>
@@ -383,6 +392,42 @@
 
   <script>
     const threadId = {% if thread %}{{ thread.id }}{% else %}null{% endif %};
+
+    async function exportContextToRepo(){
+      const snapEl = document.getElementById('snapshotSelect');
+      const snapshotId = snapEl ? parseInt(snapEl.value || '0', 10) : 0;
+      if(!snapshotId){ toast("Select an approved App Context first."); return; }
+      const fd = new FormData();
+      fd.append("snapshot_id", String(snapshotId));
+      try{
+        const resp = await fetch(`/athena/studio/${threadId}/export-context/`, {
+          method:'POST', body: fd, headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        });
+        const j = await resp.json();
+        toast(j.ok ? `Exported → ${j.target_path} (${j.bytes} bytes)` : (j.error || "Export failed"));
+      }catch(e){ toast("Export error: " + e); }
+    }
+
+    async function runAgent(){
+      const snapEl = document.getElementById('snapshotSelect');
+      const snapshotId = snapEl ? parseInt(snapEl.value || '0', 10) : 0;
+      if(!snapshotId){ toast("Select an approved App Context first."); return; }
+      if(!confirm("Run Claude Code headlessly against the exported design doc, in an isolated git worktree?")) return;
+      const fd = new FormData();
+      fd.append("snapshot_id", String(snapshotId));
+      try{
+        const resp = await fetch(`/athena/studio/${threadId}/run-agent/`, {
+          method:'POST', body: fd, headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        });
+        const j = await resp.json();
+        if(j.ok){
+          toast(`Agent run #${j.agent_run_id} queued (${j.status}). Opening…`);
+          window.location.href = j.detail_url;
+        } else {
+          toast(j.error || "Could not start agent run");
+        }
+      }catch(e){ toast("Agent error: " + e); }
+    }
 
     function toast(msg){
       alert(msg);

@@ -1,0 +1,44 @@
+{# apps/athena/templates/athena/agent_run_list.html #}
+{% extends "athena/base.html" %}
+{% block athena_content %}
+
+<div class="neon-glass-card p-3 mb-3">
+  <div class="d-flex justify-content-between align-items-start">
+    <div>
+      <h3 class="mb-1">Agent runs</h3>
+      <div class="text-muted">Headless Claude Code runs against exported briefs, each in an isolated worktree.</div>
+    </div>
+    <a class="btn btn-sm btn-outline-light" href="{% url 'athena:studio' %}">Studio</a>
+  </div>
+</div>
+
+<div class="neon-glass-card p-3">
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead>
+        <tr>
+          <th>#</th><th>Status</th><th>Prompt</th><th>Snapshot</th>
+          <th>Branch</th><th>Exit</th><th>Cost&nbsp;$</th><th>Started</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in runs %}
+        <tr>
+          <td><a href="{% url 'athena:agent_run_detail' run.pk %}">{{ run.pk }}</a></td>
+          <td><span class="pill">{{ run.status }}</span></td>
+          <td>{% if run.template %}{{ run.template.key }}@v{{ run.version.version }}{% else %}—{% endif %}</td>
+          <td>{% if run.snapshot %}{{ run.snapshot.key }} v{{ run.snapshot.version }}{% else %}—{% endif %}</td>
+          <td><code>{{ run.branch|default:"—" }}</code></td>
+          <td>{{ run.exit_code|default:"—" }}</td>
+          <td>{{ run.cost_usd|default:"—" }}</td>
+          <td class="text-muted">{{ run.started_at }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-muted">No agent runs yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
