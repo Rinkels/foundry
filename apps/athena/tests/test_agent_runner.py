@@ -180,6 +180,21 @@ class RunAgentTests(TestCase, _Fixtures):
         self.assertIn("--allowedTools", args)
         self.assertNotIn("--dangerously-skip-permissions", args)
 
+    def test_dirty_with_only_exports_is_allowed(self):
+        # The whole point of option 2: uncommitted CLAUDE.md + the exported
+        # design doc must NOT block the run — they are seeded into the worktree.
+        run = self._pending()
+        fake = _FakeGit(status_output=" M CLAUDE.md\n?? docs/design/demo_app-1.md\n",
+                        claude_rc=0)
+        with mock.patch.object(agent_runner.shell, "run", fake), \
+             mock.patch.object(agent_runner.shell, "resolve_tool", lambda n: n):
+            agent_runner.run_agent(run)
+        run.refresh_from_db()
+        self.assertEqual(run.status, AgentRun.STATUS_SUCCESS)
+        # It seeded the worktree and reached the agent.
+        self.assertTrue(any(c and c[0] == "claude" for c in fake.calls))
+        self.assertIn("seeded", run.log.lower())
+
     def test_dirty_tree_refused(self):
         run = self._pending()
         fake = _FakeGit(status_output=" M apps/foo.py\n")
@@ -188,7 +203,8 @@ class RunAgentTests(TestCase, _Fixtures):
             agent_runner.run_agent(run)
         run.refresh_from_db()
         self.assertEqual(run.status, AgentRun.STATUS_FAILED)
-        self.assertIn("dirty", run.log.lower())
+        self.assertIn("uncommitted changes", run.log.lower())
+        self.assertIn("apps/foo.py", run.log)
         # It must bail BEFORE creating a worktree or invoking claude.
         self.assertFalse(any(c and c[0] == "claude" for c in fake.calls))
         self.assertFalse(any("worktree" in c for c in fake.calls))

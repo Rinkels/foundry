@@ -92,7 +92,9 @@ git worktree** — branch `foundry/agent/<run-pk>` off HEAD.
 
 **Isolation is non-negotiable and enforced:**
 
-- refuses to run on a **dirty working tree**;
+- refuses to run on a **dirty working tree** — *except* for this run's own
+  exported brief / `CLAUDE.md` (see below); any **other** uncommitted change
+  still blocks the run;
 - arg-list invocation with a **narrow `--allowedTools` allowlist**
   (`ATHENA_AGENT_ALLOWED_TOOLS`); **never** `--dangerously-skip-permissions`;
 - **never** `git push`, never merges, never triggers a deploy;
@@ -107,6 +109,23 @@ branch, base/result commit, diff stat, token usage, and estimated cost
 *from a Studio run* (that is what carries the prompt-version provenance).
 Otherwise “Run agent” returns a clear *“export a design doc first”* message.
 
+#### What about committing the exports?
+
+You **don't** have to. 📤 Export writes `CLAUDE.md` + the design doc into the
+target repo's working tree but doesn't commit them. When you 🤖 Run agent, the
+run:
+
+1. lets the preflight pass even though those two files are uncommitted — but
+   *only* those two; any unrelated uncommitted change still blocks the run;
+2. creates the worktree off HEAD, **copies the exported files into it, and
+   commits them there** as a separate `Athena context export (run #<pk>)`
+   commit — so the agent finds its brief and starts from a clean tree;
+3. leaves your main checkout exactly as it was (the exports stay uncommitted
+   there; commit or discard them at your leisure).
+
+Because the export is committed separately in the worktree, it never pollutes
+the agent's own diff.
+
 ---
 
 ## Golden path
@@ -115,9 +134,10 @@ Otherwise “Run agent” returns a clear *“export a design doc first”* mess
 2. Ingest **and approve** an App Context snapshot for your app.
 3. Studio: pick the snapshot → run **Feature Designer** → get a design doc.
 4. **📤 Export** context + design doc into the repo.
-5. **Commit** those exported files (the agent needs a clean tree).
-6. **🤖 Run agent** → inspect the resulting branch/diff at **📜 Agent runs**.
-7. **Merge the agent's branch yourself** if you like the diff — Athena
+5. **🤖 Run agent** → inspect the resulting branch/diff at **📜 Agent runs**.
+   (No need to commit the exports first — the agent seeds them into its own
+   worktree; see *“What about committing the exports?”* below.)
+6. **Merge the agent's branch yourself** if you like the diff — Athena
    deliberately stops short of merging.
 
 ---
@@ -191,24 +211,22 @@ equivalent:
 python manage.py athena_export_context --key bookstore --design-doc
 ```
 
-### 4. Commit the exported files
+### 4. Run the agent
 
-The agent refuses a dirty tree, so commit what you exported **in the bookstore
-repo**:
-
-```bash
-git -C C:/Projects/bookstore add CLAUDE.md docs/design/bookstore-45.md
-git -C C:/Projects/bookstore commit -m "Add Foundry context + wishlist design doc"
-```
-
-### 5. Run the agent
+No manual commit needed — the two exported files can stay uncommitted in the
+bookstore working tree; the agent seeds them into its worktree itself.
 
 Click **🤖 Run agent**. It finds the latest design-doc export for snapshot 12
 and enqueues **AgentRun #7**:
 
-1. **Preflight** — git tree ✓, clean ✓, `claude` on PATH ✓.
-2. **Isolate** — record base commit, then
-   `git worktree add -b foundry/agent/7 ..\_athena_agent_worktrees\7 HEAD`.
+1. **Preflight** — git tree ✓, `claude` on PATH ✓, and the tree is clean *apart
+   from* `CLAUDE.md` + `docs/design/bookstore-45.md` (allowed); any other
+   uncommitted change would block here.
+2. **Isolate + seed** — record base commit, then
+   `git worktree add -b foundry/agent/7 ..\_athena_agent_worktrees\7 HEAD`, copy
+   `CLAUDE.md` + `docs/design/bookstore-45.md` into the worktree and commit them
+   there (`Athena context export (run #7)`) so the tree is clean and the brief
+   is present.
 3. **Run headless** (arg-list, narrow tools, never `--dangerously-skip-permissions`):
    ```
    claude -p "Read docs/design/bookstore-45.md and implement it. Follow CLAUDE.md.
@@ -223,7 +241,7 @@ and enqueues **AgentRun #7**:
 
 You are redirected to `/athena/agent-runs/7/`.
 
-### 6. Review the run
+### 5. Review the run
 
 `/athena/agent-runs/7/` shows, from stored fields alone:
 
@@ -240,7 +258,7 @@ You are redirected to `/athena/agent-runs/7/`.
 
 plus the full agent log.
 
-### 7. Adopt the work (you, not Athena)
+### 6. Adopt the work (you, not Athena)
 
 Athena stops at an isolated branch. You decide:
 

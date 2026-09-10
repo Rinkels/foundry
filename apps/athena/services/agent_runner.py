@@ -4,7 +4,10 @@ ISOLATED git worktree, and record the run against its prompt version / snapshot
 
 Isolation is non-negotiable (see docs/briefs/2026-09-10-athena-claude-code-seam.md):
   * a dedicated branch + worktree per run: `foundry/agent/<agent-run-pk>` off HEAD;
-  * NEVER run on a dirty working tree (preflight refuses it);
+  * NEVER run on a dirty working tree — preflight refuses one, EXCEPT for this
+    run's own exported brief / CLAUDE.md (which Athena wrote and then seeds into
+    the isolated worktree itself, so you don't have to commit them by hand). Any
+    OTHER uncommitted change still blocks the run;
   * NEVER `git push`, never merge, never trigger an Atlas deploy;
   * NEVER `--dangerously-skip-permissions` — the agent gets an explicit, narrow
     `--allowedTools` list from settings and nothing more.
@@ -16,6 +19,7 @@ pending row → inline thread or `athena_agent_worker`) mirrors atlas.provisione
 from __future__ import annotations
 
 import json
+import shutil
 import threading
 from datetime import timedelta
 from pathlib import Path
@@ -62,6 +66,34 @@ def _worktree_root() -> Path:
                         Path(settings.BASE_DIR).parent / "_athena_agent_worktrees"))
     root.mkdir(parents=True, exist_ok=True)
     return root
+
+
+CLAUDE_FILE = "CLAUDE.md"
+
+
+def _export_rels(run: AgentRun) -> list[str]:
+    """Repo-relative (posix) paths of THIS run's exported context — the only
+    uncommitted files the preflight tolerates, and the files seeded into the
+    worktree. Deterministic: the design-doc brief + the CLAUDE.md context block."""
+    rels: list[str] = []
+    if run.brief_path:
+        rels.append(run.brief_path)
+    rels.append(CLAUDE_FILE)
+    return rels
+
+
+def _dirty_paths(porcelain_output: str) -> list[str]:
+    """Parse `git status --porcelain` into repo-relative posix paths. git emits
+    forward slashes on every platform; a rename shows as 'old -> new'."""
+    paths: list[str] = []
+    for line in porcelain_output.splitlines():
+        if not line.strip():
+            continue
+        p = line[3:] if len(line) > 3 else line
+        if " -> " in p:
+            p = p.split(" -> ", 1)[1]
+        paths.append(p.strip().strip('"'))
+    return paths
 
 
 # --------------------------------------------------------------------------- #
@@ -150,14 +182,19 @@ def _preflight(run: AgentRun, repo: Path) -> None:
     if not res.ok or res.output.strip() != "true":
         raise AgentRunError(f"Not a git working tree: {repo}")
 
-    # NON-NEGOTIABLE: refuse a dirty tree.
+    # NON-NEGOTIABLE: refuse a dirty tree — EXCEPT for this run's own exported
+    # brief / CLAUDE.md, which are seeded into the isolated worktree below. Any
+    # OTHER uncommitted change still blocks the run.
     res = _git(repo, "status", "--porcelain")
     if not res.ok:
         raise AgentRunError(f"`git status` failed in {repo}:\n{res.output}")
-    if res.output.strip():
+    allowed = set(_export_rels(run))
+    stray = [p for p in _dirty_paths(res.output) if p not in allowed]
+    if stray:
         raise AgentRunError(
-            "Refusing to run: the target working tree is dirty. Commit or stash "
-            f"first.\n{res.output.strip()[:800]}"
+            "Refusing to run: the target working tree has uncommitted changes "
+            "beyond Athena's exported context. Commit or stash them first.\n"
+            + "\n".join(stray[:40])
         )
 
     # The CLI must be installed (fail fast with a clear message).
@@ -227,6 +264,39 @@ def run_agent(run: AgentRun) -> AgentRun:
         if not add.ok:
             return _finish(run, AgentRun.STATUS_FAILED, "Failed to create git worktree.")
 
+        # Seed the isolated worktree with THIS run's exported brief / CLAUDE.md.
+        # They may still be uncommitted in the main tree (the worktree is off
+        # HEAD, which predates them), so we copy them in and commit them here —
+        # the agent finds its brief without you committing exports by hand, and
+        # the main checkout is left exactly as it was. Committing them separately
+        # keeps them out of the agent's own diff.
+        seeded: list[str] = []
+        for rel in _export_rels(run):
+            src = repo / rel
+            if src.exists():
+                dst = worktree / rel
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dst)
+                seeded.append(rel)
+        seed_commit = ""
+        if seeded:
+            _git(worktree, "add", *seeded)
+            staged = _git(worktree, "diff", "--cached", "--name-only")
+            if staged.ok and staged.output.strip():
+                _git(worktree, "-c", "user.name=Athena Agent",
+                     "-c", "user.email=athena@foundry.local",
+                     "commit", "-m", f"Athena context export (run #{run.pk})")
+                head = _git(worktree, "rev-parse", "HEAD")
+                if head.ok:
+                    seed_commit = head.output.strip().splitlines()[-1].strip()
+                _append(run, "Seeded worktree with exported context: " + ", ".join(seeded))
+
+        # The brief MUST now be present in the worktree, or the agent has nothing
+        # to implement.
+        if not (worktree / run.brief_path).exists():
+            return _finish(run, AgentRun.STATUS_FAILED,
+                           f"Brief not found in worktree: {run.brief_path}. Export the design doc first.")
+
         # Headless agent. Arg-list only (no shell), explicit narrow tool allowlist,
         # NEVER --dangerously-skip-permissions.
         prompt = (
@@ -270,7 +340,10 @@ def run_agent(run: AgentRun) -> AgentRun:
             head = _git(worktree, "rev-parse", "HEAD")
             if head.ok:
                 run.result_commit = head.output.strip().splitlines()[-1].strip()
-            diff = _git(worktree, "diff", "--stat", f"{run.base_commit}..HEAD")
+            # Diff against the seed commit (if any) so the exported context does
+            # not pollute the agent's own diff; else against the original base.
+            diff_base = seed_commit or run.base_commit
+            diff = _git(worktree, "diff", "--stat", f"{diff_base}..HEAD")
             run.diff_stat = diff.output.strip() if diff.ok else ""
         else:
             run.diff_stat = "(no changes)"
