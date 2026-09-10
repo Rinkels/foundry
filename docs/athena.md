@@ -52,12 +52,51 @@ pipeline top to bottom:
   Questions). Saved on the thread as `last_design_doc`.
 - **🛠 Create Implementation Generator** — turns that design doc into a concrete
   implementation prompt.
-- **App Builder** — the greenfield variant, for a brand-new app (no snapshot
-  required).
 
-Each execution is recorded as an **AthenaStudioRun** (prompt version + inputs +
-output), so every output is traceable to the exact prompt version that produced
-it.
+At the top of the sidebar you choose the thread's **mode** — **Enhancement**
+(work on an existing app; the flow above, snapshot-based) or **New App**
+(greenfield; see the next section). Each execution is recorded as an
+**AthenaStudioRun** (prompt version + inputs + output), so every output is
+traceable to the exact prompt version that produced it.
+
+---
+
+## 3b. Creating a brand-new app (greenfield)
+
+Use this when there is no existing codebase yet — you're designing an app from a
+description rather than enhancing one. It needs **no App Context snapshot**.
+
+**Prerequisite (one-time):** a prompt with the **App Builder** role, with an
+approved/canonical version (Admin → assign role *App Builder*, then *“Approve
+current version”*). The Studio finds it by role, not by name.
+
+Steps in the Studio (`/athena/studio/`):
+
+1. Open or start a thread and switch the mode toggle to **New App** (next to
+   **Enhancement**). Your mode is saved per thread.
+2. In the **User message** box, describe what you want to build — app name plus
+   requirements (entities, workflows, roles, UI, constraints). This is the whole
+   input; there's no snapshot to select.
+3. Click **🧱 Run App Builder**. It runs the canonical App Builder prompt against
+   your description and produces an **App Blueprint** (core entities, workflows,
+   roles, UI, constraints, non-functional notes). The output is stored as the
+   thread's **design doc** (`last_design_doc`), and the thread is auto-renamed
+   from your description. Recorded as an **AthenaStudioRun**, same as any run.
+4. Iterate: edit the requirements and re-run until the blueprint reads right.
+5. Click **🛠 Create Implementation Generator** to turn that blueprint into a
+   concrete implementation-generator prompt you can run like any other prompt.
+
+**Where greenfield stops today.** The New App step produces a design doc and an
+implementation prompt, but the **📤 Export / 🤖 Run agent** buttons (the headless
+Claude Code seam) live in the *Enhancement* step and are **snapshot-based**, so
+they are not wired for snapshot-less New App threads. To hand a brand-new app to
+the headless agent: scaffold the initial repo (e.g. from the implementation
+prompt's output), then treat it as an **existing** app — run Code Analyzer to
+produce and approve an App Context snapshot, and follow the Enhancement +
+Claude Code seam flow from there.
+
+> Rule of thumb: **New App** designs the shape of something that doesn't exist
+> yet; **Enhancement** (+ the agent seam) changes code that already does.
 
 ---
 
@@ -130,6 +169,8 @@ the agent's own diff.
 
 ## Golden path
 
+**Enhancement (existing app):**
+
 1. Approve a prompt version (library).
 2. Ingest **and approve** an App Context snapshot for your app.
 3. Studio: pick the snapshot → run **Feature Designer** → get a design doc.
@@ -140,6 +181,16 @@ the agent's own diff.
 6. **Adopt the diff** — click **🔀 Merge branch** on the run detail page to
    merge the result branch into the target repo's current branch (the *agent*
    never merges itself; a reviewer does). Or merge from the command line.
+
+**New app (greenfield):**
+
+1. Approve an **App Builder** prompt version (library).
+2. Studio: switch the thread to **New App** → describe the app in the User
+   message → **🧱 Run App Builder** → get a blueprint (the thread's design doc).
+3. **🛠 Create Implementation Generator** and run it to generate the initial
+   code; scaffold the repo from that output.
+4. To continue with the agent seam, snapshot the new repo (Code Analyzer) and
+   switch to the **Enhancement** golden path above.
 
 ---
 
