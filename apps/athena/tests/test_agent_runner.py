@@ -376,6 +376,54 @@ class RunAgentViewTests(TestCase, _Fixtures):
         self.assertTrue(body["ok"])
         self.assertEqual(AgentRun.objects.get(pk=body["agent_run_id"]).status, AgentRun.STATUS_PENDING)
 
+    def test_greenfield_export_and_run_without_snapshot(self):
+        # New App threads have no snapshot: export the design doc from the
+        # thread's App Builder run, then run the agent scoped to the thread.
+        root = Path(tempfile.mkdtemp()).resolve()
+        self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        ov = self.settings(ATHENA_EXPORT_ROOTS=[str(root)])
+        ov.enable()
+        self.addCleanup(ov.disable)
+
+        tmpl = PromptTemplate.objects.create(key="app_builder", name="App Builder")
+        ver = PromptVersion.objects.create(template=tmpl, version=1)
+        thread = AthenaThread.objects.create(title="New App")
+        run = AthenaStudioRun.objects.create(
+            thread=thread, template=tmpl, version=ver,
+            response_text="## App Blueprint\n## Core Entities\n- Thing", ok=True,
+        )
+        thread.last_design_doc = run.response_text
+        thread.save(update_fields=["last_design_doc"])
+
+        # Export (no snapshot_id) — design-doc only, from the run.
+        resp = self.client.post(
+            f"/athena/studio/{thread.id}/export-context/", {"target": str(root)},
+        )
+        self.assertEqual(resp.status_code, 200, resp.content)
+        self.assertTrue(resp.json()["ok"])
+        export = ContextExport.objects.get()
+        self.assertEqual(export.kind, ContextExport.KIND_DESIGN_DOC)
+        self.assertEqual(export.studio_run, run)
+        self.assertIsNone(export.snapshot)
+        self.assertTrue((root / "docs" / "design" / f"app-{run.id}.md").exists())
+
+        # Run the agent (no snapshot_id) — scoped to the thread, explicit target.
+        resp = self.client.post(
+            f"/athena/studio/{thread.id}/run-agent/", {"target": str(root)},
+        )
+        self.assertEqual(resp.status_code, 200, resp.content)
+        agent_run = AgentRun.objects.get(pk=resp.json()["agent_run_id"])
+        self.assertEqual(agent_run.status, AgentRun.STATUS_PENDING)
+        self.assertIsNone(agent_run.snapshot)
+        self.assertEqual(agent_run.template, tmpl)
+        self.assertEqual(agent_run.context_export, export)
+
+    def test_greenfield_export_requires_target(self):
+        thread = AthenaThread.objects.create(title="New App")
+        resp = self.client.post(f"/athena/studio/{thread.id}/export-context/", {})
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("target", resp.json()["error"].lower())
+
     def test_run_agent_view_requires_design_doc_export(self):
         # A thread/snapshot with no design-doc export → clear 400.
         thread = AthenaThread.objects.create(title="t2")

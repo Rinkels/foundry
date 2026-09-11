@@ -347,8 +347,23 @@
                 <button class="btn btn-warn" type="button" onclick="runAppBuilderFromUI()">🧱 Run App Builder</button>
                 <button class="btn btn-warn" type="button" onclick="createImplementationGenerator()">🛠 Create Implementation Generator</button>
               </div>
+
+              <h4 style="margin-top:12px;">Step 2: Hand to Claude Code <span class="badge">Optional</span></h4>
+              <label>Target repo path</label>
+              <input type="text" id="newAppTarget"
+                     placeholder="e.g. C:\Projects\my-new-app (must be a git repo inside an allowed export root)">
+              <div style="display:flex; gap:8px; margin-top:8px;">
+                <button class="btn" type="button" onclick="exportNewAppDesignDoc()"
+                        title="Write the App Builder design doc into the target repo's docs/design/">📤 Export design doc</button>
+                <button class="btn" type="button" onclick="runAgentNewApp()"
+                        title="Run Claude Code headlessly against the exported design doc in an isolated git worktree">🤖 Run agent</button>
+                <a class="btn" href="{% url 'athena:agent_run_list' %}"
+                   title="View past agent runs">📜 Agent runs</a>
+              </div>
+
               <div class="tiny">
                 Flow: App Builder output is treated as the design_doc for the thread (no App Context needed).
+                To hand it to the agent, scaffold a git repo, add its path to an allowed export root, then Export → Run agent.
               </div>
             </div>
 
@@ -415,6 +430,40 @@
       if(!confirm("Run Claude Code headlessly against the exported design doc, in an isolated git worktree?")) return;
       const fd = new FormData();
       fd.append("snapshot_id", String(snapshotId));
+      try{
+        const resp = await fetch(`/athena/studio/${threadId}/run-agent/`, {
+          method:'POST', body: fd, headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        });
+        const j = await resp.json();
+        if(j.ok){
+          toast(`Agent run #${j.agent_run_id} queued (${j.status}). Opening…`);
+          window.location.href = j.detail_url;
+        } else {
+          toast(j.error || "Could not start agent run");
+        }
+      }catch(e){ toast("Agent error: " + e); }
+    }
+
+    async function exportNewAppDesignDoc(){
+      const target = (document.getElementById('newAppTarget')?.value || "").trim();
+      if(!target){ toast("Enter the target repo path first."); return; }
+      const fd = new FormData();
+      fd.append("target", target);   // no snapshot_id → greenfield design-doc export
+      try{
+        const resp = await fetch(`/athena/studio/${threadId}/export-context/`, {
+          method:'POST', body: fd, headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        });
+        const j = await resp.json();
+        toast(j.ok ? `Exported → ${j.target_path} (${j.bytes} bytes)` : (j.error || "Export failed"));
+      }catch(e){ toast("Export error: " + e); }
+    }
+
+    async function runAgentNewApp(){
+      const target = (document.getElementById('newAppTarget')?.value || "").trim();
+      if(!target){ toast("Enter the target repo path first."); return; }
+      if(!confirm("Run Claude Code headlessly against the exported design doc, in an isolated git worktree?")) return;
+      const fd = new FormData();
+      fd.append("target", target);   // no snapshot_id → scoped to this thread's runs
       try{
         const resp = await fetch(`/athena/studio/${threadId}/run-agent/`, {
           method:'POST', body: fd, headers: { 'X-CSRFToken': '{{ csrf_token }}' }

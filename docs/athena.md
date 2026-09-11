@@ -70,7 +70,7 @@ description rather than enhancing one. It needs **no App Context snapshot**.
 approved/canonical version (Admin → assign role *App Builder*, then *“Approve
 current version”*). The Studio finds it by role, not by name.
 
-Steps in the Studio (`/athena/studio/`):
+**Step 1 — design the app.** In the Studio (`/athena/studio/`):
 
 1. Open or start a thread and switch the mode toggle to **New App** (next to
    **Enhancement**). Your mode is saved per thread.
@@ -83,20 +83,28 @@ Steps in the Studio (`/athena/studio/`):
    thread's **design doc** (`last_design_doc`), and the thread is auto-renamed
    from your description. Recorded as an **AthenaStudioRun**, same as any run.
 4. Iterate: edit the requirements and re-run until the blueprint reads right.
-5. Click **🛠 Create Implementation Generator** to turn that blueprint into a
-   concrete implementation-generator prompt you can run like any other prompt.
+5. Optionally click **🛠 Create Implementation Generator** to turn the blueprint
+   into a reusable implementation-generator prompt.
 
-**Where greenfield stops today.** The New App step produces a design doc and an
-implementation prompt, but the **📤 Export / 🤖 Run agent** buttons (the headless
-Claude Code seam) live in the *Enhancement* step and are **snapshot-based**, so
-they are not wired for snapshot-less New App threads. To hand a brand-new app to
-the headless agent: scaffold the initial repo (e.g. from the implementation
-prompt's output), then treat it as an **existing** app — run Code Analyzer to
-produce and approve an App Context snapshot, and follow the Enhancement +
-Claude Code seam flow from there.
+**Step 2 — hand it to Claude Code (optional).** The New App step has its own
+**📤 Export design doc**, **🤖 Run agent**, and **📜 Agent runs** controls — the
+same headless seam as Enhancement, wired **snapshot-lessly**:
+
+1. Scaffold an empty **git repo** for the new app and make sure its path sits
+   inside an allowed export root (add it to `ATHENA_EXPORT_ROOTS`, or place it
+   under `ATLAS_WORK_ROOT`).
+2. Enter that path in **Target repo path**.
+3. **📤 Export design doc** writes the App Builder blueprint to
+   `docs/design/app-<run-id>.md` in that repo (design-doc only — there is no
+   snapshot, so no `CLAUDE.md` context block is written). The export carries the
+   App Builder run's prompt version, which is what the agent needs.
+4. **🤖 Run agent** runs headlessly against that brief in an isolated worktree,
+   exactly like Enhancement — same isolation guarantees, same AgentRun record
+   (its `snapshot` is simply blank), same **🔀 Merge branch** adopt step.
 
 > Rule of thumb: **New App** designs the shape of something that doesn't exist
-> yet; **Enhancement** (+ the agent seam) changes code that already does.
+> yet; **Enhancement** starts from an approved App Context snapshot. Both can
+> hand off to the headless agent.
 
 ---
 
@@ -187,10 +195,10 @@ the agent's own diff.
 1. Approve an **App Builder** prompt version (library).
 2. Studio: switch the thread to **New App** → describe the app in the User
    message → **🧱 Run App Builder** → get a blueprint (the thread's design doc).
-3. **🛠 Create Implementation Generator** and run it to generate the initial
-   code; scaffold the repo from that output.
-4. To continue with the agent seam, snapshot the new repo (Code Analyzer) and
-   switch to the **Enhancement** golden path above.
+3. Scaffold an empty git repo for the app inside an allowed export root, put its
+   path in **Target repo path**, then **📤 Export design doc**.
+4. **🤖 Run agent** → review at **📜 Agent runs** → **🔀 Merge branch** to adopt —
+   same seam as Enhancement, just with no snapshot.
 
 ---
 
