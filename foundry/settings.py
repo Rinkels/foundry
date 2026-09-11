@@ -85,6 +85,13 @@ ATHENA_AGENT_MODEL = os.environ.get("ATHENA_AGENT_MODEL", "claude-opus-4-8")
 GITHUB_APP_ID = os.environ.get("GITHUB_APP_ID", "")
 GITHUB_APP_PRIVATE_KEY_PATH = os.environ.get("GITHUB_APP_PRIVATE_KEY_PATH", "")
 GITHUB_WEBHOOK_SECRET = os.environ.get("GITHUB_WEBHOOK_SECRET", "")
+# The public URL GitHub delivers to (Cloudflare tunnel → localhost:8086). Used
+# for the dashboard health badge: 405 = healthy, 502 = Foundry isn't listening.
+ATLAS_WEBHOOK_PUBLIC_URL = os.environ.get("ATLAS_WEBHOOK_PUBLIC_URL", "https://foundry.mindsgate.com/atlas/webhook/github/")
+# GitHub does NOT retry a failed webhook. On runserver start, replay push
+# deliveries that failed in the last N hours (see atlas_redeliver).
+ATLAS_REDELIVER_ON_START = os.environ.get("ATLAS_REDELIVER_ON_START", "True") == "True"
+ATLAS_REDELIVER_HOURS = int(os.environ.get("ATLAS_REDELIVER_HOURS", "72"))
 
 # Aegis (public exposure monitoring). Falls back to a PAT when a watch profile
 # has no GitHub App installation attached; needs only `public_repo` scope.

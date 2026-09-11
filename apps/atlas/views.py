@@ -10,14 +10,37 @@ from django.views.decorators.http import require_POST
 from django.conf import settings
 
 from .models import BackupRun, CloudProject
-from .services import backup, backup_health, github, provisioner, webhooks
+from .services import backup, backup_health, github, provisioner, redelivery, webhooks
 from .services import manage as mgmt
 
 
 @login_required
 def dashboard(request):
     projects = CloudProject.objects.prefetch_related("resources", "runs")
-    return render(request, "atlas/dashboard.html", {"projects": projects})
+    force = request.GET.get("refresh") == "1"
+    return render(request, "atlas/dashboard.html", {
+        "projects": projects,
+        "webhook": redelivery.webhook_health(force=force),
+        "deliveries": redelivery.recent_deliveries(force=force),
+    })
+
+
+@login_required
+@require_POST
+def webhook_replay(request):
+    """Replay push deliveries GitHub couldn't hand us (e.g. 502 while Foundry
+    was down). Requires Foundry to be reachable through the tunnel right now."""
+    summary = redelivery.redeliver_missed()
+    from django.core.cache import cache
+    cache.delete(redelivery.DELIVERIES_KEY)
+    if not summary["found"]:
+        messages.info(request, "No missed deliveries to replay.")
+    else:
+        for label in summary["redelivered"]:
+            messages.success(request, f"Redelivered {label}")
+        for err in summary["errors"]:
+            messages.error(request, err)
+    return redirect("atlas:dashboard")
 
 
 @login_required

@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     # Webhook must come before the <slug> routes so it isn't shadowed.
     path("webhook/github/", views.github_webhook, name="github_webhook"),
+    path("webhook/replay/", views.webhook_replay, name="webhook_replay"),
     path("backups/", views.backups, name="backups"),
     path("<slug:slug>/", views.project_detail, name="project_detail"),
     path("<slug:slug>/backup/", views.backup_now, name="backup_now"),
