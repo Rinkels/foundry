@@ -885,14 +885,33 @@ def studio_export_context(request, thread_id: int):
     Returns the same {"ok": ...} shape as the other Studio endpoints."""
     thread = get_object_or_404(AthenaThread, pk=thread_id)
     snapshot_id = request.POST.get("snapshot_id") or (thread.ui_state or {}).get("snapshot_id")
-    if not snapshot_id:
-        return JsonResponse({"ok": False, "error": "Select an approved App Context snapshot first."}, status=400)
-    snap = AppContextSnapshot.objects.filter(pk=snapshot_id).first()
-    if snap is None:
-        return JsonResponse({"ok": False, "error": "Snapshot not found."}, status=404)
+    target_arg = request.POST.get("target")
 
     try:
-        target = _Path(request.POST["target"]) if request.POST.get("target") else \
+        # --- Greenfield (New App): no snapshot, design-doc only ---
+        if not snapshot_id:
+            if not target_arg:
+                return JsonResponse(
+                    {"ok": False, "error": "Provide a target repo path for a New App export."},
+                    status=400,
+                )
+            # Export from the thread's latest successful run so the design-doc
+            # export carries a prompt version (studio_run) — that is what the
+            # agent needs. Fall back to the thread's cached design doc.
+            source = (AthenaStudioRun.objects.filter(thread=thread, ok=True)
+                      .order_by("-created_at").first()) or thread
+            de = _ctx_export.export_design_doc(source, _Path(target_arg), user=request.user)
+            return JsonResponse({
+                "ok": True, "export_id": de.id, "kind": de.kind,
+                "target_path": de.target_path, "bytes": de.bytes_written, "sha256": de.sha256,
+            })
+
+        # --- Enhancement: approved snapshot → CLAUDE.md (+ optional design doc) ---
+        snap = AppContextSnapshot.objects.filter(pk=snapshot_id).first()
+        if snap is None:
+            return JsonResponse({"ok": False, "error": "Snapshot not found."}, status=404)
+
+        target = _Path(target_arg) if target_arg else \
             _ctx_export.resolve_target_for_snapshot(snap)
         ce = _ctx_export.export_context(snap, target, user=request.user)
         result = {
@@ -923,27 +942,32 @@ def studio_run_agent(request, thread_id: int):
     (it carries the prompt version / snapshot provenance). Returns {"ok": ...}."""
     thread = get_object_or_404(AthenaThread, pk=thread_id)
     snapshot_id = request.POST.get("snapshot_id") or (thread.ui_state or {}).get("snapshot_id")
-    if not snapshot_id:
-        return JsonResponse({"ok": False, "error": "Select an approved App Context snapshot first."}, status=400)
 
-    export = (ContextExport.objects
-              .filter(kind=ContextExport.KIND_DESIGN_DOC, snapshot_id=snapshot_id,
-                      studio_run__isnull=False)
-              .order_by("-created_at").first())
+    # Find the latest design-doc export carrying a prompt version. For an
+    # Enhancement thread that is scoped by snapshot; for a New App (greenfield)
+    # thread there is no snapshot, so scope by the thread's own runs.
+    exports = ContextExport.objects.filter(
+        kind=ContextExport.KIND_DESIGN_DOC, studio_run__isnull=False)
+    exports = (exports.filter(snapshot_id=snapshot_id) if snapshot_id
+               else exports.filter(studio_run__thread_id=thread.id))
+    export = exports.order_by("-created_at").first()
     if export is None:
         return JsonResponse(
             {"ok": False, "error": "Export a design doc to the repo first (📤), then run the agent."},
             status=400,
         )
 
-    snap = AppContextSnapshot.objects.filter(pk=snapshot_id).first()
+    snap = AppContextSnapshot.objects.filter(pk=snapshot_id).first() if snapshot_id else None
     try:
         if request.POST.get("target"):
             target = _Path(request.POST["target"])
         elif snap is not None:
             target = _ctx_export.resolve_target_for_snapshot(snap)
         else:
-            return JsonResponse({"ok": False, "error": "Could not resolve the target repo."}, status=400)
+            return JsonResponse(
+                {"ok": False, "error": "Provide a target repo path for the agent run."},
+                status=400,
+            )
 
         timeout = request.POST.get("timeout_seconds")
         run = _agent_runner.enqueue_agent_run(
