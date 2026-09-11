@@ -203,7 +203,8 @@ class RunAgentTests(TestCase, _Fixtures):
             agent_runner.run_agent(run)
         run.refresh_from_db()
         self.assertEqual(run.status, AgentRun.STATUS_FAILED)
-        self.assertIn("dirty", run.log.lower())
+        self.assertIn("uncommitted changes", run.log.lower())
+        self.assertIn("apps/foo.py", run.log)
         # It must bail BEFORE creating a worktree or invoking claude.
         self.assertFalse(any(c and c[0] == "claude" for c in fake.calls))
         self.assertFalse(any("worktree" in c for c in fake.calls))
@@ -234,6 +235,94 @@ class RunAgentTests(TestCase, _Fixtures):
         self.assertEqual(run.status, AgentRun.STATUS_FAILED)
         self.assertEqual(run.exit_code, 2)
         self.assertEqual(run.diff_stat, "(no changes)")
+
+
+class MergeTests(TestCase, _Fixtures):
+    def setUp(self):
+        self.repo = Path(tempfile.mkdtemp()).resolve()
+        self.addCleanup(shutil.rmtree, self.repo, ignore_errors=True)
+        ov = self.settings(ATHENA_INLINE_WORKER=False)
+        ov.enable()
+        self.addCleanup(ov.disable)
+
+    def _success_run(self):
+        run = agent_runner.enqueue_agent_run(self._make_export(), self.repo)
+        run.status = AgentRun.STATUS_SUCCESS
+        run.branch = f"foundry/agent/{run.pk}"
+        run.result_commit = "9f8e7d6"
+        run.save()
+        return run
+
+    class _MergeGit:
+        """shell.run stand-in for merges. `on_branch` is the repo's current
+        branch; `status_output` its dirtiness; `merge_ok` the merge outcome."""
+        def __init__(self, *, on_branch="main", status_output="", merge_ok=True):
+            self.on_branch = on_branch
+            self.status_output = status_output
+            self.merge_ok = merge_ok
+            self.calls = []
+
+        def __call__(self, args, *, cwd=None, timeout=1800, env=None, input_text=None):
+            args = list(args); self.calls.append(args)
+            sub = args[3] if len(args) > 3 else ""
+            if sub == "rev-parse" and "--is-inside-work-tree" in args:
+                return _cmd(args, "true\n")
+            if sub == "rev-parse" and "--abbrev-ref" in args:
+                return _cmd(args, self.on_branch + "\n")
+            if sub == "status":
+                return _cmd(args, self.status_output)
+            if sub == "diff" and "--cached" in args:
+                return _cmd(args, "docs/design/demo_app-1.md\n" if self.status_output else "")
+            if sub == "merge" and "--abort" in args:
+                return _cmd(args, "aborted\n")
+            if sub == "merge":
+                return _cmd(args, "Merge made\n" if self.merge_ok else "CONFLICT\n",
+                            0 if self.merge_ok else 1)
+            if sub == "rev-parse":
+                return _cmd(args, "abc1234\n")
+            return _cmd(args, "")
+
+    def test_merge_success_records_and_never_pushes(self):
+        run = self._success_run()
+        fake = self._MergeGit(on_branch="main")
+        with mock.patch.object(agent_runner.shell, "run", fake):
+            agent_runner.merge_agent_run(run)
+        run.refresh_from_db()
+        self.assertIsNotNone(run.merged_at)
+        self.assertEqual(run.merged_into, "main")
+        self.assertEqual(run.merge_commit, "abc1234")
+        subs = [c[3] for c in fake.calls if c and c[0] == "git" and len(c) > 3]
+        self.assertNotIn("push", subs)
+
+    def test_merge_conflict_aborts(self):
+        run = self._success_run()
+        fake = self._MergeGit(on_branch="main", merge_ok=False)
+        with mock.patch.object(agent_runner.shell, "run", fake):
+            with self.assertRaises(AgentRunError):
+                agent_runner.merge_agent_run(run)
+        run.refresh_from_db()
+        self.assertIsNone(run.merged_at)
+        subs = [" ".join(c) for c in fake.calls]
+        self.assertTrue(any("merge --abort" in s for s in subs))
+
+    def test_merge_refuses_when_on_result_branch(self):
+        run = self._success_run()
+        fake = self._MergeGit(on_branch=f"foundry/agent/{run.pk}")
+        with mock.patch.object(agent_runner.shell, "run", fake):
+            with self.assertRaises(AgentRunError):
+                agent_runner.merge_agent_run(run)
+
+    def test_merge_refuses_stray_dirty(self):
+        run = self._success_run()
+        fake = self._MergeGit(on_branch="main", status_output=" M apps/other.py\n")
+        with mock.patch.object(agent_runner.shell, "run", fake):
+            with self.assertRaises(AgentRunError):
+                agent_runner.merge_agent_run(run)
+
+    def test_merge_refuses_non_success(self):
+        run = agent_runner.enqueue_agent_run(self._make_export(), self.repo)  # pending
+        with self.assertRaises(AgentRunError):
+            agent_runner.merge_agent_run(run)
 
 
 class QueueTests(TestCase, _Fixtures):

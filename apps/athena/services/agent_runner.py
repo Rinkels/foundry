@@ -364,6 +364,85 @@ def run_agent(run: AgentRun) -> AgentRun:
 
 
 # --------------------------------------------------------------------------- #
+# Human-initiated merge (adopt the result branch)
+# --------------------------------------------------------------------------- #
+
+def merge_agent_run(run: AgentRun, *, user=None) -> AgentRun:
+    """Merge a successful run's result branch into the target repo's CURRENT
+    branch — a human adopt action triggered from the run detail page. The agent
+    never does this itself.
+
+    Safety: only a successful, not-yet-merged run; refuses a detached HEAD or the
+    result branch itself as the target; refuses if the tree is dirty with
+    anything other than this run's own exported files (which it commits first);
+    aborts cleanly on a merge conflict (never leaves the repo mid-merge); and
+    NEVER pushes. Raises AgentRunError with a message safe to show the user."""
+    if run.merged_at:
+        raise AgentRunError(f"Run #{run.pk} is already merged into '{run.merged_into}'.")
+    if run.status != AgentRun.STATUS_SUCCESS:
+        raise AgentRunError("Only a successful run can be merged.")
+    if not run.branch or not run.result_commit:
+        raise AgentRunError("This run produced no result branch to merge.")
+
+    repo = Path(run.target_path)
+    if not repo.exists():
+        raise AgentRunError(f"Target repo does not exist: {repo}")
+    res = _git(repo, "rev-parse", "--is-inside-work-tree")
+    if not res.ok or res.output.strip() != "true":
+        raise AgentRunError(f"Not a git working tree: {repo}")
+
+    cur = _git(repo, "rev-parse", "--abbrev-ref", "HEAD")
+    if not cur.ok:
+        raise AgentRunError(f"Could not determine the current branch:\n{cur.output}")
+    target = cur.output.strip().splitlines()[-1].strip()
+    if target == "HEAD":
+        raise AgentRunError("Repo is in a detached-HEAD state; check out a branch to merge into.")
+    if target == run.branch:
+        raise AgentRunError(f"The repo is currently on the result branch '{run.branch}'. "
+                            "Check out the branch you want to merge into first.")
+
+    # Tolerate ONLY this run's exported files being dirty; commit them so the
+    # merge starts from a clean tree. Anything else blocks (no surprise adopts).
+    status = _git(repo, "status", "--porcelain")
+    if not status.ok:
+        raise AgentRunError(f"`git status` failed in {repo}:\n{status.output}")
+    allowed = set(_export_rels(run))
+    dirty = _dirty_paths(status.output)
+    stray = [p for p in dirty if p not in allowed]
+    if stray:
+        raise AgentRunError(
+            "Refusing to merge: commit or stash your other uncommitted changes "
+            "first.\n" + "\n".join(stray[:40])
+        )
+    if dirty:
+        _git(repo, "add", *[p for p in dirty if p in allowed])
+        staged = _git(repo, "diff", "--cached", "--name-only")
+        if staged.ok and staged.output.strip():
+            _git(repo, "-c", "user.name=Athena", "-c", "user.email=athena@foundry.local",
+                 "commit", "-m", f"Adopt Foundry context export (run #{run.pk})")
+            _append(run, f"Committed exported context on '{target}' before merge: {', '.join(dirty)}")
+
+    merge = _git(repo, "merge", "--no-ff", "--no-edit", run.branch)
+    _append(run, merge.command)
+    _append(run, merge.output)
+    if not merge.ok:
+        abort = _git(repo, "merge", "--abort")
+        _append(run, abort.command)
+        raise AgentRunError(
+            f"Merge of '{run.branch}' into '{target}' did not apply cleanly and was "
+            f"aborted (repo left untouched). Resolve it manually.\n{merge.output[-800:]}"
+        )
+
+    head = _git(repo, "rev-parse", "HEAD")
+    run.merge_commit = head.output.strip().splitlines()[-1].strip() if head.ok else ""
+    run.merged_into = target
+    run.merged_at = timezone.now()
+    run.save(update_fields=["merge_commit", "merged_into", "merged_at"])
+    _append(run, f"Merged '{run.branch}' into '{target}' as {run.merge_commit}. Not pushed.")
+    return run
+
+
+# --------------------------------------------------------------------------- #
 # Durable queue (DB-backed) — mirrors atlas.provisioner
 # --------------------------------------------------------------------------- #
 

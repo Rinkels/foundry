@@ -967,6 +967,22 @@ def agent_run_list(request):
 
 
 @login_required
+@require_POST
+def agent_run_merge(request, pk: int):
+    """Human adopt: merge a successful run's result branch into the target repo's
+    current branch. The agent never does this itself. Returns {"ok": ...}."""
+    run = get_object_or_404(AgentRun, pk=pk)
+    try:
+        _agent_runner.merge_agent_run(run, user=request.user)
+        return JsonResponse({
+            "ok": True, "merged_into": run.merged_into,
+            "merge_commit": run.merge_commit,
+        })
+    except _agent_runner.AgentRunError as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=400)
+
+
+@login_required
 def agent_run_detail(request, pk: int):
     run = get_object_or_404(
         AgentRun.objects.select_related(

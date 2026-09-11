@@ -52,12 +52,51 @@ pipeline top to bottom:
   Questions). Saved on the thread as `last_design_doc`.
 - **🛠 Create Implementation Generator** — turns that design doc into a concrete
   implementation prompt.
-- **App Builder** — the greenfield variant, for a brand-new app (no snapshot
-  required).
 
-Each execution is recorded as an **AthenaStudioRun** (prompt version + inputs +
-output), so every output is traceable to the exact prompt version that produced
-it.
+At the top of the sidebar you choose the thread's **mode** — **Enhancement**
+(work on an existing app; the flow above, snapshot-based) or **New App**
+(greenfield; see the next section). Each execution is recorded as an
+**AthenaStudioRun** (prompt version + inputs + output), so every output is
+traceable to the exact prompt version that produced it.
+
+---
+
+## 3b. Creating a brand-new app (greenfield)
+
+Use this when there is no existing codebase yet — you're designing an app from a
+description rather than enhancing one. It needs **no App Context snapshot**.
+
+**Prerequisite (one-time):** a prompt with the **App Builder** role, with an
+approved/canonical version (Admin → assign role *App Builder*, then *“Approve
+current version”*). The Studio finds it by role, not by name.
+
+Steps in the Studio (`/athena/studio/`):
+
+1. Open or start a thread and switch the mode toggle to **New App** (next to
+   **Enhancement**). Your mode is saved per thread.
+2. In the **User message** box, describe what you want to build — app name plus
+   requirements (entities, workflows, roles, UI, constraints). This is the whole
+   input; there's no snapshot to select.
+3. Click **🧱 Run App Builder**. It runs the canonical App Builder prompt against
+   your description and produces an **App Blueprint** (core entities, workflows,
+   roles, UI, constraints, non-functional notes). The output is stored as the
+   thread's **design doc** (`last_design_doc`), and the thread is auto-renamed
+   from your description. Recorded as an **AthenaStudioRun**, same as any run.
+4. Iterate: edit the requirements and re-run until the blueprint reads right.
+5. Click **🛠 Create Implementation Generator** to turn that blueprint into a
+   concrete implementation-generator prompt you can run like any other prompt.
+
+**Where greenfield stops today.** The New App step produces a design doc and an
+implementation prompt, but the **📤 Export / 🤖 Run agent** buttons (the headless
+Claude Code seam) live in the *Enhancement* step and are **snapshot-based**, so
+they are not wired for snapshot-less New App threads. To hand a brand-new app to
+the headless agent: scaffold the initial repo (e.g. from the implementation
+prompt's output), then treat it as an **existing** app — run Code Analyzer to
+produce and approve an App Context snapshot, and follow the Enhancement +
+Claude Code seam flow from there.
+
+> Rule of thumb: **New App** designs the shape of something that doesn't exist
+> yet; **Enhancement** (+ the agent seam) changes code that already does.
 
 ---
 
@@ -92,7 +131,9 @@ git worktree** — branch `foundry/agent/<run-pk>` off HEAD.
 
 **Isolation is non-negotiable and enforced:**
 
-- refuses to run on a **dirty working tree**;
+- refuses to run on a **dirty working tree** — *except* for this run's own
+  exported brief / `CLAUDE.md` (see below); any **other** uncommitted change
+  still blocks the run;
 - arg-list invocation with a **narrow `--allowedTools` allowlist**
   (`ATHENA_AGENT_ALLOWED_TOOLS`); **never** `--dangerously-skip-permissions`;
 - **never** `git push`, never merges, never triggers a deploy;
@@ -107,18 +148,49 @@ branch, base/result commit, diff stat, token usage, and estimated cost
 *from a Studio run* (that is what carries the prompt-version provenance).
 Otherwise “Run agent” returns a clear *“export a design doc first”* message.
 
+#### What about committing the exports?
+
+You **don't** have to. 📤 Export writes `CLAUDE.md` + the design doc into the
+target repo's working tree but doesn't commit them. When you 🤖 Run agent, the
+run:
+
+1. lets the preflight pass even though those two files are uncommitted — but
+   *only* those two; any unrelated uncommitted change still blocks the run;
+2. creates the worktree off HEAD, **copies the exported files into it, and
+   commits them there** as a separate `Athena context export (run #<pk>)`
+   commit — so the agent finds its brief and starts from a clean tree;
+3. leaves your main checkout exactly as it was (the exports stay uncommitted
+   there; commit or discard them at your leisure).
+
+Because the export is committed separately in the worktree, it never pollutes
+the agent's own diff.
+
 ---
 
 ## Golden path
+
+**Enhancement (existing app):**
 
 1. Approve a prompt version (library).
 2. Ingest **and approve** an App Context snapshot for your app.
 3. Studio: pick the snapshot → run **Feature Designer** → get a design doc.
 4. **📤 Export** context + design doc into the repo.
-5. **Commit** those exported files (the agent needs a clean tree).
-6. **🤖 Run agent** → inspect the resulting branch/diff at **📜 Agent runs**.
-7. **Merge the agent's branch yourself** if you like the diff — Athena
-   deliberately stops short of merging.
+5. **🤖 Run agent** → inspect the resulting branch/diff at **📜 Agent runs**.
+   (No need to commit the exports first — the agent seeds them into its own
+   worktree; see *“What about committing the exports?”* below.)
+6. **Adopt the diff** — click **🔀 Merge branch** on the run detail page to
+   merge the result branch into the target repo's current branch (the *agent*
+   never merges itself; a reviewer does). Or merge from the command line.
+
+**New app (greenfield):**
+
+1. Approve an **App Builder** prompt version (library).
+2. Studio: switch the thread to **New App** → describe the app in the User
+   message → **🧱 Run App Builder** → get a blueprint (the thread's design doc).
+3. **🛠 Create Implementation Generator** and run it to generate the initial
+   code; scaffold the repo from that output.
+4. To continue with the agent seam, snapshot the new repo (Code Analyzer) and
+   switch to the **Enhancement** golden path above.
 
 ---
 
@@ -191,24 +263,22 @@ equivalent:
 python manage.py athena_export_context --key bookstore --design-doc
 ```
 
-### 4. Commit the exported files
+### 4. Run the agent
 
-The agent refuses a dirty tree, so commit what you exported **in the bookstore
-repo**:
-
-```bash
-git -C C:/Projects/bookstore add CLAUDE.md docs/design/bookstore-45.md
-git -C C:/Projects/bookstore commit -m "Add Foundry context + wishlist design doc"
-```
-
-### 5. Run the agent
+No manual commit needed — the two exported files can stay uncommitted in the
+bookstore working tree; the agent seeds them into its worktree itself.
 
 Click **🤖 Run agent**. It finds the latest design-doc export for snapshot 12
 and enqueues **AgentRun #7**:
 
-1. **Preflight** — git tree ✓, clean ✓, `claude` on PATH ✓.
-2. **Isolate** — record base commit, then
-   `git worktree add -b foundry/agent/7 ..\_athena_agent_worktrees\7 HEAD`.
+1. **Preflight** — git tree ✓, `claude` on PATH ✓, and the tree is clean *apart
+   from* `CLAUDE.md` + `docs/design/bookstore-45.md` (allowed); any other
+   uncommitted change would block here.
+2. **Isolate + seed** — record base commit, then
+   `git worktree add -b foundry/agent/7 ..\_athena_agent_worktrees\7 HEAD`, copy
+   `CLAUDE.md` + `docs/design/bookstore-45.md` into the worktree and commit them
+   there (`Athena context export (run #7)`) so the tree is clean and the brief
+   is present.
 3. **Run headless** (arg-list, narrow tools, never `--dangerously-skip-permissions`):
    ```
    claude -p "Read docs/design/bookstore-45.md and implement it. Follow CLAUDE.md.
@@ -223,7 +293,7 @@ and enqueues **AgentRun #7**:
 
 You are redirected to `/athena/agent-runs/7/`.
 
-### 6. Review the run
+### 5. Review the run
 
 `/athena/agent-runs/7/` shows, from stored fields alone:
 
@@ -240,9 +310,19 @@ You are redirected to `/athena/agent-runs/7/`.
 
 plus the full agent log.
 
-### 7. Adopt the work (you, not Athena)
+### 6. Adopt the work (you, not Athena)
 
-Athena stops at an isolated branch. You decide:
+Athena stops at an isolated branch — *you* decide whether to take it.
+
+**From the UI:** on `/athena/agent-runs/7/`, click **🔀 Merge branch**. It merges
+`foundry/agent/7` into the target repo's **current** branch, after committing the
+still-uncommitted exported files (`CLAUDE.md`, the design doc) for you. It
+refuses if the tree has other uncommitted changes, aborts cleanly on a conflict
+(leaving the repo untouched), and **never pushes**. The run detail page then
+shows a **merged** badge with the merge commit. The agent itself never merges —
+this is always a human action.
+
+**From the command line**, equivalently:
 
 ```bash
 git -C C:/Projects/bookstore diff main..foundry/agent/7   # inspect
