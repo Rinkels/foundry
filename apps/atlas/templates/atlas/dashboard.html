@@ -12,6 +12,48 @@
   </div>
 </div>
 
+<div class="neon-glass-card p-3 mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <span class="fw-semibold">Auto-deploy webhook receiver</span>
+      {% if webhook.ok %}
+        <span class="badge bg-success ms-2">reachable · HTTP {{ webhook.status }}</span>
+      {% else %}
+        <span class="badge bg-danger ms-2">DOWN{% if webhook.status %} · HTTP {{ webhook.status }}{% endif %}</span>
+        <span class="text-soft ms-2">{{ webhook.detail }}</span>
+      {% endif %}
+      <div class="text-soft small">{{ webhook.url }} — GitHub does not retry a failed delivery; Foundry replays missed pushes on startup or via Replay.</div>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn-glass" href="{% url 'atlas:dashboard' %}?refresh=1">Re-check</a>
+      <form method="post" action="{% url 'atlas:webhook_replay' %}" class="m-0">{% csrf_token %}
+        <button class="btn-glass" type="submit"{% if not webhook.ok %} disabled title="Foundry must be reachable first"{% endif %}>
+          Replay missed{% if deliveries.missed %} ({{ deliveries.missed|length }}){% endif %}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {% if deliveries.error %}
+    <div class="text-soft small mt-2">Delivery log unavailable: {{ deliveries.error }}</div>
+  {% else %}
+    {% if deliveries.missed %}
+      <div class="mt-2 small">
+        <span class="badge bg-warning text-dark">missed</span>
+        {% for m in deliveries.missed %}
+          <span class="ms-2">{{ m.repo }}@{{ m.branch }} <code>{{ m.commit }}</code> · HTTP {{ m.status_code }} · {{ m.delivered_at|slice:":16" }}Z</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <div class="mt-2 d-flex flex-wrap gap-1 align-items-center small" title="Recent push deliveries, newest first">
+      <span class="text-soft me-1">Recent pushes:</span>
+      {% for d in deliveries.deliveries %}
+        <span class="badge {% if d.ok %}bg-success{% else %}bg-danger{% endif %}" title="{{ d.delivered_at }}{% if d.redelivery %} (redelivery){% endif %}">{{ d.status_code }}</span>
+      {% empty %}<span class="text-soft">none</span>{% endfor %}
+    </div>
+  {% endif %}
+</div>
+
 <div class="neon-glass-card p-0 overflow-hidden">
   <table class="table table-dark mb-0">
     <thead>

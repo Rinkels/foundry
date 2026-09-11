@@ -102,6 +102,39 @@ def authed_clone_url(repo_full_name: str, token: str) -> str:
     return f"https://x-access-token:{token}@github.com/{repo_full_name}.git"
 
 
+# --------------------------------------------------------------------------- #
+# Webhook delivery log (the authoritative record of what GitHub sent us)
+# --------------------------------------------------------------------------- #
+
+def _app_headers() -> dict:
+    return {**_API_HEADERS, "Authorization": f"Bearer {app_jwt()}"}
+
+
+def list_deliveries(per_page: int = 100) -> list[dict]:
+    """Most recent webhook deliveries for the App (id, guid, delivered_at,
+    status_code, event, action, repository_id, redelivery)."""
+    resp = httpx.get(f"{GITHUB_API}/app/hook/deliveries", headers=_app_headers(),
+                     params={"per_page": per_page}, timeout=30)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def delivery_detail(delivery_id: int) -> dict:
+    """One delivery including the request payload (ref, commit, repo) and the
+    response Foundry returned (or the tunnel's 502 text)."""
+    resp = httpx.get(f"{GITHUB_API}/app/hook/deliveries/{delivery_id}", headers=_app_headers(), timeout=30)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def redeliver(delivery_id: int) -> bool:
+    """Ask GitHub to send a delivery again (it arrives as a new delivery with
+    the same guid and redelivery=true). 202 = accepted."""
+    resp = httpx.post(f"{GITHUB_API}/app/hook/deliveries/{delivery_id}/attempts",
+                      headers=_app_headers(), timeout=30)
+    return resp.status_code == 202
+
+
 def is_configured() -> bool:
     return bool(
         getattr(settings, "GITHUB_APP_ID", "")
