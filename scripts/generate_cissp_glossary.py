@@ -583,7 +583,7 @@ def build_body():
         "<section>"
         "<h2>Browse the glossary</h2>"
         '<nav class="gl-jump" aria-label="Jump to a category">' + jump + "</nav>"
-        '<p class="gl-flash"><a href="cissp-flashcards.html">Study these terms with flashcards →</a></p>'
+        '<p class="gl-flash"><a href="cissp-flashcards.html">Study these terms with flashcards &amp; exam-style practice questions →</a></p>'
         '<div class="gl-controls" id="gl-controls" hidden>'
         '<input class="gl-search" id="gl-search" type="search" '
         'placeholder="Search acronyms, terms, definitions\u2026" aria-label="Search the glossary">'
@@ -718,15 +718,214 @@ for i, (acr, q) in enumerate(SCENARIOS, 1):
         "term_id": term_id(acr),
     })
 
+# ---------------------------------------------------------------------------
+# ORIGINAL exam-style practice questions (single best answer, Sybex-difficulty
+# STYLE only — scenario stems, sibling-concept distractors, BEST/FIRST/NOT
+# phrasing). All scenarios written from scratch; none reproduce ISC2, Sybex,
+# LearnZapp or any other question bank. options[0] is ALWAYS the correct
+# answer as authored; the app shuffles presentation order.
+# (category, question, [correct, d1, d2, d3], explanation)
+# ---------------------------------------------------------------------------
+QUIZ = [
+    # --- Risk, Governance & Continuity --------------------------------------
+    ("risk",
+     "A data center asset is valued at $200,000. A flood would damage 25% of it, and floods are expected once every five years. What is the ALE?",
+     ["$10,000", "$50,000", "$40,000", "$250,000"],
+     "SLE = $200,000 × 0.25 = $50,000 (that figure is the classic trap). ARO = 1/5 = 0.2, so ALE = SLE × ARO = $10,000."),
+    ("risk",
+     "An auditor notes that a payment process can only be defrauded if two employees cooperate. Which control created this property?",
+     ["Separation of duties", "Least privilege", "Job rotation", "Need to know"],
+     "Requiring collusion is the hallmark of SoD — one person creates, another approves. Least privilege limits each account's rights but one person could still hold a complete sensitive workflow."),
+    ("risk",
+     "A continuity planner documents that order processing can survive at most 18 hours of outage before the company suffers unacceptable harm. Which metric has she defined?",
+     ["MTD", "RTO", "RPO", "MTTR"],
+     "The maximum tolerable downtime bounds the business process itself; the RTO is the engineering target set BELOW the MTD, and RPO measures data loss, not time down."),
+    ("risk",
+     "The board asks for an early-warning metric that signals when patching discipline is drifting toward dangerous exposure. Which should the CISO present?",
+     ["A KRI", "A KPI", "An SLA", "The ALE"],
+     "A rising 'systems past patch deadline' figure indicates changing risk exposure — a key RISK indicator. A KPI measures performance against an objective, which is how the same number would be framed for the IT team."),
+    ("risk",
+     "A new CISO wants to build the organization's first business continuity plan. What should be completed FIRST?",
+     ["A business impact analysis", "The disaster recovery plan", "A tabletop exercise", "Selection of an alternate site"],
+     "The BIA identifies critical processes and quantifies disruption impact — everything else in BC/DR planning (including RTO/RPO targets and site strategy) is derived from it."),
+
+    # --- Data & Asset Security ----------------------------------------------
+    ("data",
+     "A hospital wants to stop staff from emailing patient records to personal accounts or copying them to USB drives. Which control BEST addresses this?",
+     ["DLP", "CASB", "FDE", "DRM"],
+     "Detecting and blocking unauthorized movement of sensitive data is exactly DLP. CASB governs cloud-service usage, FDE protects a lost device, and DRM controls licensed content usage."),
+    ("data",
+     "A vendor announces that a product will receive no further security patches after June, though it will still function. What has the product reached?",
+     ["End of Support", "End of Life", "End of Sale", "Planned obsolescence"],
+     "No more support or security updates = EOS. EOL is the end of active development/marketing of the product; the two dates often differ, and the security cliff is EOS."),
+    ("data",
+     "A regional sales manager's laptop is stolen from a car overnight. Which control provides the STRONGEST protection for the data on it?",
+     ["Full disk encryption", "TLS", "A VPN", "DLP"],
+     "The threat is physical access to data at rest — FDE. TLS and VPNs protect data in transit, and DLP policies on a powered-off stolen disk enforce nothing."),
+    ("data",
+     "A billing export contains patient names, dates of service, and diagnosis codes. How should this file be classified?",
+     ["PHI", "PII only", "PCI data", "Public data"],
+     "Individually identifiable health information is PHI — a superset situation: it contains PII, but the health context triggers the stricter protection regime (e.g. HIPAA)."),
+    ("data",
+     "An e-book publisher wants purchased titles to open only inside its reader app and never be copied or printed. Which technology enforces this?",
+     ["DRM", "DLP", "FDE", "A CASB"],
+     "Controlling how licensed digital CONTENT may be used after delivery is digital rights management. DLP protects an organization's own sensitive data from leaving; it doesn't govern a customer's use of sold content."),
+
+    # --- Cryptography --------------------------------------------------------
+    ("crypto",
+     "Two services that already share a secret key must exchange terabytes of data nightly with minimal CPU cost. Which algorithm should encrypt the data?",
+     ["AES", "RSA", "ECC", "SHA-256"],
+     "Bulk encryption is symmetric work — AES. RSA/ECC are orders of magnitude slower and used for key exchange and signatures; SHA-256 is a hash and provides no confidentiality."),
+    ("crypto",
+     "Two internal services sharing a secret key need each message verified for integrity AND sender authenticity. Non-repudiation is not required. Which mechanism fits BEST?",
+     ["HMAC", "A digital signature", "SHA-256 alone", "AES-CBC"],
+     "HMAC = hash + shared secret → integrity and authenticity. A plain hash proves only integrity; digital signatures add non-repudiation but require asymmetric keys and PKI overhead the requirement doesn't ask for."),
+    ("crypto",
+     "A browser must confirm in real time, with minimal data transfer, whether a single certificate has been revoked. Which mechanism should it use?",
+     ["OCSP", "A CRL download", "A new CSR", "Certificate pinning"],
+     "OCSP queries the status of one certificate on demand; a CRL is a periodically published full list — heavier and potentially staler."),
+    ("crypto",
+     "A laptop fleet must verify boot integrity and protect disk-encryption keys using hardware built into each machine. Which component is being used?",
+     ["TPM", "HSM", "A smart card", "Secure enclave software"],
+     "Per-device platform integrity + key protection = the TPM. An HSM is dedicated (usually network/rack or PCIe) hardware for an organization's high-value keys, not a per-laptop boot-integrity chip."),
+    ("crypto",
+     "Two mobile apps with no prior shared secret must derive a session key over an untrusted network, using small keys suitable for low-power devices. Which approach fits BEST?",
+     ["ECDH", "RSA encryption of a random key", "AES key wrapping", "HMAC"],
+     "Key agreement without a pre-shared secret is Diffie-Hellman; the elliptic-curve variant gives equivalent strength with far smaller keys — the low-power requirement is the discriminator against RSA."),
+
+    # --- Communication & Network Security ------------------------------------
+    ("network",
+     "A monitoring appliance is connected to a switch SPAN port and must never be able to interrupt production traffic. Which technology matches this deployment?",
+     ["IDS", "IPS", "WAF", "NAC"],
+     "A SPAN/mirror port sees copies of traffic out-of-band — detection only. An IPS must sit inline to block, which contradicts the 'never interrupt traffic' constraint."),
+    ("network",
+     "An organization's public range is 203.0.113.0/24. Which OUTBOUND packet should its egress filter BLOCK?",
+     ["One with source address 172.16.4.9", "One with source address 203.0.113.40", "One with source address 203.0.113.7", "One with source address 203.0.113.199"],
+     "Egress filtering drops traffic leaving with source addresses that aren't yours — RFC 1918 or foreign sources indicate spoofing or misconfiguration. 172.16.0.0/12 is private and must never appear as a source on the internet."),
+    ("network",
+     "Finance and engineering hosts share the same physical switches, but finance traffic must be isolated into its own broadcast domain without new cabling. What should be configured?",
+     ["VLANs", "A VPN", "NAC", "A WAF"],
+     "Logical segmentation on shared switching hardware is exactly what VLANs do. A VPN protects traffic across untrusted networks; NAC decides admission, not segmentation."),
+    ("network",
+     "Customers of a SaaS product must be able to verify that DNS answers for its domain are authentic and untampered. Confidentiality of the lookups is not the goal. What should be deployed?",
+     ["DNSSEC", "TLS on the website", "A VPN for customers", "SSH"],
+     "DNSSEC signs DNS data — origin authentication and integrity, not encryption. TLS protects the web session but does nothing for the DNS resolution step before it."),
+    ("network",
+     "A retailer with 400 branches and a large remote workforce wants networking and security (SWG, ZTNA, firewalling) delivered together as a cloud edge service. Which architecture is this?",
+     ["SASE", "SDN", "A VPN concentrator", "CASB"],
+     "Converging WAN networking with cloud-delivered security functions at the edge is Secure Access Service Edge. SDN separates control/forwarding planes; a CASB governs cloud app usage only."),
+
+    # --- Identity & Access Management ----------------------------------------
+    ("iam",
+     "A mobile app lets users sign in with their existing cloud account and needs to reliably learn WHO the user is. Which standard is designed for this?",
+     ["OIDC", "OAuth 2.0 alone", "SAML", "SCIM"],
+     "Knowing the user's identity is authentication — OIDC's purpose. OAuth alone is delegated AUTHORIZATION; treating an access token as proof of identity is the classic implementation mistake."),
+    ("iam",
+     "Records may be opened only when the user's department matches the record's region AND the request occurs during business hours from a managed device. Which access-control model supports this directly?",
+     ["ABAC", "RBAC", "MAC", "DAC"],
+     "Decisions built from attributes of the user, resource, and context (time, device) are attribute-based access control. Roles alone can't express the environmental conditions."),
+    ("iam",
+     "When HR marks an employee as terminated, their accounts across 30 SaaS applications should be disabled automatically. Which standard addresses this?",
+     ["SCIM", "SAML", "OAuth 2.0", "LDAP"],
+     "Automated provisioning and deprovisioning across domains is SCIM's job. SAML/OIDC handle the sign-in moment; they don't lifecycle the accounts."),
+    ("iam",
+     "Network engineers need per-command authorization and full accounting for administrative access to routers and switches. Which protocol is the BEST fit?",
+     ["TACACS+", "RADIUS", "LDAP", "SSH alone"],
+     "TACACS+ separates authentication/authorization/accounting and supports per-command authorization — the classic device-administration choice. RADIUS shines for network ACCESS authentication."),
+    ("iam",
+     "Which combination constitutes true multi-factor authentication?",
+     ["A password plus a fingerprint", "A password plus a PIN", "A PIN plus a security question", "Two different passwords"],
+     "MFA requires factors from DIFFERENT categories. Password, PIN and security questions are all 'something you know' — pairing them is still single-factor."),
+
+    # --- Security Assessment & Testing ----------------------------------------
+    ("assess",
+     "A vulnerability report must express each finding's severity on a standardized 0–10 scale for prioritization. Which framework provides this?",
+     ["CVSS", "CVE", "CWE", "SBOM"],
+     "CVSS scores severity; CVE is the identifier of the vulnerability instance, CWE catalogs the weakness TYPE. The three are routinely confused on the exam."),
+    ("assess",
+     "During QA, an agent inside the running application observes code paths as functional tests execute and reports the vulnerable lines being exercised. Which testing approach is this?",
+     ["IAST", "DAST", "SAST", "RASP"],
+     "Instrumentation inside a RUNNING app during testing = interactive AST. DAST probes from outside; SAST never executes the code; RASP is production protection, not testing."),
+    ("assess",
+     "Management wants demonstrated proof that discovered flaws can actually be chained by an attacker to reach payroll data, under a signed authorization. What are they commissioning?",
+     ["A penetration test", "A vulnerability assessment", "An SCA scan", "A CVSS review"],
+     "Exploitation to demonstrate practical impact is a penetration test. A vulnerability assessment identifies and rates weaknesses but stops short of exploiting them."),
+    ("assess",
+     "A popular open-source library is found to be backdoored. Which artifact lets each product team answer 'do we ship this component?' within minutes?",
+     ["The SBOM", "A fresh DAST scan", "The CVE feed", "The WAF logs"],
+     "A software bill of materials is the standing inventory of components per product — exposure is a lookup. Rescanning everything works eventually; the SBOM answers immediately."),
+    ("assess",
+     "Which control lives INSIDE the application in production and can block an injection attempt while the code is running?",
+     ["RASP", "A WAF", "IAST", "SAST"],
+     "Runtime application self-protection is embedded in the app in production. The WAF is the external sibling (it filters HTTP before the app); IAST is the testing-time twin of the same instrumentation idea."),
+
+    # --- Security Operations ----------------------------------------------------
+    ("ops",
+     "A SOC drowning in repetitive alerts wants enrichment, ticketing and containment steps executed automatically from playbooks. Which capability should be added?",
+     ["SOAR", "A second SIEM", "UEBA", "NDR"],
+     "Orchestrating and automating response workflows is SOAR. The SIEM aggregates and correlates — it raises the alerts that SOAR then handles."),
+    ("ops",
+     "A service account that has logged in from one server for years suddenly authenticates at 03:00 from a new country. Which technology is DESIGNED to flag this?",
+     ["UEBA", "An IDS signature", "DLP", "NAC"],
+     "Deviation from a learned behavioral baseline is exactly user and entity behavior analytics. Signature-based tools can't flag activity that is individually well-formed."),
+    ("ops",
+     "An incident team has just isolated the affected servers from the network. According to the standard incident-response lifecycle, what comes NEXT?",
+     ["Eradication", "Recovery", "Lessons learned", "Detection"],
+     "The order is Detection/Analysis → Containment → Eradication → Recovery → Lessons Learned. After containing, you remove the adversary and artifacts before restoring service."),
+    ("ops",
+     "A threat-intel report lists file hashes, C2 IP addresses and malicious domain names from a recent campaign. What are these?",
+     ["IOCs", "TTPs", "CVEs", "KRIs"],
+     "Observable artifacts of compromise are indicators (IOCs). TTPs describe the adversary's METHODS — the distinction is 'evidence you can match' versus 'behavior you must understand'."),
+    ("ops",
+     "A security team wants one vendor-integrated layer that correlates detections and drives response across endpoints, email, identity and cloud workloads. What are they describing?",
+     ["XDR", "EDR", "NDR", "A SIEM"],
+     "Extending detection AND response across multiple integrated telemetry layers is XDR. A SIEM aggregates logs broadly but is analytics-first; EDR/NDR cover single layers."),
+
+    # --- Software & Cloud Security ----------------------------------------------
+    ("cloud",
+     "In which cloud service model is the CUSTOMER responsible for patching the guest operating system?",
+     ["IaaS", "PaaS", "SaaS", "None — the CSP always patches the OS"],
+     "IaaS hands you infrastructure; everything from the guest OS up is yours. In PaaS the platform (and OS) is managed for you; in SaaS the entire stack is."),
+    ("cloud",
+     "At which point in the SDLC is a security flaw CHEAPEST to correct?",
+     ["During requirements and design", "During implementation", "During testing", "After release, via patching"],
+     "Cost to fix rises steeply through the lifecycle — the premise behind threat modeling at design time and 'shift left' generally."),
+    ("cloud",
+     "A team wants automated security gates on every merge request, before code is deployed by the pipeline. Which tool pairing belongs in that gate?",
+     ["SAST and SCA", "DAST and RASP", "WAF and EDR", "CVSS and CVE"],
+     "Static analysis and dependency scanning run on code and build artifacts — perfect for merge-time gates. DAST needs a running app and RASP/WAF/EDR are runtime protections, not pipeline checks."),
+    ("cloud",
+     "Developers need the community's canonical, regularly updated list of the most critical web-application risks to prioritize secure-coding training. Where should they start?",
+     ["The OWASP Top 10", "NIST SP 800-53", "The CWE database", "PCI DSS"],
+     "OWASP maintains the Top 10 web-app risk list. CWE is the exhaustive weakness catalog (reference, not a priority list); 800-53 is a control catalog; PCI DSS is a payment-card standard."),
+    ("cloud",
+     "A public partner-facing API is being launched. Which control should be treated as the FIRST line of defense?",
+     ["Strong authentication and authorization on every endpoint", "Keeping endpoint URLs undocumented", "Relying on TLS to protect the interface", "Rate limiting alone"],
+     "APIs are direct doors to data: authn/authz per endpoint is foundational. Obscurity is not access control, TLS only protects data in transit, and rate limiting throttles abuse but doesn't decide WHO may act."),
+]
+
+_json_quiz = []
+for i, (cat, q, options, expl) in enumerate(QUIZ, 1):
+    assert cat in _cat_labels, cat
+    assert len(options) == 4, q
+    _json_quiz.append({
+        "id": "qz-%02d" % i, "type": "quiz", "category": cat,
+        "category_label": _cat_labels[cat], "question": q,
+        "options": options, "answer": 0,  # authored order: index 0 correct; app shuffles
+        "explanation": expl,
+    })
+
 _data = {
     "version": 1,
     "generated": _dt.now(_tz.utc).isoformat(timespec="seconds"),
     "categories": _cat_labels,
     "terms": _json_terms,
     "scenarios": _json_scenarios,
+    "quiz": _json_quiz,
 }
 _out = (_Path(_settings.BASE_DIR) / "output" / "sites" / site.slug
         / "assets" / "data" / "cissp-glossary.json")
 _out.parent.mkdir(parents=True, exist_ok=True)
 _out.write_text(_json.dumps(_data, ensure_ascii=False, indent=1), encoding="utf-8")
-print("wrote", _out, "| terms:", len(_json_terms), "| scenarios:", len(_json_scenarios))
+print("wrote", _out, "| terms:", len(_json_terms), "| scenarios:", len(_json_scenarios),
+      "| quiz:", len(_json_quiz))

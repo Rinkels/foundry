@@ -67,6 +67,17 @@ CSS = """
 .fc-rate--good{border-color:var(--site-accent,#5dd6c6)}.fc-rate--good:hover{background:rgba(93,214,198,.12)}
 .fc-rate--easy{border-color:#7c8cf8}.fc-rate--easy:hover{background:rgba(124,140,248,.12)}
 .fc-session{margin-top:12px;font-size:.9rem;color:var(--site-muted,#8b93a7)}
+.fc-opts{display:grid;gap:10px;margin-top:18px}
+.fc-opt{font:inherit;text-align:left;padding:13px 16px;border-radius:10px;cursor:pointer;
+  border:1px solid var(--site-border,rgba(148,163,199,.25));
+  background:var(--site-surface,rgba(255,255,255,.03));color:var(--site-text,#dfe4ee)}
+.fc-opt:hover:not([disabled]){border-color:var(--site-accent,#5dd6c6)}
+.fc-opt[disabled]{cursor:default}
+.fc-opt__key{display:inline-block;min-width:1.4em;font-weight:700;color:var(--site-muted,#8b93a7)}
+.fc-opt--correct{border-color:var(--site-accent,#5dd6c6);box-shadow:0 0 0 1px var(--site-accent,#5dd6c6)}
+.fc-opt--correct .fc-opt__key{color:var(--site-accent,#5dd6c6)}
+.fc-opt--wrong{border-color:#e5484d;box-shadow:0 0 0 1px #e5484d}
+.fc-opt--wrong .fc-opt__key{color:#e5484d}
 .fc-mgmt{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
 .fc-mgmt .fc-chip{font-size:.8rem}
 .fc-note{font-size:.85rem;color:var(--site-muted,#8b93a7);margin-top:10px}
@@ -93,6 +104,7 @@ APP_HTML = """
       <button type="button" class="fc-chip" data-mode="new" aria-pressed="false">New Cards</button>
       <button type="button" class="fc-chip" data-mode="all" aria-pressed="false">All Cards</button>
       <button type="button" class="fc-chip" data-mode="core" aria-pressed="false">Core CISSP Terms</button>
+      <button type="button" class="fc-chip" data-mode="exam" aria-pressed="false">Exam Practice</button>
     </div>
 
     <div class="fc-label" id="fc-dir-label">Direction</div>
@@ -113,7 +125,11 @@ APP_HTML = """
     <div class="fc-card" id="fc-card" hidden aria-live="polite">
       <div class="fc-card__meta" id="fc-meta"></div>
       <div class="fc-front" id="fc-front"></div>
+      <div class="fc-opts" id="fc-opts" hidden role="group" aria-label="Answer choices"></div>
       <div class="fc-back" id="fc-back" hidden></div>
+      <div class="fc-actions" id="fc-next-row" hidden>
+        <button type="button" class="fc-btn fc-btn--primary" id="fc-next">Next card <small>(Space)</small></button>
+      </div>
       <div class="fc-actions" id="fc-reveal-row">
         <button type="button" class="fc-btn fc-btn--primary" id="fc-reveal">Reveal answer <small>(Space)</small></button>
       </div>
@@ -195,7 +211,8 @@ JS = """
   function pool() {
     return cards.filter(function (c) {
       if (!sel.cats[c.category]) return false;
-      if (sel.mode === "core") return c.type !== "scenario" && c.priority === "Core";
+      if (sel.mode === "core") return c.type !== "scenario" && c.type !== "quiz" && c.priority === "Core";
+      if (sel.mode === "exam") return c.type === "quiz";
       return true;
     });
   }
@@ -247,9 +264,55 @@ JS = """
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   };
   function cardDir(card) {
+    if (card.type === "quiz") return "quiz";
     if (card.type === "scenario") return "scenario";
     if (sel.dir === "mix") return Math.random() < 0.5 ? "a2d" : "d2a";
     return sel.dir;
+  }
+  function renderQuiz(item) {
+    // shuffle presentation order; remember where the correct option landed
+    var order = shuffle(item.options.map(function (_, i) { return i; }));
+    session.quizOrder = order;
+    session.quizCorrectPos = order.indexOf(item.answer);
+    var keys = ["A", "B", "C", "D"];
+    var opts = document.getElementById("fc-opts");
+    opts.innerHTML = order.map(function (optIdx, pos) {
+      return '<button type="button" class="fc-opt" data-pos="' + pos + '">' +
+             '<span class="fc-opt__key">' + keys[pos] + "</span> " +
+             esc(item.options[optIdx]) + "</button>";
+    }).join("");
+    opts.hidden = false;
+  }
+  function answerQuiz(pos) {
+    if (!session || session.revealed || session.current.type !== "quiz") return;
+    var item = session.current, correct = pos === session.quizCorrectPos;
+    var opts = document.getElementById("fc-opts");
+    Array.prototype.forEach.call(opts.querySelectorAll(".fc-opt"), function (b) {
+      b.disabled = true;
+      var p = parseInt(b.dataset.pos, 10);
+      if (p === session.quizCorrectPos) b.classList.add("fc-opt--correct");
+      else if (p === pos) b.classList.add("fc-opt--wrong");
+    });
+    var back = document.getElementById("fc-back");
+    back.innerHTML =
+      '<p class="fc-back__answer">' + (correct ? "Correct." : "Not quite.") + "</p>" +
+      '<p class="fc-back__def">' + esc(item.explanation) + "</p>";
+    back.hidden = false;
+    document.getElementById("fc-next-row").hidden = false;
+    session.revealed = true;
+    // auto-schedule in the SR engine: wrong = Again (re-queued), right = Good
+    rate(item, correct ? 3 : 1);
+    session.done++;
+    if (!correct) {
+      session.again++;
+      session.queue.splice(Math.min(session.idx + 3, session.queue.length), 0, item);
+    }
+    dash();
+  }
+  function nextCard() {
+    if (!session || !session.revealed || session.current.type !== "quiz") return;
+    session.idx++;
+    show();
   }
   function show() {
     var cardEl = document.getElementById("fc-card");
@@ -260,22 +323,29 @@ JS = """
     cardEl.hidden = false;
     document.getElementById("fc-back").hidden = true;
     document.getElementById("fc-rate-row").hidden = true;
-    document.getElementById("fc-reveal-row").hidden = false;
+    document.getElementById("fc-opts").hidden = true;
+    document.getElementById("fc-next-row").hidden = true;
+    document.getElementById("fc-reveal-row").hidden = item.type === "quiz";
     session.revealed = false;
 
     var meta = '<span class="fc-tag">' + esc(item.category_label) + "</span>";
     if (item.type === "scenario") meta += '<span class="fc-tag fc-tag--scenario">Scenario</span>';
+    else if (item.type === "quiz") meta += '<span class="fc-tag fc-tag--scenario">Exam practice · pick one</span>';
     else meta += '<span class="fc-tag">' + esc(item.priority) + "</span>";
     document.getElementById("fc-meta").innerHTML = meta;
 
     var front = document.getElementById("fc-front");
-    if (item.dirNow === "scenario") { front.className = "fc-front fc-front--small"; front.textContent = item.question; }
+    if (item.dirNow === "quiz") {
+      front.className = "fc-front fc-front--small"; front.textContent = item.question;
+      renderQuiz(item);
+    }
+    else if (item.dirNow === "scenario") { front.className = "fc-front fc-front--small"; front.textContent = item.question; }
     else if (item.dirNow === "a2d") { front.className = "fc-front"; front.textContent = item.acronym; }
     else { front.className = "fc-front fc-front--small"; front.textContent = item.definition; }
     sessionStatus();
   }
   function reveal() {
-    if (!session || session.revealed) return;
+    if (!session || session.revealed || session.current.type === "quiz") return;
     var item = session.current, back = document.getElementById("fc-back"), h = "";
     if (item.type === "scenario") {
       var t = byId[item.term_id];
@@ -297,7 +367,7 @@ JS = """
     session.revealed = true;
   }
   function onRate(g) {
-    if (!session || !session.revealed) return;
+    if (!session || !session.revealed || session.current.type === "quiz") return;
     var item = session.current;
     rate(item, g);
     session.done++;
@@ -414,6 +484,18 @@ JS = """
     if (!session) return;
     var tag = (document.activeElement && document.activeElement.tagName) || "";
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    var isQuiz = session.current && session.current.type === "quiz";
+    if (isQuiz) {
+      var k = ev.key.toUpperCase();
+      if (!session.revealed && (k === "A" || k === "B" || k === "C" || k === "D")) {
+        ev.preventDefault(); answerQuiz("ABCD".indexOf(k));
+      } else if (!session.revealed && ev.key >= "1" && ev.key <= "4") {
+        ev.preventDefault(); answerQuiz(parseInt(ev.key, 10) - 1);
+      } else if (session.revealed && (ev.key === " " || ev.key === "Enter")) {
+        ev.preventDefault(); nextCard();
+      }
+      return;
+    }
     if (ev.key === " " && !session.revealed) { ev.preventDefault(); reveal(); }
     else if (session.revealed && ev.key >= "1" && ev.key <= "4") {
       ev.preventDefault(); onRate(parseInt(ev.key, 10));
@@ -426,7 +508,7 @@ JS = """
     return r.json();
   }).then(function (d) {
     data = d;
-    cards = d.terms.concat(d.scenarios);
+    cards = d.terms.concat(d.scenarios).concat(d.quiz || []);
     cards.forEach(function (c) { byId[c.id] = c; });
     document.getElementById("fc-nojs").hidden = true;
     document.getElementById("fc-ui").hidden = false;
@@ -435,6 +517,11 @@ JS = """
     buildCatChips();
     document.getElementById("fc-start").addEventListener("click", start);
     document.getElementById("fc-reveal").addEventListener("click", reveal);
+    document.getElementById("fc-next").addEventListener("click", nextCard);
+    document.getElementById("fc-opts").addEventListener("click", function (ev) {
+      var b = ev.target.closest(".fc-opt");
+      if (b && !b.disabled) answerQuiz(parseInt(b.dataset.pos, 10));
+    });
     document.getElementById("fc-rate-row").addEventListener("click", function (ev) {
       var b = ev.target.closest("[data-rate]");
       if (b) onRate(parseInt(b.dataset.rate, 10));
@@ -467,6 +554,11 @@ def build_body():
         "back just as you're about to forget it. This tool runs both over the full "
         "Mindsgate CISSP glossary: every acronym, definition and study tip, plus original "
         "scenario questions, in standard and reverse directions.</p>"
+        "<p><strong>Exam Practice mode</strong> drills single-best-answer questions in the "
+        "real exam's style — scenario stems with four deliberately confusable options and an "
+        "explanation after every answer. All questions are original Mindsgate material written "
+        "against the same glossary; none are reproduced from ISC2 or any commercial question "
+        "bank. Miss one and the spaced-repetition engine brings it back until it sticks.</p>"
         '<p class="fc-glosslink"><a href="cissp-security-glossary.html">Browse the full CISSP '
         "glossary →</a></p>"
         "</section>"
