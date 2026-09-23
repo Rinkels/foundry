@@ -19,7 +19,13 @@ Run:
 Then:
   python manage.py build_site mindsgate-redesign
 """
+import re
 from html import escape
+
+
+def slug_id(acr):
+    """Stable per-term anchor id — must match term_id() used for the JSON export."""
+    return re.sub(r"[^a-z0-9]+", "-", acr.lower()).strip("-")
 
 SLUG = "cissp-security-glossary"
 TITLE = "CISSP Security Acronyms & Definitions: A Practical Study Glossary"
@@ -403,9 +409,12 @@ CSS = """
 .gl-disclaimer{font-size:.85rem;color:var(--site-muted,#8b93a7);border-top:1px solid var(--site-border,rgba(148,163,199,.14));
   padding-top:14px;margin-top:20px}
 .gl-cat__count{font-size:.85rem;color:var(--site-muted,#8b93a7);font-weight:400}
-.gl-flash{margin:14px 0 0}
+.gl-flash{margin:14px 0 0;display:flex;gap:22px;flex-wrap:wrap}
 .gl-flash a{color:var(--site-gold,#d9b36b);font-weight:600;text-decoration:none;border-bottom:1px solid var(--site-gold,#d9b36b)}
 .gl-flash a:hover{opacity:.85}
+.gl-entry.gl-hit{animation:glHit 2.4s ease}
+@keyframes glHit{0%,60%{background:rgba(217,179,107,.14);box-shadow:inset 3px 0 0 var(--site-gold,#d9b36b)}100%{background:transparent}}
+@media (prefers-reduced-motion:reduce){.gl-entry.gl-hit{animation:none;box-shadow:inset 3px 0 0 var(--site-gold,#d9b36b)}}
 .gl-studying .gl-entry{cursor:pointer}
 .gl-studying .gl-entry__body{display:none}
 .gl-studying .gl-entry.gl-open .gl-entry__body{display:block}
@@ -513,6 +522,32 @@ JS = """
   });
 
   apply();
+
+  // Deep links from the mind map (…#t-<id>): clear filters so the target is
+  // visible, scroll to it, and flash a highlight.
+  function jumpToHash() {
+    var h = location.hash;
+    if (!h || h.indexOf("#t-") !== 0) return;
+    var el = document.getElementById(h.slice(1));
+    if (!el) return;
+    state.q = ""; state.cat = "all"; state.core = false;
+    search.value = "";
+    chips.forEach(function (c) {
+      var on = c.dataset.cat === "all";
+      c.classList.toggle("is-on", on);
+      c.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    coreBtn.classList.remove("is-on");
+    coreBtn.setAttribute("aria-pressed", "false");
+    apply();
+    if (state.study) el.classList.add("gl-open");
+    el.scrollIntoView({ block: "center" });
+    el.classList.remove("gl-hit");
+    void el.offsetWidth; // restart the highlight animation on repeat hits
+    el.classList.add("gl-hit");
+  }
+  window.addEventListener("hashchange", jumpToHash);
+  jumpToHash();
 })();
 </script>
 """
@@ -526,7 +561,7 @@ def entry_html(cat, acr, term, definition, pri, tip):
         tip_html = ('<p class="gl-entry__tip"><strong>Study tip:</strong> '
                     + escape(tip) + "</p>")
     return (
-        '<div class="gl-entry" data-cat="' + cat + '" data-pri="' + pri
+        '<div class="gl-entry" id="t-' + slug_id(acr) + '" data-cat="' + cat + '" data-pri="' + pri
         + '" data-hay="' + hay + '">'
         + '<div class="gl-entry__head">'
         + '<span class="gl-entry__acr">' + escape(acr) + "</span>"
@@ -583,7 +618,8 @@ def build_body():
         "<section>"
         "<h2>Browse the glossary</h2>"
         '<nav class="gl-jump" aria-label="Jump to a category">' + jump + "</nav>"
-        '<p class="gl-flash"><a href="cissp-flashcards.html">Study these terms with flashcards &amp; exam-style practice questions →</a></p>'
+        '<p class="gl-flash"><a href="cissp-flashcards.html">Study these terms with flashcards &amp; exam-style practice questions →</a>'
+        '<a href="cissp-mind-map.html">See the whole syllabus as a mind map →</a></p>'
         '<div class="gl-controls" id="gl-controls" hidden>'
         '<input class="gl-search" id="gl-search" type="search" '
         'placeholder="Search acronyms, terms, definitions\u2026" aria-label="Search the glossary">'
@@ -915,10 +951,25 @@ for i, (cat, q, options, expl) in enumerate(QUIZ, 1):
         "explanation": expl,
     })
 
+# Official CISSP domains (current ISC2 exam outline) mapped onto our category
+# keys — the shared source for glossary tags, flashcard filters and the mind map.
+DOMAINS = [
+    {"number": 1, "key": "risk",    "name": "Security and Risk Management",          "weight": 16},
+    {"number": 2, "key": "data",    "name": "Asset Security",                        "weight": 10},
+    {"number": 3, "key": "crypto",  "name": "Security Architecture and Engineering", "weight": 13},
+    {"number": 4, "key": "network", "name": "Communication and Network Security",    "weight": 13},
+    {"number": 5, "key": "iam",     "name": "Identity and Access Management (IAM)",  "weight": 13},
+    {"number": 6, "key": "assess",  "name": "Security Assessment and Testing",       "weight": 12},
+    {"number": 7, "key": "ops",     "name": "Security Operations",                   "weight": 13},
+    {"number": 8, "key": "cloud",   "name": "Software Development Security",         "weight": 10},
+]
+assert {d["key"] for d in DOMAINS} == set(_cat_labels), "domain keys must match categories"
+
 _data = {
     "version": 1,
     "generated": _dt.now(_tz.utc).isoformat(timespec="seconds"),
     "categories": _cat_labels,
+    "domains": DOMAINS,
     "terms": _json_terms,
     "scenarios": _json_scenarios,
     "quiz": _json_quiz,

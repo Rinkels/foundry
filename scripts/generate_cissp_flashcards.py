@@ -526,6 +526,27 @@ JS = """
       var b = ev.target.closest("[data-rate]");
       if (b) onRate(parseInt(b.dataset.rate, 10));
     });
+    // Deep-link filters from the mind map: ?cat=network[,iam] or ?domain=4[,5]
+    try {
+      var qp = new URLSearchParams(location.search);
+      var want = [];
+      (qp.get("cat") || "").split(",").forEach(function (k) {
+        if (k && data.categories[k]) want.push(k);
+      });
+      (qp.get("domain") || "").split(",").forEach(function (n) {
+        (data.domains || []).forEach(function (dom) {
+          if (String(dom.number) === n) want.push(dom.key);
+        });
+      });
+      if (want.length) {
+        Object.keys(sel.cats).forEach(function (k) { sel.cats[k] = want.indexOf(k) !== -1; });
+        Array.prototype.forEach.call(document.querySelectorAll("#fc-cats .fc-chip"), function (c) {
+          var on = want.indexOf(c.dataset.cat) !== -1;
+          c.classList.toggle("is-on", on);
+          c.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+      }
+    } catch (e) {}
     document.getElementById("fc-export").addEventListener("click", doExport);
     document.getElementById("fc-reset").addEventListener("click", doReset);
     var fileInput = document.getElementById("fc-import-file");
@@ -559,8 +580,9 @@ def build_body():
         "explanation after every answer. All questions are original Mindsgate material written "
         "against the same glossary; none are reproduced from ISC2 or any commercial question "
         "bank. Miss one and the spaced-repetition engine brings it back until it sticks.</p>"
-        '<p class="fc-glosslink"><a href="cissp-security-glossary.html">Browse the full CISSP '
-        "glossary →</a></p>"
+        '<p class="fc-glosslink" style="display:flex;gap:22px;flex-wrap:wrap">'
+        '<a href="cissp-security-glossary.html">Browse the full CISSP glossary →</a>'
+        '<a href="cissp-mind-map.html">See the syllabus mind map →</a></p>'
         "</section>"
         "<section>" + APP_HTML + "</section>"
         "<section>"
