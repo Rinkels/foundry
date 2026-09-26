@@ -439,6 +439,11 @@ CSS = """
 .gl-entry.gl-hit{animation:glHit 2.4s ease}
 @keyframes glHit{0%,60%{background:rgba(217,179,107,.14);box-shadow:inset 3px 0 0 var(--site-gold,#d9b36b)}100%{background:transparent}}
 @media (prefers-reduced-motion:reduce){.gl-entry.gl-hit{animation:none;box-shadow:inset 3px 0 0 var(--site-gold,#d9b36b)}}
+.gl-more{margin:8px 0 0;font-size:.9rem}
+.gl-more summary{cursor:pointer;color:var(--site-gold,#d9b36b);font-weight:600;font-size:.84rem}
+.gl-more summary:hover{opacity:.85}
+.gl-more ul{margin:8px 0 0;padding-left:20px;color:var(--site-muted,#a8b3c9)}
+.gl-more li{margin:3px 0}
 .gl-studying .gl-entry{cursor:pointer}
 .gl-studying .gl-entry__body{display:none}
 .gl-studying .gl-entry.gl-open .gl-entry__body{display:block}
@@ -577,6 +582,61 @@ JS = """
 """
 
 
+# Optional "In depth" expansions for step/level/layer-based terms — the exam
+# loves asking about the phases, so these enumerate them. Rendered as a native
+# <details> block in the glossary (no JS required) and after the answer in
+# flashcards; exported to the shared JSON as `detail`.
+DETAILS = {
+    "PASTA": ["Stage 1 — Define Objectives (business & security goals)",
+              "Stage 2 — Define Technical Scope (attack surface)",
+              "Stage 3 — Application Decomposition (components, data flows, trust boundaries)",
+              "Stage 4 — Threat Analysis (intel-driven threat identification)",
+              "Stage 5 — Vulnerability & Weakness Analysis",
+              "Stage 6 — Attack Modeling & Simulation",
+              "Stage 7 — Risk & Impact Analysis (countermeasures weighted by asset value)"],
+    "STRIDE": ["Spoofing — attacks authentication",
+               "Tampering — attacks integrity",
+               "Repudiation — attacks non-repudiation",
+               "Information disclosure — attacks confidentiality",
+               "Denial of service — attacks availability",
+               "Elevation of privilege — attacks authorization"],
+    "DREAD": ["Damage — how bad is the impact?",
+              "Reproducibility — how reliably does the attack work?",
+              "Exploitability — how much effort/skill to launch?",
+              "Affected users — how many people are hit?",
+              "Discoverability — how easily is the flaw found?"],
+    "SW-CMM": ["Level 1 Initial — ad hoc, heroics",
+               "Level 2 Repeatable — basic project management discipline",
+               "Level 3 Defined — processes documented organization-wide",
+               "Level 4 Managed — processes quantitatively measured",
+               "Level 5 Optimizing — continuous process improvement"],
+    "OSI": ["Layer 1 Physical — cables, signals, hubs",
+            "Layer 2 Data Link — frames, MAC addresses, switches",
+            "Layer 3 Network — packets, IP, routers",
+            "Layer 4 Transport — TCP/UDP, ports, segmentation",
+            "Layer 5 Session — dialog establishment and teardown",
+            "Layer 6 Presentation — formats, compression, encryption",
+            "Layer 7 Application — HTTP, DNS, SMTP and friends"],
+    "TCP/IP": ["Link — OSI layers 1–2", "Internet — OSI layer 3 (IP)",
+               "Transport — OSI layer 4 (TCP/UDP)", "Application — OSI layers 5–7"],
+    "IR": ["1 Detection / Analysis — recognize and triage the incident",
+           "2 Containment — stop the spread before deeper action",
+           "3 Eradication / Remediation — remove the adversary and artifacts",
+           "4 Recovery — restore systems and service",
+           "5 Lessons Learned — feed improvements back into controls"],
+    "SDLC": ["Requirements — what must it do (start security HERE)",
+             "Design — architecture and threat modeling",
+             "Implementation — secure coding",
+             "Testing — SAST/DAST, reviews, UAT",
+             "Deployment / Operations — hardening, monitoring, patching",
+             "Retirement — secure decommissioning and data disposal"],
+    "Rings": ["Ring 0 — kernel: most privileged",
+              "Rings 1–2 — OS services and device drivers",
+              "Ring 3 — user applications: least privileged",
+              "Inner rings service and control outer rings"],
+}
+
+
 def entry_html(cat, acr, term, definition, pri, tip):
     hay = escape((acr + " " + term + " " + definition).lower(), quote=True)
     pri_label = "Core" if pri == "core" else "Extended"
@@ -595,8 +655,18 @@ def entry_html(cat, acr, term, definition, pri, tip):
         + '<div class="gl-entry__body">'
         + '<p class="gl-entry__def">' + escape(definition) + "</p>"
         + tip_html
+        + detail_block(acr)
         + "</div></div>"
     )
+
+
+def detail_block(acr):
+    det = DETAILS.get(acr)
+    if not det:
+        return ""
+    lis = "".join("<li>" + escape(x) + "</li>" for x in det)
+    return ('<details class="gl-more"><summary>In depth — the steps that get tested</summary>'
+            "<ul>" + lis + "</ul></details>")
 
 
 def remember_html(title, lines):
@@ -765,7 +835,8 @@ _cat_labels = {k: label for k, label, _ in CATS}
 _json_terms = [
     {"id": term_id(a), "acronym": a, "full_term": t, "definition": d,
      "category": c, "category_label": _cat_labels[c],
-     "study_tip": tip or "", "priority": ("Core" if p == "core" else "Extended")}
+     "study_tip": tip or "", "priority": ("Core" if p == "core" else "Extended"),
+     **({"detail": DETAILS[a]} if a in DETAILS else {})}
     for c, a, t, d, p, tip in TERMS
 ]
 _json_scenarios = []

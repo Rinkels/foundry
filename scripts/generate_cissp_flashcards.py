@@ -59,6 +59,8 @@ CSS = """
 .fc-back__def{margin:0 0 8px;color:var(--site-text,#dfe4ee)}
 .fc-back__tip{margin:0;font-size:.92rem;color:var(--site-muted,#8b93a7)}
 .fc-back__tip strong{color:var(--site-gold,#d9b36b)}
+.fc-back__detail{margin:10px 0 0;padding-left:20px;font-size:.88rem;color:var(--site-muted,#8b93a7)}
+.fc-back__detail li{margin:2px 0}
 .fc-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
 .fc-rate{flex:1;min-width:110px;text-align:center;background:transparent;color:var(--site-text,#dfe4ee)}
 .fc-rate small{display:block;font-weight:400;font-size:.72rem;color:var(--site-muted,#8b93a7)}
@@ -344,6 +346,12 @@ JS = """
     else { front.className = "fc-front fc-front--small"; front.textContent = item.definition; }
     sessionStatus();
   }
+  function detailHtml(t) {
+    if (!t || !t.detail || !t.detail.length) return "";
+    return '<ul class="fc-back__detail">' + t.detail.map(function (x) {
+      return "<li>" + esc(x) + "</li>";
+    }).join("") + "</ul>";
+  }
   function reveal() {
     if (!session || session.revealed || session.current.type === "quiz") return;
     var item = session.current, back = document.getElementById("fc-back"), h = "";
@@ -351,14 +359,17 @@ JS = """
       var t = byId[item.term_id];
       h = '<p class="fc-back__answer">' + esc(item.answer_acronym) + " — " + esc(item.answer_term) + "</p>" +
           (t ? '<p class="fc-back__def">' + esc(t.definition) + "</p>" : "") +
-          (t && t.study_tip ? '<p class="fc-back__tip"><strong>Study tip:</strong> ' + esc(t.study_tip) + "</p>" : "");
+          (t && t.study_tip ? '<p class="fc-back__tip"><strong>Study tip:</strong> ' + esc(t.study_tip) + "</p>" : "") +
+          detailHtml(t);
     } else if (item.dirNow === "a2d") {
       h = '<p class="fc-back__answer">' + esc(item.full_term) + "</p>" +
           '<p class="fc-back__def">' + esc(item.definition) + "</p>" +
-          (item.study_tip ? '<p class="fc-back__tip"><strong>Study tip:</strong> ' + esc(item.study_tip) + "</p>" : "");
+          (item.study_tip ? '<p class="fc-back__tip"><strong>Study tip:</strong> ' + esc(item.study_tip) + "</p>" : "") +
+          detailHtml(item);
     } else {
       h = '<p class="fc-back__answer">' + esc(item.acronym) + " — " + esc(item.full_term) + "</p>" +
-          (item.study_tip ? '<p class="fc-back__tip"><strong>Study tip:</strong> ' + esc(item.study_tip) + "</p>" : "");
+          (item.study_tip ? '<p class="fc-back__tip"><strong>Study tip:</strong> ' + esc(item.study_tip) + "</p>" : "") +
+          detailHtml(item);
     }
     back.innerHTML = h;
     back.hidden = false;
