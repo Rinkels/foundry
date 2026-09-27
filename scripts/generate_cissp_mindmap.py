@@ -99,7 +99,14 @@ TOPICS = {
                                                   "compartments · silos · segmentations",
                                                   "lattice structure · protection rings"]),
         ]),
-        ("Security models", ["Bell-LaPadula (confidentiality)", "Biba (integrity)", "Clark-Wilson", "Brewer-Nash", "g:Rings"]),
+        ("Security models", [
+            ("a", "Bell-LaPadula (confidentiality)", "cissp-security-models.html#blp"),
+            ("a", "Biba (integrity)", "cissp-security-models.html#biba"),
+            ("a", "Clark-Wilson (transactions)", "cissp-security-models.html#cw"),
+            ("a", "Brewer-Nash (Chinese Wall)", "cissp-security-models.html#bn"),
+            "g:Rings",
+            ("a", "All models compared →", "cissp-security-models.html"),
+        ]),
         ("System security capabilities", ["g:TPM", "g:HSM", "Memory protection", "Trusted execution"]),
         ("Architecture vulnerabilities", ["Single points of failure", "Covert channels", "Emanations"]),
         ("Cloud and distributed architecture", ["g:SaaS", "g:PaaS", "g:IaaS", "Containers", "Microservices",
@@ -213,6 +220,9 @@ def children_html(kids, depth):
             lines = "".join("<div>" + escape(x) + "</div>" for x in k[2])
             parts.append('<li class="mm-noteli"><div class="mm-note"><div class="mm-note__t">'
                          + escape(k[1]) + "</div>" + lines + "</div></li>")
+        elif isinstance(k, tuple) and k[0] == "a":
+            parts.append('<li class="mm-leaf"><a class="mm-term" href="' + k[2] + '">'
+                         + escape(k[1]) + "</a></li>")
         elif isinstance(k, tuple) and k[0] == "s":
             parts.append(branch_html(k[1], k[2], depth + 1))
         else:

@@ -1051,6 +1051,24 @@ QUIZ = [
      "Arranging multiple DIFFERENT security controls in series, so that an asset remains protected when any single control fails, describes which principle?",
      ["Defense in depth", "Zero Trust", "Least privilege", "Separation of duties"],
      "Layered controls in series = defense in depth (related vocabulary: layering, zones, compartments, protection rings). Zero Trust removes implicit network trust, least privilege minimizes rights, and SoD divides duties between people."),
+
+    # --- Security models (deep-dive companion questions) ---------------------
+    ("crypto",
+     "A classified system must prevent users from reading documents above their clearance AND prevent high-level processes from writing into lower-classification files. Which model enforces exactly this?",
+     ["Bell-LaPadula", "Biba", "Clark-Wilson", "Brewer-Nash"],
+     "No read up + no write down protecting CONFIDENTIALITY = Bell-LaPadula. Biba is the integrity mirror image (no read down / no write up); Clark-Wilson uses transactions; Brewer-Nash handles conflicts of interest."),
+    ("crypto",
+     "Under the Biba model, which action is a subject FORBIDDEN to perform?",
+     ["Reading data at a lower integrity level", "Reading data at a higher integrity level", "Writing to a lower integrity level", "Accessing data at its own integrity level"],
+     "Biba protects integrity: no read DOWN (don't consume less-trustworthy data) and no write UP. Reading up and writing down are both allowed — the arrows are Bell-LaPadula's inverted."),
+    ("crypto",
+     "An accounting platform requires that users never modify ledger data directly — every change must pass through certified programs, with duties split across roles. Which model describes this design?",
+     ["Clark-Wilson", "Biba", "Bell-LaPadula", "Take-Grant"],
+     "Subject → Transformation Procedure → Constrained Data Item (the access triple), well-formed transactions and separation of duties = Clark-Wilson. Biba also protects integrity but through levels, not vetted transactions."),
+    ("crypto",
+     "A consultancy's document system automatically blocks an analyst from opening Bank B's files once they have accessed files from competing Bank A. Which model is at work?",
+     ["Brewer-Nash", "Bell-LaPadula", "Graham-Denning", "Noninterference"],
+     "Access decided dynamically by prior history within conflict-of-interest classes is Brewer-Nash (the Chinese Wall). It is the only classic model whose permissions change based on what the user already touched."),
 ]
 
 _json_quiz = []
