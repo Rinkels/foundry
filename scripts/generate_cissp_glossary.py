@@ -774,7 +774,8 @@ def build_body():
         "<h2>Browse the glossary</h2>"
         '<nav class="gl-jump" aria-label="Jump to a category">' + jump + "</nav>"
         '<p class="gl-flash"><a href="cissp-flashcards.html">Study these terms with flashcards &amp; exam-style practice questions →</a>'
-        '<a href="cissp-mind-map.html">See the whole syllabus as a mind map →</a></p>'
+        '<a href="cissp-mind-map.html">See the whole syllabus as a mind map →</a>'
+        '<a href="cissp-score-tracker.html">Track your chapter scores →</a></p>'
         '<div class="gl-controls" id="gl-controls" hidden>'
         '<input class="gl-search" id="gl-search" type="search" '
         'placeholder="Search acronyms, terms, definitions\u2026" aria-label="Search the glossary">'

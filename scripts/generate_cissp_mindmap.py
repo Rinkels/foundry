@@ -452,7 +452,8 @@ def build_body():
         "full definition in the glossary; every domain links straight into domain-filtered "
         "flashcards. Based on the current ISC2 CISSP Exam Outline, independently summarized.</p>"
         '<p class="mm-links"><a href="cissp-security-glossary.html">CISSP Glossary →</a>'
-        '<a href="cissp-flashcards.html">CISSP Flashcards →</a></p>'
+        '<a href="cissp-flashcards.html">CISSP Flashcards →</a>'
+        '<a href="cissp-score-tracker.html">Chapter Score Tracker →</a></p>'
         "</section>"
         '<section><div id="mm-app">'
         '<div class="mm-controls" id="mm-controls" hidden>'

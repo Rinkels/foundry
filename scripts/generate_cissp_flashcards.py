@@ -593,7 +593,8 @@ def build_body():
         "bank. Miss one and the spaced-repetition engine brings it back until it sticks.</p>"
         '<p class="fc-glosslink" style="display:flex;gap:22px;flex-wrap:wrap">'
         '<a href="cissp-security-glossary.html">Browse the full CISSP glossary →</a>'
-        '<a href="cissp-mind-map.html">See the syllabus mind map →</a></p>'
+        '<a href="cissp-mind-map.html">See the syllabus mind map →</a>'
+        '<a href="cissp-score-tracker.html">Chapter score tracker →</a></p>'
         "</section>"
         "<section>" + APP_HTML + "</section>"
         "<section>"
