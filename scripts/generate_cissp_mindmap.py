@@ -122,7 +122,10 @@ TOPICS = {
                                              "RSA/ECC = asymmetric = keys & signatures",
                                              "SHA = hashing = integrity"]),
         ]),
-        ("Physical and site security", ["Perimeter and zones", "Environmental controls", "Fire suppression", "Motion detection"]),
+        ("Physical and site security", ["g:CPTED", "g:CPA", "g:Cable plant", "g:Sprinklers", "g:6 Ds",
+                                        "Perimeter and zones", "Environmental controls", "Motion detection",
+            ("!", "Six Ds in order", ["Deter → Deny → Detect → Delay → Determine → Decide"]),
+        ]),
         ("Information-system lifecycle", ["Acquire → implement → operate → retire"]),
     ],
     4: [
