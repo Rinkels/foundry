@@ -129,7 +129,7 @@ TOPICS = {
         ("Information-system lifecycle", ["Acquire → implement → operate → retire"]),
     ],
     4: [
-        ("OSI and TCP/IP models", ["g:OSI", "g:TCP/IP", "Encapsulation", "IPv4 and IPv6"]),
+        ("OSI and TCP/IP models", ["g:OSI", "g:TCP/IP", "Encapsulation", "IPv4 and IPv6", "g:RFC 1918", "g:APIPA", "g:NTP"]),
         ("Secure network protocols", ["g:TLS", "g:SSL", "g:SSH", "g:DNSSEC", "g:SNMP", "g:DHCP", "g:DNS",
             ("s", "IPsec", ["g:IPSec", "AH — authentication/integrity", "ESP — encryption/confidentiality", "IKE — key exchange"]),
             ("!", "AH vs ESP", ["AH = authentication and integrity only",
@@ -144,7 +144,11 @@ TOPICS = {
         ("Network monitoring and defense", ["g:IDS", "g:IPS", "g:IDPS", "g:WAF", "g:NGFW", "g:NAC", "g:QoS",
             ("s", "Layer-2 attacks", ["g:ARP", "g:MAC spoofing", "MAC flooding (CAM overflow)"]),
         ]),
-        ("Secure communication channels", ["g:VPN", "Voice and collaboration", "Remote access"]),
+        ("Secure communication channels", ["g:VPN", "g:EAP", "g:PAP", "g:CHAP", "g:PVC", "Voice and collaboration",
+            ("!", "PPP authentication", ["PAP = plaintext (no protection)",
+                                         "CHAP = challenge/response, password never sent",
+                                         "EAP = extensible framework (40+ methods)"]),
+        ]),
     ],
     5: [
         ("Access control fundamentals", ["Physical and logical access", "Identification", "Authentication",
@@ -159,7 +163,9 @@ TOPICS = {
         ("Privileged access", ["g:PAM", "g:JIT", "Break-glass accounts", "Service accounts"]),
         ("Authorization models", ["g:RBAC", "g:ABAC", "g:MAC", "g:DAC", "Rule-based"]),
         ("Provisioning and lifecycle", ["g:SCIM", "Joiner / mover / leaver", "Access reviews"]),
-        ("Authentication systems", ["g:LDAP", "Kerberos", "g:RADIUS", "g:TACACS+"]),
+        ("Authentication systems", ["g:LDAP", "g:Kerberos", "g:RADIUS", "g:TACACS+",
+            ("s", "Credential attacks", ["g:PtH", "Pass the ticket / golden ticket (Kerberos)", "Rainbow tables (offline)"]),
+        ]),
     ],
     6: [
         ("Assessment strategies", ["Internal assessment", "External assessment", "Third-party assessment"]),
