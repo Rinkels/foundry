@@ -1,5 +1,7 @@
 import ftplib
+import os
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Optional
 from django.conf import settings
@@ -17,6 +19,8 @@ class Deployer:
             return self._deploy_ftp(target)
         elif target.type == DeploymentTarget.TYPE_LOCAL:
             return self._deploy_local(target)
+        elif target.type == DeploymentTarget.TYPE_CF_PAGES:
+            return self._deploy_cf_pages(target)
         else:
             raise ValueError(f"Unsupported deployment type: {target.type}")
 
@@ -81,6 +85,43 @@ class Deployer:
 
                     with open(path, "rb") as f:
                         ftp.storbinary(f"STOR {remote_name}", f)
+
+    def _deploy_cf_pages(self, target: DeploymentTarget):
+        """Deploy via `npx wrangler pages deploy`. Auth comes from the host's
+        wrangler OAuth login or a CLOUDFLARE_API_TOKEN env var (inherited)."""
+        site_dir = self.base_output_dir / target.site.slug
+        if not site_dir.exists():
+            raise FileNotFoundError(f"Site output not found: {site_dir}")
+        if not target.cf_project_name:
+            raise ValueError("cf_project_name is required for Cloudflare Pages deployment.")
+
+        # cwd = the site output dir: wrangler reads .env from its cwd, and
+        # foundry's own .env holds a DNS-only token that can't deploy Pages.
+        cmd = (f'npx wrangler pages deploy . '
+               f'--project-name {target.cf_project_name} --branch main --commit-dirty=true')
+
+        def run(env):
+            return subprocess.run(cmd, shell=True, capture_output=True, text=True,
+                                  encoding='utf-8', errors='replace',
+                                  timeout=600, env=env, cwd=str(site_dir))
+
+        result = run(None)  # inherit env: uses CLOUDFLARE_API_TOKEN if set
+        combined = (result.stdout or "") + (result.stderr or "")
+        if result.returncode != 0 and 'Authentication error' in combined \
+                and os.environ.get('CLOUDFLARE_API_TOKEN'):
+            # The env token may lack Pages permissions (e.g. DNS-only token);
+            # retry with the host's wrangler OAuth login instead.
+            env = os.environ.copy()
+            env.pop('CLOUDFLARE_API_TOKEN', None)
+            result = run(env)
+
+        stdout = result.stdout or ""
+        stderr = result.stderr or ""
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"wrangler deploy failed (exit {result.returncode}):\n"
+                f"{stdout[-1000:]}\n{stderr[-1000:]}")
+        return stdout.strip().splitlines()[-1] if stdout.strip() else "deployed"
 
     def _deploy_local(self, target: DeploymentTarget):
         site_dir = self.base_output_dir / target.site.slug

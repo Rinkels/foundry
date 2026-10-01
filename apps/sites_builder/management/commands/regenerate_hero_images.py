@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.sites_builder.models import Site
-from apps.sites_builder.services.hero_image_regenerator import regenerate_site_hero_images
+from ...models import Site
+from ...services.hero_image_regenerator import regenerate_site_hero_images
 
 
 class Command(BaseCommand):

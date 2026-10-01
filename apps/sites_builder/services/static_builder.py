@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List
 from django.template.loader import render_to_string
 from django.conf import settings
+from django.utils.html import escape
 from django.utils.text import slugify
 from datetime import datetime
 from shutil import copyfile
@@ -20,6 +21,7 @@ from ..models import Site, ArticleCornerstoneLink, EvergreenArticle
 from .seo_files import write_seo_files
 from .image_optimizer import optimize_images_dir
 from .content_styler import cardify_subsections
+from .reader_feedback import build_reader_feedback_context
 
 try:
     import markdown as md
@@ -34,13 +36,32 @@ _ABS_IMG_RE = re.compile(
 
 THEME_CSS_MAP = {
     "neon_glass": "neon_glass.css",
-    "minimal": "minimal.css",
     "startup": "startup.css",
     "aurora": "aurora.css",
     "verdant": "verdant.css",
+    "bauhaus": "bauhaus.css",
     "editorial": "editorial.css",
     "mindsgate": "mindsgate.css",
+    "humainx": "humainx.css",
 }
+
+THEME_FAVICON_MAP = {
+    "mindsgate": "mindsgate-favicon.svg",
+    "humainx": "../HumainX.svg",
+}
+
+THEME_CONTENT_ASSET_MAP = {
+    "mindsgate": ("neo-cottage-revolution-og.png",),
+    "humainx": ("neo-cottage-revolution-og.png",),
+}
+
+PAGE_TEMPLATE_MAP = {
+    "humainx": "sites_builder/sites/default/humainx.html",
+    "humainx_home": "sites_builder/sites/default/humainx_home.html",
+    "neo_cottage": "sites_builder/sites/default/neo_cottage.html",
+}
+
+ARTICLE_READER_RESPONSE_MARKER = "<!-- reader-response -->"
 
 
 class StaticBuilder:
@@ -53,6 +74,137 @@ class StaticBuilder:
         if base_output_dir is None:
             base_output_dir = Path(settings.BASE_DIR) / "output" / "sites"
         self.base_output_dir = base_output_dir
+
+    def _inject_theme_favicon(self, html: str, theme: str, rel_root: str = "") -> str:
+        """Add the configured theme favicon to generated and locked HTML."""
+        if theme not in THEME_FAVICON_MAP or re.search(
+            r'<link\b[^>]*\brel=["\'][^"\']*\bicon\b', html, re.IGNORECASE
+        ):
+            return html
+        favicon = (
+            f'  <link rel="icon" type="image/svg+xml" '
+            f'href="{rel_root}assets/images/favicon.svg">\n'
+        )
+        return re.sub(r"</head>", f"{favicon}</head>", html, count=1, flags=re.IGNORECASE)
+
+    def _copy_theme_favicon(self, site_dir: Path, theme: str) -> None:
+        source_name = THEME_FAVICON_MAP.get(theme)
+        if not source_name:
+            return
+        source = Path(settings.BASE_DIR) / "static" / "themes" / source_name
+        if not source.is_file():
+            raise FileNotFoundError(f"Theme favicon not found: {source}")
+        destination_dir = site_dir / "assets" / "images"
+        destination_dir.mkdir(parents=True, exist_ok=True)
+        copyfile(source, destination_dir / "favicon.svg")
+        jpeg_source = source.with_suffix(".jpg")
+        if jpeg_source.is_file():
+            copyfile(jpeg_source, destination_dir / "favicon.jpg")
+
+    def _copy_theme_content_assets(self, site_dir: Path, theme: str) -> None:
+        """Copy curated, theme-owned editorial assets into the static build."""
+        source_dir = Path(settings.BASE_DIR) / "static" / "themes"
+        destination_dir = site_dir / "assets" / "images"
+        for source_name in THEME_CONTENT_ASSET_MAP.get(theme, ()):
+            source = source_dir / source_name
+            if not source.is_file():
+                raise FileNotFoundError(f"Theme content asset not found: {source}")
+            destination_dir.mkdir(parents=True, exist_ok=True)
+            copyfile(source, destination_dir / source_name)
+
+    @staticmethod
+    def _normalize_article_body_markup(body: str) -> str:
+        """Keep only article-body markup and prevent nested document headings."""
+        body = (body or "").strip()
+        document_body = re.search(
+            r"<body\b[^>]*>(.*?)</body>", body, flags=re.IGNORECASE | re.DOTALL
+        )
+        if document_body:
+            body = document_body.group(1).strip()
+        return re.sub(
+            r"<h1\b[^>]*>.*?</h1>",
+            "",
+            body,
+            count=1,
+            flags=re.IGNORECASE | re.DOTALL,
+        ).strip()
+
+    @staticmethod
+    def _build_article_schema(
+        site: Site,
+        article: EvergreenArticle,
+        canonical_url: str,
+        image_url: str,
+        author_name: str,
+        author_url: str,
+        modified_at,
+    ) -> str:
+        if not canonical_url:
+            return ""
+
+        author_type = (
+            "Organization"
+            if author_name.casefold() in {site.name.casefold(), "humainx"}
+            else "Person"
+        )
+        author = {"@type": author_type, "name": author_name}
+        if author_url:
+            author["url"] = author_url
+
+        article_node = {
+            "@type": "Article",
+            "@id": f"{canonical_url}#article",
+            "headline": article.title,
+            "description": article.meta_description or article.excerpt,
+            "mainEntityOfPage": {"@type": "WebPage", "@id": canonical_url},
+            "author": author,
+            "publisher": {
+                "@type": "Organization",
+                "name": site.name,
+                "url": site.base_url,
+            },
+        }
+        if article.published_at:
+            article_node["datePublished"] = article.published_at.isoformat()
+        if modified_at:
+            article_node["dateModified"] = modified_at.isoformat()
+        if image_url:
+            article_node["image"] = [image_url]
+        if article.series:
+            article_node["isPartOf"] = {
+                "@type": "CreativeWorkSeries",
+                "name": article.series,
+                "url": f"{site.base_url}/{slugify(article.series)}.html",
+            }
+
+        breadcrumb = {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {
+                    "@type": "ListItem",
+                    "position": 1,
+                    "name": site.name,
+                    "item": f"{site.base_url}/",
+                },
+                {
+                    "@type": "ListItem",
+                    "position": 2,
+                    "name": "Insights",
+                    "item": f"{site.base_url}/insights.html",
+                },
+                {
+                    "@type": "ListItem",
+                    "position": 3,
+                    "name": article.title,
+                    "item": canonical_url,
+                },
+            ],
+        }
+        return json.dumps(
+            {"@context": "https://schema.org", "@graph": [article_node, breadcrumb]},
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
 
     def _normalize_landing_href(
         self, site: Site, href: str, known_slugs: set[str], fallback_text: str = ""
@@ -264,15 +416,13 @@ class StaticBuilder:
         }
 
     def _render_article_html(self, site: Site, article: EvergreenArticle, build_id: str) -> str:
-        """
-        Render a standalone static HTML page for an article.
-        Includes automatic Cornerstone/Supporting linking sections using ArticleCornerstoneLink.
-        """
-        title = (article.meta_title or article.title or "").strip()
-        meta_desc = (article.meta_description or article.excerpt or "").strip()
-
+        """Render an Insight using the shared article system and optional series metadata."""
         body = (article.body_md or "").strip()
-        if md is not None and body:
+        if body.startswith("<"):
+            # Curated article source may already be semantic HTML. Passing it
+            # through Markdown can subtly alter component markup and spacing.
+            body_html = body
+        elif md is not None and body:
             try:
                 body_html = md.markdown(body, extensions=["extra", "tables", "toc"])
             except Exception:
@@ -280,10 +430,6 @@ class StaticBuilder:
         else:
             body_html = body
 
-        # ----------------------------
-        # Cluster linking via join table
-        # ----------------------------
-        # Supporting -> cornerstones (many)
         cornerstone_links = (
             ArticleCornerstoneLink.objects
             .filter(site=site, supporting=article, cornerstone__status=EvergreenArticle.STATUS_PUBLISHED)
@@ -291,7 +437,6 @@ class StaticBuilder:
             .order_by("-is_primary", "cornerstone__title")
         )
 
-        # Cornerstone -> supporting (many)
         supporting_links = []
         if getattr(article, "is_cornerstone", False):
             supporting_links = (
@@ -301,125 +446,124 @@ class StaticBuilder:
                 .order_by("-is_primary", "-supporting__published_at", "supporting__title")
             )
 
-        # We are inside /insights/<slug>.html so sibling links are just "<other>.html"
-        def sib_url(slug: str) -> str:
-            return f"{slug}.html"
+        body_html = self._normalize_article_body_markup(body_html)
+        article_body_before_feedback = body_html
+        article_body_after_feedback = ""
+        if ARTICLE_READER_RESPONSE_MARKER in body_html:
+            article_body_before_feedback, article_body_after_feedback = body_html.split(
+                ARTICLE_READER_RESPONSE_MARKER, 1
+            )
 
-        cornerstone_box = ""
-        if cornerstone_links:
-            items = []
-            for link in cornerstone_links:
-                cs = link.cornerstone
-                label = (cs.title or "").strip() or "Cornerstone"
-                desc = (link.anchor_text or "").strip()
-
-                if desc:
-                    items.append(
-                        f'<li><a href="{sib_url(cs.slug)}">{label}</a>'
-                        f'<div class="text-soft small" style="margin-top:4px;">{desc}</div></li>'
-                    )
-                else:
-                    items.append(f'<li><a href="{sib_url(cs.slug)}">{label}</a></li>')
-            cornerstone_box = f"""
-              <div class="neon-glass-card p-3" style="margin-bottom:14px;">
-                <div class="text-soft small" style="margin-bottom:6px;"><b>Part of:</b></div>
-                <ul style="margin:0; padding-left:18px;">{''.join(items)}</ul>
-              </div>
-            """
-
-        supporting_section = ""
-        if supporting_links:
-            items = []
-            for link in supporting_links:
-                sup = link.supporting
-                anchor = (link.anchor_text or sup.title).strip()
-                items.append(f'<li><a href="{sib_url(sup.slug)}">{anchor}</a></li>')
-            supporting_section = f"""
-              <hr style="border-color: rgba(255,255,255,.10); margin: 22px 0;">
-              <h3>Supporting articles</h3>
-              <ul style="padding-left:18px;">{''.join(items)}</ul>
-            """
-
-        body_html = re.sub(r"^\s*<h1[^>]*>.*?</h1>\s*", "", body_html, flags=re.IGNORECASE | re.DOTALL)
         theme = (getattr(site, "theme_css", None) or "aurora").strip()
-
-        # ----------------------------
-        # HTML wrapper
-        # ----------------------------
-        theme = (getattr(site, "theme_css", None) or "aurora").strip()
-
-        # relative paths because articles live in /insights/
-        rel_root = "../"
-
         latest_articles = (
             EvergreenArticle.objects
             .filter(site=site, status=EvergreenArticle.STATUS_PUBLISHED)
             .order_by("-published_at", "-updated_at")[:5]
         )
+        canonical_url = article.canonical_url
+        if not canonical_url and site.base_url:
+            canonical_url = f"{site.base_url}/insights/{article.slug}.html"
 
-        ctx = {
+        hero_url = (article.hero_image_url or "").strip()
+        article_hero_page_url = hero_url
+        article_hero_meta_url = hero_url
+        article_hero_webp_page_url = ""
+        parsed_hero_url = urlparse(hero_url)
+        if hero_url and not parsed_hero_url.scheme and not parsed_hero_url.netloc:
+            asset_path = hero_url.lstrip("/")
+            article_hero_page_url = (
+                hero_url if hero_url.startswith("../") else f"../{asset_path}"
+            )
+            if site.base_url:
+                article_hero_meta_url = (
+                    article_hero_page_url
+                    if asset_path.startswith("../")
+                    else f"{site.base_url}/{asset_path}"
+                )
+            else:
+                article_hero_meta_url = article_hero_page_url
+
+            local_asset = self.base_output_dir / site.slug / asset_path
+            if asset_path.startswith("../") or not local_asset.is_file():
+                # A missing optional hero must not create a broken link in every
+                # generated article build. Editors can restore it by supplying
+                # the asset (or an absolute URL).
+                article_hero_page_url = ""
+                article_hero_meta_url = ""
+            else:
+                webp_asset = local_asset.with_suffix(".webp")
+                if webp_asset.is_file():
+                    webp_path = Path(asset_path).with_suffix(".webp").as_posix()
+                    article_hero_webp_page_url = f"../{webp_path}"
+
+        article_modified_at = (
+            article.content_updated_at or article.updated_at or article.published_at
+        )
+        article_author = {
+            "name": (article.author_name or site.name).strip(),
+            "url": (article.author_url or site.base_url).strip(),
+        }
+        article_schema_json = self._build_article_schema(
+            site=site,
+            article=article,
+            canonical_url=canonical_url,
+            image_url=article_hero_meta_url,
+            author_name=article_author["name"],
+            author_url=article_author["url"],
+            modified_at=article_modified_at,
+        )
+
+        is_humainx = (article.series or "").casefold() == "humainx"
+        newsletter = site.newsletter_config or {}
+        configured_series = str(newsletter.get("series") or "").strip()
+        series_matches = not configured_series or (
+            configured_series.casefold() == (article.series or "").casefold()
+        )
+        article_follow = None
+        if (
+            article.series
+            and series_matches
+            and newsletter.get("enabled")
+            and str(newsletter.get("provider") or "").casefold() == "buttondown"
+            and newsletter.get("form_action")
+        ):
+            article_follow = {
+                "anchor": str(newsletter.get("article_anchor") or "").strip()
+                or f"follow-{slugify(article.series)}",
+                "label": str(newsletter.get("article_link_label") or "").strip()
+                or f"Follow {article.series}",
+                "eyebrow": str(newsletter.get("section_eyebrow") or "").strip()
+                or "Follow the exploration",
+                "description": str(newsletter.get("section_description") or "").strip(),
+            }
+
+        reader_feedback = build_reader_feedback_context(
+            article, site.reader_feedback_config
+        )
+
+        context = {
             "site": site,
             "build_id": build_id,
             "theme": theme,
-            "rel_root": rel_root,
+            "rel_root": "../",
             "article": article,
+            "article_body_before_feedback": article_body_before_feedback,
+            "article_body_after_feedback": article_body_after_feedback,
+            "canonical_url": canonical_url,
+            "article_hero_page_url": article_hero_page_url,
+            "article_hero_meta_url": article_hero_meta_url,
+            "article_hero_webp_page_url": article_hero_webp_page_url,
+            "article_modified_at": article_modified_at,
+            "article_author": article_author,
+            "article_schema_json": article_schema_json,
+            "cornerstone_links": cornerstone_links,
+            "supporting_links": supporting_links,
             "latest_articles": latest_articles,
+            "is_humainx": is_humainx,
+            "article_follow": article_follow,
+            "reader_feedback": reader_feedback,
         }
-
-        header_html = render_to_string(
-            "sites_builder/sites/default/partials/header.html",
-            ctx
-        )
-
-        footer_html = render_to_string(
-            "sites_builder/sites/default/partials/footer.html",
-            ctx
-        )
-        html = f"""<!doctype html>
-        <html lang="en" class="theme-{theme}">
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width,initial-scale=1">
-          <title>{title}</title>
-          {"<meta name='description' content='" + meta_desc.replace('"', "&quot;") + "'>" if meta_desc else ""}
-          {"<link rel='canonical' href='" + (article.canonical_url or '').replace('"', "%22") + "'>" if getattr(article, "canonical_url", "") else ""}
-          <link rel="stylesheet" href="{rel_root}assets/css/landing.css?v={build_id}">
-          <link rel="stylesheet" href="{rel_root}assets/css/site.css?v={build_id}">
-        </head>
-
-        <body class="theme-{theme} article-page"; display: flex>
-          {header_html}
-
-          <main id="article-main"; flex: 1 0 auto; class="container" style="max-width:1100px; margin:0 auto; padding:18px 16px 48px;">
-            <div class="article-shell">
-              <div class="neon-glass-card p-4">
-
-                <div class="text-soft small" style="margin-bottom:10px;">
-                  <a href="{rel_root}insights.html" class="text-soft">← Back to Insights</a>
-                  <a href="https://www.mindsgate.com" class="text-soft" style="margin-left:12px;">• Mindsgate.com</a>
-                </div>
-
-                <h1 style="margin-bottom:10px;">{article.title}</h1>
-                {"<div class='text-soft' style='margin-bottom:14px;'>" + article.excerpt + "</div>" if article.excerpt else ""}
-
-                <hr style="border-color: rgba(255,255,255,.10); margin: 16px 0;">
-
-                <div class="article-body">
-                  {cornerstone_box}
-                  {body_html}
-                  {supporting_section}
-                </div>
-
-              </div>
-            </div>
-          </main>
-
-          {footer_html}
-        </body>
-        </html>
-        """
-
-        return html
+        return render_to_string("sites_builder/sites/default/article.html", context)
 
     def _apply_theme_classes(self, html: str, theme: str) -> str:
         """
@@ -483,6 +627,39 @@ class StaticBuilder:
         cards = []
 
         theme = (getattr(site, "theme_css", None) or "aurora").strip()
+        canonical_url = f"{site.base_url}/insights.html" if site.base_url else ""
+        title = f"{site.name} | Insights"
+        description = (
+            "Insights from Mindsgate on AI, autonomous systems, software delivery, "
+            "business architecture, and the future of work."
+        )
+        insights_schema = json.dumps(
+            {
+                "@context": "https://schema.org",
+                "@type": "CollectionPage",
+                "name": title,
+                "description": description,
+                "url": canonical_url,
+                "mainEntity": {
+                    "@type": "ItemList",
+                    "itemListElement": [
+                        {
+                            "@type": "ListItem",
+                            "position": position,
+                            "name": article.title,
+                            "url": (
+                                f"{site.base_url}/insights/{article.slug}.html"
+                                if site.base_url
+                                else f"insights/{article.slug}.html"
+                            ),
+                        }
+                        for position, article in enumerate(articles, start=1)
+                    ],
+                },
+            },
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).replace("</", "<\\/")
 
         latest_articles = (
             EvergreenArticle.objects
@@ -512,12 +689,18 @@ class StaticBuilder:
             slug = a.slug
             url = f"insights/{slug}.html"
             excerpt = (a.excerpt or "").strip()
+            feature_class = " humainx-insight-feature" if (a.series or "").casefold() == "humainx" else ""
+            published = a.published_at.strftime("%B %Y") if a.published_at else ""
+            metadata = f"{a.editorial_label} · {a.reading_minutes} min read"
+            if published:
+                metadata += f" · {published}"
             cards.append(f"""
-              <div class="neon-glass-card p-4 mb-3">
-                <h3 class="mb-2"><a href="{url}" style="text-decoration:none;">{a.title}</a></h3>
-                <div class="text-soft small">{excerpt}</div>
+              <div class="neon-glass-card p-4 mb-3{feature_class}">
+                <div class="insight-card__meta">{escape(metadata)}</div>
+                <h3 class="mb-2"><a href="{escape(url)}" style="text-decoration:none;">{escape(a.title)}</a></h3>
+                <div class="text-soft small">{escape(excerpt)}</div>
                 <div class="mt-3">
-                  <a class="btn-glass" href="{url}">Read</a>
+                  <a class="btn-glass" href="{escape(url)}">Read</a>
                 </div>
               </div>
             """)
@@ -528,17 +711,23 @@ class StaticBuilder:
           </div>
         """
 
-        # Hero image candidates (prefer webp if present)
-        hero_webp = "assets/images/hero-insights.webp"
-        hero_png = "assets/images/hero-insights.png"
-        hero_jpg = "assets/images/hero-insights.jpg"
-
         return f"""<!doctype html>
     <html lang="en" class="theme-{theme}">
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
-      <title>{site.name} | Insights</title>
+      <title>{escape(title)}</title>
+      <meta name="description" content="{escape(description)}">
+      <meta name="robots" content="index,follow">
+      {f'<link rel="canonical" href="{escape(canonical_url)}">' if canonical_url else ''}
+      <meta property="og:type" content="website">
+      <meta property="og:title" content="{escape(title)}">
+      <meta property="og:description" content="{escape(description)}">
+      {f'<meta property="og:url" content="{escape(canonical_url)}">' if canonical_url else ''}
+      <meta name="twitter:card" content="summary">
+      <meta name="twitter:title" content="{escape(title)}">
+      <meta name="twitter:description" content="{escape(description)}">
+      <script type="application/ld+json">{insights_schema}</script>
       <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
       <link rel="stylesheet" href="assets/css/landing.css?v={build_id}">
       <link rel="stylesheet" href="assets/css/site.css?v={build_id}">
@@ -577,6 +766,75 @@ class StaticBuilder:
             "links": links,
         }
         (site_dir / "sitelinks.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
+
+    def _write_article_redirects(
+        self, site_dir: Path, site: Site, articles: list[EvergreenArticle]
+    ) -> None:
+        """Write Apache 301 rules plus crawl-safe HTML fallbacks for old slugs."""
+        redirect_rules = []
+        insights_dir = site_dir / "insights"
+        for article in articles:
+            current_slug = (article.slug or slugify(article.title)).strip()
+            for raw_slug in article.legacy_slugs or []:
+                legacy_slug = slugify(str(raw_slug))
+                if not legacy_slug or legacy_slug == current_slug:
+                    continue
+
+                source_path = f"/insights/{legacy_slug}.html"
+                destination_path = f"/insights/{current_slug}.html"
+                canonical_url = (
+                    f"{site.base_url}{destination_path}"
+                    if site.base_url
+                    else destination_path
+                )
+                redirect_rules.append(
+                    f"Redirect 301 {source_path} {canonical_url}"
+                )
+
+                relative_target = f"{current_slug}.html"
+                fallback_html = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Moved: {escape(article.title)}</title>
+  <meta name="robots" content="noindex,follow">
+  <link rel="canonical" href="{escape(canonical_url)}">
+  <meta http-equiv="refresh" content="0;url={escape(relative_target)}">
+  <script>window.location.replace({json.dumps(relative_target)});</script>
+</head>
+<body>
+  <p>This article has moved to <a href="{escape(relative_target)}">{escape(article.title)}</a>.</p>
+</body>
+</html>
+"""
+                (insights_dir / f"{legacy_slug}.html").write_text(
+                    fallback_html, encoding="utf-8"
+                )
+
+        htaccess = site_dir / ".htaccess"
+        marker_pattern = re.compile(
+            r"(?:^|\n)# BEGIN FOUNDRY REDIRECTS\n.*?"
+            r"# END FOUNDRY REDIRECTS\n?",
+            flags=re.DOTALL,
+        )
+        existing_rules = (
+            htaccess.read_text(encoding="utf-8", errors="ignore")
+            if htaccess.is_file()
+            else ""
+        )
+        preserved_rules = marker_pattern.sub("\n", existing_rules).strip()
+        sections = [preserved_rules] if preserved_rules else []
+        if redirect_rules:
+            unique_rules = list(dict.fromkeys(redirect_rules))
+            sections.append(
+                "# BEGIN FOUNDRY REDIRECTS\n"
+                + "\n".join(unique_rules)
+                + "\n# END FOUNDRY REDIRECTS"
+            )
+        if sections:
+            htaccess.write_text("\n\n".join(sections) + "\n", encoding="utf-8")
+        elif htaccess.is_file():
+            htaccess.unlink()
 
     def _localize_absolute_assets(self, html: str, site_dir: Path, cache: dict) -> str:
         """Make the built page self-contained: download any absolute http(s) image
@@ -637,6 +895,10 @@ class StaticBuilder:
             .order_by("-published_at", "-updated_at")[:3]
         )
         theme = (getattr(site, "theme_css", None) or "aurora").strip()
+        self._copy_theme_content_assets(site_dir, theme)
+        # Create modern-format siblings before rendering so article templates can
+        # emit a <picture> source on the first build, not only subsequent builds.
+        optimize_images_dir(site_dir / "assets" / "images")
         for page in pages:
             parent = page.parent
             children = list(page.children.all().order_by("nav_order", "title", "id"))
@@ -661,6 +923,7 @@ class StaticBuilder:
                 styled_html = self._apply_theme_classes(styled_html, theme)  # ✅ add this
                 styled_html = self._relativize_root_internal_links(site, styled_html)
                 styled_html = self._localize_absolute_assets(styled_html, site_dir, asset_cache)
+                styled_html = self._inject_theme_favicon(styled_html, theme)
                 out_path.write_text(styled_html, encoding="utf-8")
             else:
                 context = {
@@ -673,7 +936,10 @@ class StaticBuilder:
                     "theme": theme,  # ✅ add this
                 }
 
-                if getattr(page, "page_type", "article") == "landing":
+                template_name = PAGE_TEMPLATE_MAP.get(getattr(page, "template_variant", ""))
+                if template_name:
+                    html = render_to_string(template_name, context)
+                elif getattr(page, "page_type", "article") == "landing":
                     # Composed marketing layout — section blocks, no cardify.
                     page.landing_sections = self._normalize_landing_section_links(
                         site, page.landing_sections
@@ -685,6 +951,7 @@ class StaticBuilder:
                     html = cardify_subsections(html)
                 html = self._relativize_root_internal_links(site, html)
                 html = self._localize_absolute_assets(html, site_dir, asset_cache)
+                html = self._inject_theme_favicon(html, theme)
                 out_path.write_text(html, encoding="utf-8")
 
             sitelinks.append({
@@ -711,6 +978,7 @@ class StaticBuilder:
             html = self._render_article_html(site=site, article=a, build_id=build_id)
             html = cardify_subsections(html)
             html = self._relativize_root_internal_links(site, html, prefix="../")
+            html = self._inject_theme_favicon(html, theme, rel_root="../")
             out_path.write_text(html, encoding="utf-8")
 
             sitelinks.append({
@@ -719,13 +987,16 @@ class StaticBuilder:
                 "type": "evergreen_article",
             })
 
+        self._write_article_redirects(site_dir, site, list(articles))
+
         # Build insights.html auto blog-index — UNLESS the site owns a deliberate
         # landing page at that slug (then that page wins; don't clobber it).
         has_insights_landing = site.pages.filter(
             slug="insights", page_type="landing"
         ).exists()
-        if not has_insights_landing:
+        if not has_insights_landing and articles.exists():
             insights_index = self._render_insights_index(site=site, articles=list(articles), build_id=build_id)
+            insights_index = self._inject_theme_favicon(insights_index, theme)
             (site_dir / "insights.html").write_text(insights_index, encoding="utf-8")
 
             # Add to sitelinks near the top (optional)
@@ -753,7 +1024,7 @@ class StaticBuilder:
 
         theme_key = getattr(site, "theme_css", "neon_glass") or "neon_glass"
         theme_file = THEME_CSS_MAP.get(theme_key, "neon_glass.css")
-        print("=====> Theme file:", theme_file, " theme_key:", theme_key)
+        self._copy_theme_favicon(site_dir, theme_key)
 
         # Prefer /static/themes/<file>, fallback to /static/<file>
         src_css_candidates = [

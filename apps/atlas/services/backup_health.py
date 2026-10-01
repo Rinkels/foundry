@@ -147,7 +147,7 @@ def get_backup_health(cp, instance_connection_name: str) -> dict:
         "last_successful_backup": last_ok.isoformat() if last_ok else None,
         "status": status, "reasons": reasons,
         # Guidance text only — Atlas does NOT run this.
-        "enable_cmd": (f"gcloud sql instances patch {instance} "
+        "enable_cmd": (f"gcloud sql instances patch {instance} --project={project} "
                        f"--backup-start-time=03:00 --enable-point-in-time-recovery"),
     }
     _CACHE[instance_connection_name] = (time.time(), result)

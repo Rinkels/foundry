@@ -3,8 +3,8 @@ from pathlib import Path
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from sites_builder.models import Site, Page
-from sites_builder.services.image_generator import ImageGenerator
+from ...models import Site
+from ...services.image_generator import ImageGenerator
 
 
 class Command(BaseCommand):

@@ -6,7 +6,6 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import ListView
 from django.db.models import Q
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from platform_apps.apps.common.mixins import TenantAwareViewMixin  # 👈 this one
 from .models import FileAsset, FileAttachment
 
 @login_required
@@ -42,7 +41,7 @@ def upload_and_attach(request):
 
     return redirect(request.POST.get("next") or "/")
 
-class FileAssetListView(LoginRequiredMixin, PermissionRequiredMixin, TenantAwareViewMixin, ListView):
+class FileAssetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = FileAsset
     template_name = "mnemos/file_list.html"
     context_object_name = "files"

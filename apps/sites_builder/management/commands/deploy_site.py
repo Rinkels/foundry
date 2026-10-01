@@ -52,14 +52,25 @@ class Command(BaseCommand):
                 )
 
         deployer = Deployer()
-        deployer.deploy(
-            target,
-            backup=options["backup"],
-            prune_stale=options["prune_stale"],
-            dry_run=options["dry_run"],
-        )
 
-        if options["dry_run"]:
+        # The current Deployer (rewritten for Cloudflare Pages support) does not
+        # implement backup/prune/dry-run. Honour the flags loudly, not silently.
+        import inspect
+        supported = set(inspect.signature(deployer.deploy).parameters)
+        kwargs = {}
+        for opt in ("backup", "prune_stale", "dry_run"):
+            if options.get(opt):
+                if opt in supported:
+                    kwargs[opt] = True
+                else:
+                    raise CommandError(
+                        f"--{opt.replace('_', '-')} is not supported by the current "
+                        "Deployer implementation (removed in the Cloudflare Pages rework)."
+                    )
+
+        deployer.deploy(target, **kwargs)
+
+        if options.get("dry_run"):
             self.stdout.write(self.style.WARNING("Dry run — nothing was changed."))
         else:
             self.stdout.write(

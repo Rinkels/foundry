@@ -1,0 +1,17 @@
+<section class="humainx-reader-question" aria-labelledby="reader-question-{{ article.pk }}">
+  <span>What do you think?</span>
+  <h3 id="reader-question-{{ article.pk }}">{{ article.reader_question }}</h3>
+  {% if article.reader_answer_options %}
+    <ul>
+      {% for option in article.reader_answer_options %}<li>{{ option }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+  <div class="reader-feedback-cta">
+    <strong>Have a different view?</strong>
+    {% if reader_feedback.enabled %}
+      <a class="reader-feedback-link" href="{{ reader_feedback.url }}" target="_blank" rel="noopener">{{ reader_feedback.button_label }}</a>
+    {% else %}
+      <span class="reader-feedback-link reader-feedback-link--pending" aria-disabled="true">{{ reader_feedback.button_label }}</span>
+    {% endif %}
+  </div>
+</section>

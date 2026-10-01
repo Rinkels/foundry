@@ -19,6 +19,8 @@
         {% include "sites_builder/sites/default/partials/sections/proof.html" %}
       {% elif s.type == "contact_form" %}
         {% include "sites_builder/sites/default/partials/sections/contact_form.html" %}
+      {% elif s.type == "newsletter" %}
+        {% include "sites_builder/sites/default/partials/sections/newsletter.html" %}
       {% elif s.type == "cta" %}
         {% include "sites_builder/sites/default/partials/sections/cta.html" %}
       {% elif s.type == "richtext" %}

@@ -1,14 +1,20 @@
-from .models import Developer, Site, DeploymentTarget, Page
-from .services.generator import SiteGenerator
-from django.db import transaction
-from django.contrib import admin, messages
-from django.utils import timezone
-from .models import Site, Page
 import json
+
+from django.contrib import admin, messages
+from django.db import transaction
+from django.utils import timezone
 from django.utils.html import format_html
-from .models import EvergreenArticle, ArticleCornerstoneLink
-from django.contrib import admin
-from .models import Site, SiteTopNavItem
+
+from .models import (
+    ArticleCornerstoneLink,
+    DeploymentTarget,
+    Developer,
+    EvergreenArticle,
+    Page,
+    Site,
+    SiteTopNavItem,
+)
+from .services.generator import SiteGenerator
 
 
 @admin.register(Developer)
@@ -48,7 +54,10 @@ class PageAdmin(admin.ModelAdmin):
             "fields": ("site", "title", "slug", "parent", "hero_image_url", "depth", "is_root"),
         }),
         ("Content", {
-            "fields": ("body_html", "meta_title", "meta_description", "focus_keyword", "schema_jsonld"),
+            "fields": (
+                "page_type", "template_variant", "landing_sections", "body_html",
+                "meta_title", "meta_description", "focus_keyword", "schema_jsonld",
+            ),
         }),
         ("Lockdown / Manual override", {
             "fields": ("is_locked", "manual_html", "locked_at", "locked_by"),
@@ -293,10 +302,23 @@ def create_legal_pages(modeladmin, request, queryset):
 
 @admin.register(EvergreenArticle)
 class EvergreenArticleAdmin(admin.ModelAdmin):
-    list_display = ("title", "site", "status", "published_at", "updated_at")
-    list_filter = ("status", "site")
+    list_display = ("title", "site", "series", "series_number", "status", "published_at", "updated_at")
+    list_filter = ("status", "series", "site")
     search_fields = ("title", "slug", "excerpt", "body_md")
     prepopulated_fields = {"slug": ("title",)}
+    fieldsets = (
+        (None, {"fields": ("site", "title", "slug", "status", "is_cornerstone")}),
+        ("Series", {"fields": ("series", "series_number", "hypothesis")}),
+        ("Reader response", {
+            "fields": (
+                "feedback_identifier", "reader_question", "reader_answer_options",
+            )
+        }),
+        ("Content", {"fields": ("excerpt", "body_md", "hero_image_url")}),
+        ("Authorship", {"fields": ("author_name", "author_url")}),
+        ("SEO", {"fields": ("meta_title", "meta_description", "canonical_url")}),
+        ("Publishing", {"fields": ("published_at", "content_updated_at", "legacy_slugs")}),
+    )
 
 @admin.register(ArticleCornerstoneLink)
 class ArticleCornerstoneLinkAdmin(admin.ModelAdmin):
@@ -330,7 +352,14 @@ class SiteAdmin(admin.ModelAdmin):
         ("Generation Controls",
          {"fields": ("structure_locked", "target_page_count", "max_depth", "max_children_per_page")}),
         ("IA Plan", {"fields": ("ia_planned_at", "ia_plan_pretty")}),
-        ("Branding / Theme", {"fields": ("theme", "theme_css", "logo_url", "primary_color", "secondary_color")}),
+        ("Branding / Theme", {
+            "fields": (
+                "theme", "theme_css", "logo_url", "primary_color", "secondary_color",
+                "hide_builder_credit",
+            )
+        }),
+        ("Newsletter", {"fields": ("newsletter_config",)}),
+        ("Reader feedback", {"fields": ("reader_feedback_config",)}),
         ("Analytics (GA4)", {"fields": ("ga4_property_id", "ga4_measurement_id")}),
     )
 

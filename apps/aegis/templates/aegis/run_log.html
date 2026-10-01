@@ -1,0 +1,32 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div class="glass-header mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="mb-0">🛡️ Sweep log</h1>
+      <div class="text-soft">
+        {{ run.profile.name }} · {{ run.started_at|date:"M j, Y H:i" }}
+        {% if run.duration_s %} · {{ run.duration_s|floatformat:1 }}s{% endif %}
+      </div>
+    </div>
+    <a class="btn-glass" href="{% url 'aegis:profile_detail' run.profile.slug %}">← {{ run.profile.name }}</a>
+  </div>
+</div>
+
+<div class="neon-glass-card p-3 mb-3">
+  <div class="d-flex flex-wrap gap-4">
+    <div><div class="text-soft small">Status</div><div class="fw-bold">{{ run.get_status_display }}</div></div>
+    <div><div class="text-soft small">Queries run</div><div class="fw-bold">{{ run.queries_run }}</div></div>
+    <div><div class="text-soft small">Queries skipped</div><div class="fw-bold">{{ run.queries_skipped }}</div></div>
+    <div><div class="text-soft small">Files examined</div><div class="fw-bold">{{ run.files_examined }}</div></div>
+    <div><div class="text-soft small">New findings</div><div class="fw-bold">{{ run.findings_new }}</div></div>
+    <div><div class="text-soft small">Repeat findings</div><div class="fw-bold">{{ run.findings_seen }}</div></div>
+  </div>
+</div>
+
+<div class="neon-glass-card p-3">
+  <pre class="small mb-0" style="white-space:pre-wrap;">{{ run.log }}</pre>
+</div>
+
+{% endblock %}

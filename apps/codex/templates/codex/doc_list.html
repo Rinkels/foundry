@@ -1,0 +1,86 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+<div class="glass-header mb-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="mb-0">📖 Codex</h1>
+      <div class="text-soft">
+        Markdown library · {{ total }} doc{{ total|pluralize }} · {{ unread }} unread
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <form method="post" action="{% url 'codex:rescan' %}"
+            onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Scanning…';">
+        {% csrf_token %}
+        <button class="btn-glass" type="submit">🔄 Rescan</button>
+      </form>
+      <a class="btn-glass" href="/">← Home</a>
+    </div>
+  </div>
+</div>
+
+{# ---- Search + filters ---- #}
+<form method="get" class="neon-glass-card p-3 mb-3 d-flex flex-wrap gap-2 align-items-center">
+  <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" style="max-width:320px"
+         placeholder="Search title / path / text…">
+  {% if active_project %}<input type="hidden" name="project" value="{{ active_project }}">{% endif %}
+  <button class="btn-glass btn-sm" type="submit">Search</button>
+  <span class="mx-2 text-soft">|</span>
+  <a class="btn-glass btn-sm {% if not filter %}bg-info{% endif %}" href="?">All</a>
+  <a class="btn-glass btn-sm {% if filter == 'unread' %}bg-info{% endif %}" href="?filter=unread">Unread</a>
+  <a class="btn-glass btn-sm {% if filter == 'pinned' %}bg-info{% endif %}" href="?filter=pinned">📌 Pinned</a>
+</form>
+
+{# ---- Project chips ---- #}
+<div class="mb-3 d-flex flex-wrap gap-2">
+  {% for p in projects %}
+    <a class="badge {% if active_project == p.project %}bg-info{% else %}bg-secondary{% endif %} text-decoration-none"
+       href="?project={{ p.project|urlencode }}">{{ p.project }} <span class="text-white-50">{{ p.n }}</span></a>
+  {% endfor %}
+</div>
+
+{# ---- Doc list ---- #}
+{% for doc in docs %}
+  <div class="neon-glass-card p-3 mb-2">
+    <div class="d-flex justify-content-between align-items-start gap-2">
+      <div class="flex-grow-1">
+        <a href="{% url 'codex:detail' doc.pk %}" class="h5 text-white text-decoration-none">
+          {% if doc.pinned %}📌 {% endif %}{{ doc.title }}
+        </a>
+        {% if not doc.read %}<span class="badge bg-warning text-dark ms-1">new</span>{% endif %}
+        <div class="text-soft small mt-1">
+          <span class="badge bg-secondary">{{ doc.project }}</span>
+          <code style="font-size:.8rem">{{ doc.rel_path }}</code>
+          · {{ doc.mtime|date:"Y-m-d H:i" }} · {{ doc.size_human }}
+        </div>
+        {% if doc.excerpt %}<div class="text-white-50 small mt-1">{{ doc.excerpt }}</div>{% endif %}
+      </div>
+      <div class="d-flex flex-column gap-1">
+        <form method="post" action="{% url 'codex:toggle' doc.pk %}">
+          {% csrf_token %}<input type="hidden" name="field" value="pinned">
+          <button class="btn-glass btn-sm" type="submit" title="Pin / unpin">{% if doc.pinned %}📌{% else %}📍{% endif %}</button>
+        </form>
+        <form method="post" action="{% url 'codex:toggle' doc.pk %}">
+          {% csrf_token %}<input type="hidden" name="field" value="read">
+          <button class="btn-glass btn-sm" type="submit" title="Mark read / unread">{% if doc.read %}✓{% else %}○{% endif %}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% empty %}
+  <div class="neon-glass-card p-4 text-soft">
+    No documents indexed yet. Click <strong>🔄 Rescan</strong> to discover markdown files under your library roots.
+  </div>
+{% endfor %}
+
+{# ---- Pagination ---- #}
+{% if is_paginated %}
+  <div class="d-flex gap-2 mt-3">
+    {% if page_obj.has_previous %}<a class="btn-glass btn-sm" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if filter %}&filter={{ filter }}{% endif %}{% if active_project %}&project={{ active_project|urlencode }}{% endif %}">← Prev</a>{% endif %}
+    <span class="text-soft small align-self-center">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a class="btn-glass btn-sm" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if filter %}&filter={{ filter }}{% endif %}{% if active_project %}&project={{ active_project|urlencode }}{% endif %}">Next →</a>{% endif %}
+  </div>
+{% endif %}
+
+{% endblock %}

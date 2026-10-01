@@ -163,6 +163,10 @@
             {% trans "Warnings" %}:
             <strong class="text-warning">{{ stats.warnings_count|default:0 }}</strong>
           </span>
+
+          {% if saved_run_id %}
+            <a class="btn btn-outline-info btn-sm ms-2" href="{% url 'code_analyzer:ai_review' saved_run_id %}">🧠 AI Review findings</a>
+          {% endif %}
         </div>
       </div>
     </div>

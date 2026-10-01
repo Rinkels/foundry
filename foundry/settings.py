@@ -93,6 +93,61 @@ ATLAS_WEBHOOK_PUBLIC_URL = os.environ.get("ATLAS_WEBHOOK_PUBLIC_URL", "https://f
 ATLAS_REDELIVER_ON_START = os.environ.get("ATLAS_REDELIVER_ON_START", "True") == "True"
 ATLAS_REDELIVER_HOURS = int(os.environ.get("ATLAS_REDELIVER_HOURS", "72"))
 
+# Aegis (public exposure monitoring). Falls back to a PAT when a watch profile
+# has no GitHub App installation attached; needs only `public_repo` scope.
+AEGIS_GITHUB_TOKEN = os.environ.get("AEGIS_GITHUB_TOKEN", "")
+# GitHub's code_search bucket is ~10 req/min — 7s spacing keeps us under it.
+AEGIS_SEARCH_MIN_INTERVAL = float(os.environ.get("AEGIS_SEARCH_MIN_INTERVAL", "7.0"))
+# Per-run query cap. Each query costs ~7s, so 40 ≈ a 5 minute sweep.
+AEGIS_MAX_QUERIES = int(os.environ.get("AEGIS_MAX_QUERIES", "40"))
+AEGIS_MAX_BACKOFF = int(os.environ.get("AEGIS_MAX_BACKOFF", "120"))
+# Byline at the foot of the customer-facing one-pager.
+AEGIS_REPORT_FOOTER = os.environ.get(
+    "AEGIS_REPORT_FOOTER", "Prepared by Miventi  ·  ruan@miventi.com"
+)
+# Crawler / dataset / mirror repos that index the whole web. A brand keyword
+# matches these every time and buries real findings. Substring match on
+# "owner/name", case-insensitive.
+AEGIS_DEFAULT_REPO_DENYLIST = [
+    "duckduckgo/tracker-radar",
+    "tracker-radar",
+    "privacy-policy-historical",
+    "trackerradarapi",
+    "public-suffix",
+    "publicsuffix",
+    "top-1m",
+    "majestic-million",
+    "tranco",
+    "alexa-top",
+    "domain-list",
+    "domains-list",
+    "url-list",
+    "blocklist",
+    "blacklist",
+    "adblock",
+    "easylist",
+    "hosts-file",
+    "hostsfile",
+    "stevenblack/hosts",
+    "phishing",
+    "certstream",
+    "crt.sh",
+    "commoncrawl",
+    "wayback",
+    # URL/text corpora — surfaced by the first real global sweep (AMA, 2026-08).
+    # A brand keyword matches these because they contain the whole web.
+    "annotation-urls",
+    "-corpus",
+    "corpora",
+    "citation-study",
+    "web-archive",
+    "webarchive",
+    "gfw-report",
+    "crawl",
+    "scrape",
+    "dataset",
+]
+
 MEDIA_URL = "/uploads/"
 MEDIA_ROOT = BASE_DIR / "uploads"
 FOUNDRY_HOME_CARDS = {
@@ -106,7 +161,16 @@ FOUNDRY_HOME_CARDS = {
     "mnemos": True,
     "atlas": True,
     "argus": True,
+    "aegis": True,
+    "codex": True,
 }
+
+# Codex (markdown library) — directories scanned for .md files.
+MD_LIBRARY_ROOTS = [r"C:\Projects"]
+
+# Token the Sentry posture platform uses to pull the Achilles findings export
+# (GET /code_analyzer/export/sentry/). Blank = require an authenticated session.
+SENTRY_EXPORT_TOKEN = os.environ.get("SENTRY_EXPORT_TOKEN", "")
 # Application definition
 
 INSTALLED_APPS = [
@@ -128,6 +192,8 @@ INSTALLED_APPS = [
     "apps.mnemos.apps.MnemosConfig",
     "apps.atlas.apps.AtlasConfig",
     "apps.argus.apps.ArgusConfig",
+    "apps.aegis.apps.AegisConfig",
+    "apps.codex.apps.CodexConfig",
     "platform_apps.apps.tenants",
     "platform_apps.apps.agpay",
 ]

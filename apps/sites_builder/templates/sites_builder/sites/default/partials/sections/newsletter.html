@@ -1,0 +1,19 @@
+{% with newsletter=site.newsletter_config %}
+  {% if newsletter.enabled and newsletter.provider == "buttondown" and newsletter.form_action %}
+    <form class="newsletter-form" action="{{ newsletter.form_action }}" method="post">
+      <label class="visually-hidden" for="newsletter-email-{{ page.pk|default:'site' }}">Email address</label>
+      <input
+        id="newsletter-email-{{ page.pk|default:'site' }}"
+        class="newsletter-form__input"
+        type="email"
+        name="email"
+        autocomplete="email"
+        placeholder="Email address"
+        required>
+      <input type="hidden" name="embed" value="1">
+      <button class="btn btn-primary newsletter-form__button" type="submit">
+        {{ newsletter.button_label|default:"Subscribe" }}
+      </button>
+    </form>
+  {% endif %}
+{% endwith %}

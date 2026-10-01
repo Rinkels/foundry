@@ -1,0 +1,6 @@
+<section class="humainx-article-follow" id="{{ article_follow.anchor }}" aria-labelledby="{{ article_follow.anchor }}-heading">
+  <div class="humainx-follow__eyebrow">{{ article_follow.eyebrow }}</div>
+  <h2 id="{{ article_follow.anchor }}-heading">Stay with the question.</h2>
+  {% if article_follow.description %}<p>{{ article_follow.description }}</p>{% endif %}
+  {% include "sites_builder/sites/default/partials/sections/newsletter.html" %}
+</section>

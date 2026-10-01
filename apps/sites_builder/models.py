@@ -1,7 +1,9 @@
+from urllib.parse import urlparse
+
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from django.utils.text import slugify
-from urllib.parse import urlparse
 
 class Developer(models.Model):
     name = models.CharField(max_length=200)
@@ -52,22 +54,22 @@ class Site(models.Model):
     )
     # ✅ NEW: select which source CSS file to use (builder still outputs assets/css/site.css)
     THEME_CSS_NEON = "neon_glass"
-    THEME_CSS_MINIMAL = "minimal"
     THEME_CSS_STARTUP = "startup"
     THEME_CSS_AURORA = "aurora"
     THEME_CSS_VERDANT = "verdant"
     THEME_CSS_BAUHAUS = "bauhaus"
     THEME_CSS_EDITORIAL = "editorial"
     THEME_CSS_MINDSGATE = "mindsgate"
+    THEME_CSS_HUMAINX = "humainx"
     THEME_CSS_CHOICES = [
         (THEME_CSS_NEON, "Neon Glass"),
-        (THEME_CSS_MINIMAL, "Minimal"),
         (THEME_CSS_STARTUP, "Startup Modern"),
         (THEME_CSS_AURORA, "Aurora"),
         (THEME_CSS_VERDANT, "Verdant"),
         (THEME_CSS_BAUHAUS, "Bauhaus"),
         (THEME_CSS_EDITORIAL, "Editorial"),
         (THEME_CSS_MINDSGATE, "Mindsgate (dark premium)"),
+        (THEME_CSS_HUMAINX, "HumainX (research publication)"),
     ]
 
     theme_css = models.CharField(
@@ -87,6 +89,26 @@ class Site(models.Model):
     # Optional footer links (e.g. live platform logins). List of dicts:
     # [{"label": "Fracto", "href": "https://fracto.mindsgate.com", "external": true}]
     footer_links = models.JSONField(default=list, blank=True)
+    newsletter_config = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            "Public newsletter-form configuration. Expected keys include enabled, "
+            "provider, username, form_action, button_label, and success_url."
+        ),
+    )
+    reader_feedback_config = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            "Public reader-feedback configuration. Expected keys include enabled, "
+            "provider, form_url, and button_label. No API credentials are required."
+        ),
+    )
+    hide_builder_credit = models.BooleanField(
+        default=False,
+        help_text="Hide the Mindsgate builder credit in the generated site footer.",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -131,10 +153,12 @@ class Site(models.Model):
 class DeploymentTarget(models.Model):
     TYPE_FTP = "ftp"
     TYPE_LOCAL = "local"
+    TYPE_CF_PAGES = "cf_pages"
 
     TYPE_CHOICES = [
         (TYPE_FTP, "FTP"),
         (TYPE_LOCAL, "Local folder"),
+        (TYPE_CF_PAGES, "Cloudflare Pages"),
     ]
 
     site = models.ForeignKey(
@@ -158,6 +182,14 @@ class DeploymentTarget(models.Model):
         max_length=512,
         blank=True,
         help_text="Absolute path on server to copy files to for LOCAL deployment.",
+    )
+
+    # Cloudflare Pages (wrangler-based deployment; auth via wrangler OAuth
+    # login on this host, or CLOUDFLARE_API_TOKEN in the environment)
+    cf_project_name = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Cloudflare Pages project name for CF_PAGES deployment, e.g. gym2x.",
     )
 
     is_default = models.BooleanField(default=True)
@@ -217,6 +249,23 @@ class Page(models.Model):
     page_type = models.CharField(
         max_length=20, choices=PAGE_TYPE_CHOICES, default=PAGE_TYPE_ARTICLE,
         help_text="Article = editorial single-column; Landing = composed marketing sections.",
+    )
+    TEMPLATE_DEFAULT = ""
+    TEMPLATE_HUMAINX = "humainx"
+    TEMPLATE_HUMAINX_HOME = "humainx_home"
+    TEMPLATE_NEO_COTTAGE = "neo_cottage"
+    TEMPLATE_VARIANT_CHOICES = [
+        (TEMPLATE_DEFAULT, "Default for page type"),
+        (TEMPLATE_HUMAINX, "HumainX landing page"),
+        (TEMPLATE_HUMAINX_HOME, "HumainX standalone home page"),
+        (TEMPLATE_NEO_COTTAGE, "Neo-Cottage definition page"),
+    ]
+    template_variant = models.CharField(
+        max_length=50,
+        choices=TEMPLATE_VARIANT_CHOICES,
+        blank=True,
+        default=TEMPLATE_DEFAULT,
+        help_text="Optional curated template variant used by the static builder.",
     )
     # For landing pages: ordered list of typed section blocks the generator emits
     # as JSON, e.g. [{"type":"hero","headline":...}, {"type":"stats","items":[...]}].
@@ -354,13 +403,6 @@ class SiteAuditIssue(models.Model):
     def __str__(self) -> str:
         return f"{self.status_code or 'ERR'} {self.target_url}"
 
-from django.db import models
-from django.utils import timezone
-from django.utils.text import slugify
-
-# assuming you already have Site in this app
-# from .models import Site  (or wherever Site is defined)
-
 class EvergreenArticle(models.Model):
     STATUS_DRAFT = "draft"
     STATUS_PUBLISHED = "published"
@@ -377,6 +419,35 @@ class EvergreenArticle(models.Model):
     slug = models.SlugField(max_length=255, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT)
     is_cornerstone = models.BooleanField(default=False)
+    series = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Optional editorial series, for example HumainX.",
+    )
+    series_number = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True,
+        help_text="Optional sequence number within the editorial series.",
+    )
+    hypothesis = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Optional hypothesis identifier, for example H1.",
+    )
+    feedback_identifier = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="Stable public feedback identifier, for example HX01.",
+    )
+    reader_question = models.TextField(
+        blank=True,
+        help_text="Optional reader-response question displayed at the end of the article.",
+    )
+    reader_answer_options = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Optional ordered list of display-only reader answer options.",
+    )
 
     # content
     excerpt = models.TextField(blank=True)
@@ -390,14 +461,24 @@ class EvergreenArticle(models.Model):
     # optional visuals
     hero_image_url = models.URLField(blank=True)
 
+    # authorship and URL-history signals used by public article metadata
+    author_name = models.CharField(max_length=200, blank=True)
+    author_url = models.URLField(blank=True)
+    content_updated_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Date of the most recent significant editorial update.",
+    )
+    legacy_slugs = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Previous article slugs that should permanently redirect here.",
+    )
+
     published_at = models.DateTimeField(blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        unique_together = [("site", "slug")]
-        ordering = ["-published_at", "-updated_at"]
 
     class Meta:
         constraints = [
@@ -407,11 +488,24 @@ class EvergreenArticle(models.Model):
     def __str__(self):
         return f"{self.title} ({self.site})"
 
+    @property
+    def editorial_label(self) -> str:
+        if not self.series:
+            return "INSIGHT"
+        label = self.series.upper()
+        if self.series_number is not None:
+            return f"{label} / {self.series_number:02d}"
+        return label
+
+    @property
+    def reading_minutes(self) -> int:
+        from .services.reading_time import estimate_reading_minutes
+
+        return estimate_reading_minutes(self.body_md)
+
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.title)[:255]
-        if self.is_cornerstone:
-            self.cornerstone = None
         # auto-set published_at on publish
         if self.status == self.STATUS_PUBLISHED and self.published_at is None:
             self.published_at = timezone.now()

@@ -99,7 +99,7 @@ def write_sitemap_xml(site) -> None:
         ).order_by("-published_at", "-updated_at")
         for a in articles:
             slug = (a.slug or slugify(a.title))[:255]
-            stamp = a.published_at or a.updated_at
+            stamp = a.content_updated_at or a.updated_at or a.published_at
             add(
                 f"{base}/insights/{slug}.html",
                 stamp.date().isoformat() if stamp else now_iso,

@@ -464,7 +464,6 @@ class SiteGenerator:
 
         # If you already have a decent structure, do nothing.
         if page_count >= site.target_page_count:
-            print("MAX page count reached:", page_count)
             return
 
         # Soft defaults, no model changes required:
@@ -476,7 +475,6 @@ class SiteGenerator:
                 target_page_count=int(target_page_count),
                 max_depth=int(max_depth),
             )
-            print("====>ia: ", ia)
             site.ia_plan = ia
             site.ia_planned_at = timezone.now()
             site.save(update_fields=["ia_plan", "ia_planned_at"])
@@ -492,24 +490,28 @@ class SiteGenerator:
         existing = {p.slug: p for p in site.pages.all() if p.slug}
 
         def ensure_page(title: str, slug: str, parent: Page, depth: int, nav_order: int) -> Page:
-            # Try by slug first
-            if slug in existing:
-                return existing[slug]
-            # Then by title under the same parent
-            p = parent.children.filter(title=title).first()
-            if slug in existing:
-                p = existing[slug]
+            # Prefer a stable planned slug, then reuse a same-title sibling.
+            p = existing.get(slug) or parent.children.filter(title=title).first()
+            if p is not None:
+                changed_fields = []
                 if p.parent_id != parent.id or p.depth != depth or p.nav_order != nav_order:
                     p.parent = parent
                     p.depth = depth
                     p.nav_order = nav_order
-                    p.save(update_fields=["parent", "depth", "nav_order"])
+                    changed_fields.extend(["parent", "depth", "nav_order"])
+                if slug and p.slug != slug:
+                    p.slug = slug
+                    changed_fields.append("slug")
+                if changed_fields:
+                    p.save(update_fields=changed_fields)
+                existing[p.slug] = p
                 return p
 
             p = Page.objects.create(
                 site=site,
                 parent=parent,
                 title=title,
+                slug=slug,
                 depth=depth,
                 nav_order=nav_order,
             )

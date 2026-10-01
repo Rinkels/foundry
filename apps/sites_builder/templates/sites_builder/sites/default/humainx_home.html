@@ -1,0 +1,167 @@
+{% extends "sites_builder/base.html" %}
+{% block body_class %}humainx-home-page{% endblock %}
+{% block body %}
+  <a class="hx-skip" href="#main">Skip to content</a>
+  <header class="hx-header">
+    <div class="hx-wrap hx-header__inner">
+      <a class="hx-brand" href="index.html" aria-label="HumainX home">
+        <img src="assets/images/favicon.svg" width="38" height="38" alt="">
+        <span>Humain<span>X</span></span>
+      </a>
+      <nav class="hx-nav" aria-label="Main navigation">
+        <a href="#questions">Questions</a>
+        <a href="#field-notes">Field notes</a>
+        <a href="#method">Method</a>
+        <a class="hx-nav__cta" href="#follow">Follow the inquiry</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hx-hero">
+      <div class="hx-hero__grid" aria-hidden="true"></div>
+      <div class="hx-wrap hx-hero__inner">
+        <div class="hx-hero__copy">
+          <div class="hx-kicker"><span></span> A public inquiry toward 2036</div>
+          <h1>What happens when intelligence is <em>no longer scarce?</em></h1>
+          <p class="hx-hero__lede">AI may change more than how we work. It could change why companies exist, what humans sell, who owns productive capacity—and what society considers valuable.</p>
+          <div class="hx-actions">
+            <a class="hx-button hx-button--primary" href="https://www.mindsgate.com/insights/neo-cottage-revolution.html">Read the first argument <span aria-hidden="true">&rarr;</span></a>
+            <a class="hx-button hx-button--secondary" href="#premise">Explore the premise</a>
+          </div>
+          <div class="hx-status"><span class="hx-status__pulse"></span><b>Experiment 01</b><span>Active</span><span>Looking ten years ahead</span></div>
+        </div>
+
+        <div class="hx-orbit" aria-label="HumainX explores work, firms, value and ownership">
+          <div class="hx-orbit__ring hx-orbit__ring--one"></div>
+          <div class="hx-orbit__ring hx-orbit__ring--two"></div>
+          <div class="hx-orbit__ring hx-orbit__ring--three"></div>
+          <img class="hx-orbit__mark" src="assets/images/favicon.svg" width="154" height="154" alt="HumainX">
+          <span class="hx-orbit__label hx-orbit__label--work">Work</span>
+          <span class="hx-orbit__label hx-orbit__label--firms">Firms</span>
+          <span class="hx-orbit__label hx-orbit__label--value">Value</span>
+          <span class="hx-orbit__label hx-orbit__label--ownership">Ownership</span>
+        </div>
+      </div>
+      <a class="hx-scroll" href="#premise"><span>Begin</span><i></i></a>
+    </section>
+
+    <section class="hx-section hx-premise" id="premise">
+      <div class="hx-wrap">
+        <div class="hx-section__label">The premise</div>
+        <div class="hx-premise__grid">
+          <h2>The question is bigger than jobs.</h2>
+          <div class="hx-premise__copy">
+            <p>Most conversations about AI begin with replacement: <em>which jobs will disappear?</em> HumainX starts one layer deeper.</p>
+            <p>Jobs, firms and careers are ways of organizing scarce capability. If intelligence becomes abundant, those structures may change with it.</p>
+          </div>
+        </div>
+        <div class="hx-shift" aria-label="HumainX reframes the usual AI question">
+          <div><span>The usual question</span><strong>What jobs will AI replace?</strong></div>
+          <div class="hx-shift__arrow" aria-hidden="true">&rarr;</div>
+          <div><span>The HumainX question</span><strong>What does abundant intelligence reorganize?</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="hx-section hx-questions" id="questions">
+      <div class="hx-wrap">
+        <div class="hx-section__heading">
+          <div><div class="hx-section__label">Questions, not predictions</div><h2>Follow the scarcity.</h2></div>
+          <p>If intelligence becomes cheap and widely available, economic value should migrate toward whatever remains difficult to reproduce.</p>
+        </div>
+        <div class="hx-question-grid">
+          <article><span>01</span><h3>What becomes scarce?</h3><p>Judgment, taste, trust, accountability, relationships, physical execution—or something we have not named yet?</p></article>
+          <article><span>02</span><h3>Why will firms exist?</h3><p>If tiny teams can coordinate powerful AI systems, what remains more efficient inside an organization than outside it?</p></article>
+          <article><span>03</span><h3>Who owns productive power?</h3><p>Does AI create millions of independent producers, or deeper dependence on a few model and distribution platforms?</p></article>
+          <article><span>04</span><h3>Why will anyone pay you?</h3><p>If your customer has access to the same intelligence, what can you uniquely know, decide, own, risk or deliver?</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="hx-section hx-history">
+      <div class="hx-wrap">
+        <div class="hx-section__label">A historical lens</div>
+        <h2>Every age organizes around what its tools make possible.</h2>
+        <div class="hx-timeline">
+          <article><span>Before industry</span><strong>Cottage</strong><p>Individuals, households and local tools.</p></article>
+          <i aria-hidden="true"></i>
+          <article><span>Industrial age</span><strong>Factory</strong><p>Workers gather around expensive machinery.</p></article>
+          <i aria-hidden="true"></i>
+          <article><span>Information age</span><strong>Corporation</strong><p>Specialists coordinate knowledge at scale.</p></article>
+          <i aria-hidden="true"></i>
+          <article class="is-active"><span>AI age?</span><strong>Network</strong><p>Capability returns to individuals and tiny teams.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="hx-section hx-field-note" id="field-notes">
+      <div class="hx-wrap hx-field-note__grid">
+        <div class="hx-field-note__visual">
+          <picture>
+            <source srcset="assets/images/neo-cottage-revolution-og.webp" type="image/webp">
+            <img src="assets/images/neo-cottage-revolution-og.png" width="1732" height="908" loading="lazy" alt="Industrial production dispersing into a network of AI-enabled individuals and small teams">
+          </picture>
+          <span>Field note / 01</span>
+        </div>
+        <div class="hx-field-note__copy">
+          <div class="hx-section__label">First argument</div>
+          <h2>The Neo-Cottage Revolution</h2>
+          <p class="hx-field-note__deck">The Industrial Revolution pulled production into organizations. Could AI push productive capability back toward the individual?</p>
+          <div class="hx-hypothesis"><span>Current hypothesis H1</span><strong>AI will reduce the minimum economically viable size of many knowledge-based firms.</strong></div>
+          <div class="hx-actions">
+            <a class="hx-button hx-button--primary" href="https://www.mindsgate.com/insights/neo-cottage-revolution.html">Read the argument <span aria-hidden="true">&rarr;</span></a>
+            <a class="hx-text-link" href="https://www.mindsgate.com/neo-cottage-economy.html">What “neo-cottage” means</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="hx-section hx-method" id="method">
+      <div class="hx-wrap">
+        <div class="hx-section__heading">
+          <div><div class="hx-section__label">How HumainX works</div><h2>An inquiry in public.</h2></div>
+          <p>HumainX is not a stream of confident predictions. It is a ten-year practice of making assumptions visible and updating them when reality disagrees.</p>
+        </div>
+        <div class="hx-method__grid">
+          <article><span>H</span><h3>State a hypothesis</h3><p>Make the claim specific enough to be challenged, refined or rejected.</p></article>
+          <article><span>E</span><h3>Gather evidence</h3><p>Track research, real businesses, labour signals and counterexamples—not only dramatic demos.</p></article>
+          <article><span>X</span><h3>Invite disagreement</h3><p>Ask readers to expose missing context, weak reasoning and alternative futures.</p></article>
+          <article><span>&Delta;</span><h3>Update the model</h3><p>Preserve the trail from what we believed to what the evidence taught us.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="hx-section hx-follow" id="follow">
+      <div class="hx-follow__glow" aria-hidden="true"></div>
+      <div class="hx-wrap hx-follow__inner">
+        <div>
+          <div class="hx-section__label">Stay with the question</div>
+          <h2>Follow the inquiry toward 2036.</h2>
+          <p>New arguments, evidence, counterarguments and reader predictions—published only when there is something worth adding.</p>
+        </div>
+        <div class="hx-follow__form-wrap">
+          {% with newsletter=site.newsletter_config %}
+            {% if newsletter.enabled and newsletter.form_action %}
+              <form class="hx-follow__form" action="{{ newsletter.form_action }}" method="post">
+                <label for="hx-email">Email address</label>
+                <div><input id="hx-email" type="email" name="email" autocomplete="email" placeholder="you@example.com" required><button type="submit">{{ newsletter.button_label|default:"Follow HumainX" }}</button></div>
+                <input type="hidden" name="embed" value="1">
+              </form>
+            {% endif %}
+          {% endwith %}
+          <p>No noise. Unsubscribe whenever you like.</p>
+          <a class="hx-response-link" href="https://tally.so/r/kd8gJZ?article=HX01&amp;series=HumainX&amp;hypothesis=H1">Already have a view? Share your reasoning &rarr;</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="hx-footer">
+    <div class="hx-wrap hx-footer__inner">
+      <a class="hx-brand" href="index.html"><img src="assets/images/favicon.svg" width="30" height="30" alt=""><span>Humain<span>X</span></span></a>
+      <p>A <a href="https://www.mindsgate.com">Mindsgate</a> inquiry into economic life when intelligence is no longer scarce.</p>
+      <span>&copy; {% now "Y" %} HumainX</span>
+    </div>
+  </footer>
+{% endblock %}
