@@ -50,3 +50,6 @@ __pycache__/
 *service-account*.json
 *google_oauth*.json
 *-credentials.json
+
+# wrangler local cache (created by static-site deploys)
+.wrangler/
