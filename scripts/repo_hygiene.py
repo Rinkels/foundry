@@ -26,6 +26,7 @@ from pathlib import Path
 ROOTS = [Path(r"C:\Projects"), Path(r"C:\projects")]
 REPORT = Path(os.environ.get("LOCALAPPDATA", ".")) / "Foundry" / "repo_hygiene.txt"
 SKIP = {"SampleApp-QuickBooksV3API-Python"}  # vendor samples, not our work
+SKIP_BRANCHES = {"auto-backup"}  # local auto-snapshot branches; never meant to be pushed
 
 
 def git(repo: Path, *args: str) -> str:
@@ -75,6 +76,8 @@ def unpushed(repo: Path) -> list[str]:
     refs = git(repo, "for-each-ref", "--format=%(refname:short)|%(upstream:short)", "refs/heads/")
     for line in refs.splitlines():
         branch, upstream = (line.split("|") + [""])[:2]
+        if branch in SKIP_BRANCHES:
+            continue
         if upstream:
             ahead = git(repo, "rev-list", "--count", f"{upstream}..{branch}").strip()
             if ahead and ahead != "0":
