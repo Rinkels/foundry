@@ -9,6 +9,10 @@
     <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
       <p class="mb-0">
         &copy; {{ site.name }} {% now "Y" %}. All rights reserved.
+        {% if not site.hide_builder_credit %}
+          &middot; Built by <a class="text-decoration-none {% if site.theme == 'dark' %}text-light{% else %}text-dark{% endif %}"
+             href="https://www.mindsgate.com" rel="noopener">Mindsgate</a>
+        {% endif %}
       </p>
 
       <div class="d-flex flex-wrap gap-3 align-items-center">
