@@ -70,7 +70,7 @@ TOPICS = {
             ("!", "Quantitative risk", ["SLE = Asset Value × Exposure Factor", "ALE = SLE × ARO"]),
         ]),
         ("Controls and control assessment", ["Preventive / detective / corrective", "Administrative / technical / physical", "Compensating controls"]),
-        ("Threat modelling", ["g:STRIDE", "g:PASTA", "g:VAST", "g:DREAD", "Attack trees", "Reduction analysis",
+        ("Threat modelling", ["g:STRIDE", "g:PASTA", "g:VAST", "g:DREAD", "Attack trees", "g:Decomposition",
             ("!", "Four methodologies", ["STRIDE = categorize (6 threat classes)",
                                          "DREAD = rate (5 scoring questions)",
                                          "PASTA = 7-stage, risk/asset-centric",
