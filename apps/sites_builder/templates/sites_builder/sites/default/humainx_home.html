@@ -126,6 +126,9 @@
         </div>
         {% for article in latest_articles %}
         <article class="hx-field-note__copy">
+          {% if article.hero_image_url %}
+          <a href="insights/{{ article.slug }}.html" tabindex="-1" aria-hidden="true"><img src="{{ article.hero_image_url }}" alt="" width="1729" height="910" loading="lazy" style="width:100%;height:auto;border-radius:16px;margin-bottom:24px;"></a>
+          {% endif %}
           <h3><a class="hx-text-link" href="insights/{{ article.slug }}.html">{{ article.title }}</a></h3>
           <p class="hx-field-note__deck">{{ article.excerpt }}</p>
           <a class="hx-button hx-button--primary" href="insights/{{ article.slug }}.html">Read the article <span aria-hidden="true">&rarr;</span></a>
