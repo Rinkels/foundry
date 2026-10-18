@@ -117,6 +117,24 @@
       </div>
     </section>
 
+    {% if latest_articles %}
+    <section class="hx-section" id="latest-inquiry">
+      <div class="hx-wrap">
+        <div class="hx-section__heading">
+          <div><div class="hx-section__label">Continue the inquiry</div><h2>New arguments. Open questions.</h2></div>
+          <p>Research into agents, organization and the changing value of human contribution.</p>
+        </div>
+        {% for article in latest_articles %}
+        <article class="hx-field-note__copy">
+          <h3><a class="hx-text-link" href="insights/{{ article.slug }}.html">{{ article.title }}</a></h3>
+          <p class="hx-field-note__deck">{{ article.excerpt }}</p>
+          <a class="hx-button hx-button--primary" href="insights/{{ article.slug }}.html">Read the article <span aria-hidden="true">&rarr;</span></a>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
     <section class="hx-section hx-method" id="method">
       <div class="hx-wrap">
         <div class="hx-section__heading">
