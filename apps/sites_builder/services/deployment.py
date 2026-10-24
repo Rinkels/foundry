@@ -50,8 +50,11 @@ class Deployer:
         if not site_dir.exists():
             raise FileNotFoundError(f"Site output not found: {site_dir}")
 
-        with ftplib.FTP(target.ftp_host) as ftp:
+        # Host enforces FTPS since 2026-10 ("550 SSL/TLS required on the control
+        # channel"): explicit TLS on the control channel, PROT P on data.
+        with ftplib.FTP_TLS(target.ftp_host) as ftp:
             ftp.login(target.ftp_username, target.ftp_password)
+            ftp.prot_p()
 
             # Start at configured remote root (if any)
             if target.ftp_remote_root:
