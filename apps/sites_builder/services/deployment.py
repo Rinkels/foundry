@@ -8,6 +8,24 @@ from django.conf import settings
 from ..models import DeploymentTarget
 
 
+class SessionReuseFTPTLS(ftplib.FTP_TLS):
+    """FTP_TLS that reuses the control-channel TLS session on data connections.
+
+    Hardened FTPS servers (Pure-FTPd/ProFTPD with TLS session reuse enforced)
+    reject data connections that start a fresh TLS session — ftplib does that
+    by default, yielding "425 Unable to build data connection". Passing the
+    control socket's session into wrap_socket satisfies the server.
+    """
+
+    def ntransfercmd(self, cmd, rest=None):
+        conn, size = ftplib.FTP.ntransfercmd(self, cmd, rest)
+        if self._prot_p:
+            conn = self.context.wrap_socket(
+                conn, server_hostname=self.host, session=self.sock.session
+            )
+        return conn, size
+
+
 class Deployer:
     def __init__(self, base_output_dir: Optional[Path] = None):
         if base_output_dir is None:
@@ -52,7 +70,7 @@ class Deployer:
 
         # Host enforces FTPS since 2026-10 ("550 SSL/TLS required on the control
         # channel"): explicit TLS on the control channel, PROT P on data.
-        with ftplib.FTP_TLS(target.ftp_host) as ftp:
+        with SessionReuseFTPTLS(target.ftp_host) as ftp:
             ftp.login(target.ftp_username, target.ftp_password)
             ftp.prot_p()
 
