@@ -103,6 +103,13 @@ SECTIONS = [
                 "link_label": "Explore the model",
             },
             {
+                "icon": "🧭",
+                "title": "Sales Process Explorer",
+                "text": "An interactive B2B pipeline: the happy path, the stalls and loops where leads wait, and the CRM activity that keeps a deal moving.",
+                "href": "internal://sales-process",
+                "link_label": "Explore the process",
+            },
+            {
                 "icon": "📈",
                 "title": "Fracto market tools",
                 "text": "Free market dashboards from our Fracto platform, including the weekly CFTC Commitments of Traders report across 31 markets.",

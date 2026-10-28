@@ -1,0 +1,367 @@
+{% comment %}
+sales_explorer — interactive B2B sales process explorer (human-curated block, never LLM-emitted).
+Block keys: eyebrow, heading, subhead, default_view (happy|stalls|crm|walk), anchor.
+All content (nodes, edges, walkthrough) is data inside the script below; edit it there.
+Ported from C:\Projects\fractals\sales-process-explorer.html — keep the data and the
+edge-label logic (la: end|start with the vertical stagger) exactly as the standalone.
+Styles live in _landing.css under .lp-sx / .sx-.
+{% endcomment %}
+<section class="lp-section lp-sx-band"{% if s.anchor %} id="{{ s.anchor }}"{% endif %}>
+  <div class="lp-container">
+    {% if s.eyebrow %}<div class="lp-section__eyebrow">{{ s.eyebrow }}</div>{% endif %}
+    {% if s.heading %}<h2 class="lp-section__heading">{{ s.heading }}</h2>{% endif %}
+    {% if s.subhead %}<p class="lp-section__subhead">{{ s.subhead }}</p>{% endif %}
+
+    <div class="lp-sx" id="lp-sx-{{ forloop.counter|default:1 }}" data-default-view="{{ s.default_view|default:'happy' }}">
+      <div class="lp-sx__viewbar" role="tablist" aria-label="View">
+        <span class="lp-sx__viewlbl">View</span>
+        <button class="lp-sx__viewbtn" data-view="happy" type="button" role="tab"><i class="lp-sx__dot" style="background:var(--site-accent, #4fd8c4)"></i>Happy path</button>
+        <button class="lp-sx__viewbtn" data-view="stalls" type="button" role="tab"><i class="lp-sx__dot" style="background:#f2b45a"></i>Stalls and loops</button>
+        <button class="lp-sx__viewbtn" data-view="crm" type="button" role="tab"><i class="lp-sx__dot" style="background:var(--site-accent-2, #7c8cf8)"></i>CRM activity</button>
+        <button class="lp-sx__viewbtn" data-view="walk" type="button" role="tab"><i class="lp-sx__dot" style="background:var(--site-gold, #d9b36b)"></i>Walk a lead</button>
+        <span class="lp-sx__lede" data-lede></span>
+      </div>
+
+      <div class="lp-sx__layout">
+        <div class="lp-sx__canvas">
+          <svg data-diagram role="img" aria-labelledby="lp-sx-title-{{ forloop.counter|default:1 }} lp-sx-desc-{{ forloop.counter|default:1 }}">
+            <title id="lp-sx-title-{{ forloop.counter|default:1 }}">B2B sales process</title>
+            <desc id="lp-sx-desc-{{ forloop.counter|default:1 }}">Lead intake, qualification, outreach, discovery, proposal and outcomes, with stall states, return loops and CRM follow-up activity, drawn as animated connectors.</desc>
+          </svg>
+        </div>
+        <aside class="lp-sx__panel" data-panel></aside>
+      </div>
+      <p class="lp-sx__foot">Cadences and limits are suggested defaults — the structure is the point.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  if (window.lpSxInit) { window.lpSxInit(document.getElementById('lp-sx-{{ forloop.counter|default:1 }}')); return; }
+
+  /* ---------- Layout ---------- */
+  const GUT = 150, COL_W = 195, NODE_W = 160, NODE_H = 66;
+  const ROW_Y = [96, 236, 376];
+  const CANVAS_W = 1500, CANVAS_H = 500;
+  const colX = c => GUT + c * COL_W;
+  const PHASES = ['Intake', 'Qualify', 'Outreach', 'Discovery', 'Proposal', 'Outcome', 'Handoff'];
+  const LANES = [
+    { row: 0, label: 'Pipeline', hint: 'the stages a deal moves through' },
+    { row: 1, label: 'Holds and exceptions', hint: 'where leads wait or loop back' },
+    { row: 2, label: 'CRM activity', hint: 'what gets logged to keep it moving' },
+  ];
+
+  /* ---------- Nodes ---------- */
+  const NODES = [
+    { id: 'prospect', col: 0, row: 0, kind: 'intake', label: 'Lead prospecting', sub: 'Enquiries, scraping, referrals',
+      purpose: 'Collect raw leads from every source into one list.',
+      entry: 'Website enquiry, Google scraping run, referral, event list or purchased list.',
+      exit: 'Lead record exists with source, company and at least one contact channel.',
+      log: ['Source', 'Company', 'Contact', 'Campaign'] },
+    { id: 'quality', col: 0, row: 1, kind: 'intake', label: 'Lead quality check', sub: 'Valid contact, no duplicates',
+      purpose: 'Stop junk before it costs anyone time.',
+      entry: 'New lead record.',
+      exit: 'Pass: valid email or phone, not a duplicate, company resolvable. Fail: enrich and retry once, then remove.',
+      log: ['Validation result', 'Duplicate of', 'Enrichment source'] },
+    { id: 'classify', col: 1, row: 0, kind: 'intake', label: 'Classification', sub: 'Fit, need, readiness',
+      purpose: 'Decide what kind of thing this is before anyone sells to it.',
+      entry: 'Lead passed the quality check.',
+      exit: 'One of: Qualified (to Outreach), Nurture (to Nurture pool with a review date), Disqualified (closed, reason logged), Existing customer (to account owner), Partner or referral contact (to partner track), Non-sales enquiry (routed to the right team).',
+      log: ['Classification', 'Fit score', 'Reason', 'Review date'] },
+    { id: 'nurture', col: 1, row: 1, kind: 'hold', label: 'Nurture pool', sub: 'Review date set',
+      purpose: 'Hold leads with fit but no current need, without losing them.',
+      entry: 'Classified as Nurture, or returned from Deferred.',
+      exit: 'Review date reached: reclassify. Suggested default: quarterly review, drop after two reviews with no change.',
+      log: ['Review date', 'Nurture track', 'Last touch'] },
+    { id: 'outreach', col: 2, row: 0, kind: 'pipe', label: 'Outreach', sub: 'Call, email or social',
+      purpose: 'Get a first conversation.',
+      entry: 'Classified as Qualified. Owner assigned.',
+      exit: 'Response received: to Discovery. No response: to Unresponsive and retry within cadence.',
+      log: ['Owner', 'Attempt log', 'Next action', 'Due date'] },
+    { id: 'unresp', col: 2, row: 1, kind: 'hold', label: 'Unresponsive', sub: 'Retry within cadence',
+      purpose: 'Keep trying without nagging forever.',
+      entry: 'An outreach attempt got no reply.',
+      exit: 'Suggested default: up to 4 attempts across 2 channels over 10 working days. Response: back to Outreach. Limit reached: Deferred.',
+      log: ['Attempts', 'Channels used', 'Last attempt'] },
+    { id: 'discovery', col: 3, row: 0, kind: 'pipe', label: 'Discovery', sub: 'Requirements and decision',
+      purpose: 'Confirm the need, the budget owner and how they decide.',
+      entry: 'Prospect responded and agreed to talk.',
+      exit: 'Requirements, timing, budget range and decision process confirmed: to Proposal. Timing or gaps: to Not ready.',
+      log: ['Meeting notes', 'Requirements', 'Decision maker', 'Timing', 'Estimated value'] },
+    { id: 'notready', col: 3, row: 1, kind: 'hold', label: 'Not ready', sub: 'Timing or gaps',
+      purpose: 'Park a real opportunity until it can move.',
+      entry: 'Discovery found a blocker: no budget yet, wrong timing, missing stakeholder.',
+      exit: 'Follow up on the stated date: back to Discovery. No date or more than 90 days out: Deferred. Fit changed: reclassify.',
+      log: ['Blocker', 'Follow-up date', 'Who to contact'] },
+    { id: 'proposal', col: 4, row: 0, kind: 'pipe', label: 'Proposal', sub: 'Scope, value, terms',
+      purpose: 'Put a price on a defined scope.',
+      entry: 'Discovery complete and value estimated.',
+      exit: 'Accepted and signed: Closed won. Counter or questions: Negotiation. Rejected: Closed lost with reason.',
+      log: ['Proposal version', 'Value', 'Close date', 'Terms'] },
+    { id: 'negotiate', col: 4, row: 1, kind: 'neg', label: 'Negotiation', sub: 'Revise and resubmit',
+      purpose: 'Converge on terms without endless revisions.',
+      entry: 'Prospect countered on scope, price or terms.',
+      exit: 'Revised proposal issued: back to Proposal. Suggested default: after 2 revisions, ask for a decision; no decision in 30 days: Deferred.',
+      log: ['Revision', 'What changed', 'Concession', 'Decision date'] },
+    { id: 'won', col: 5, row: 0, kind: 'won', label: 'Closed won', sub: 'Accepted and signed',
+      purpose: 'The deal is real. Hand it over cleanly.',
+      entry: 'Signed agreement or purchase order received.',
+      exit: 'Post-sale handoff completed within 2 working days.',
+      log: ['Signed date', 'Final value', 'Contract', 'Won reason'] },
+    { id: 'lost', col: 5, row: 1, kind: 'lost', label: 'Closed lost', sub: 'Log loss reason',
+      purpose: 'Learn something from every loss.',
+      entry: 'Rejected proposal, disqualified lead, or a stop decision after follow-ups.',
+      exit: 'Loss reason logged from a fixed list. Suggested default: re-enter Nurture pool after 6 months unless reason is "no fit".',
+      log: ['Loss reason', 'Competitor', 'Re-engage date'] },
+    { id: 'deferred', col: 5, row: 2, kind: 'hold', label: 'Deferred', sub: 'Paused, no decision',
+      purpose: 'Stop active effort without closing the door.',
+      entry: 'Outreach limit reached, Not ready with no date, or Negotiation with no decision.',
+      exit: 'Review date reached: reclassify. Suggested default: review at 90 days, then move to Nurture pool or Closed lost.',
+      log: ['Defer reason', 'Review date', 'Last stage'] },
+    { id: 'handoff', col: 6, row: 0, kind: 'won', label: 'Post-sale handoff', sub: 'Delivery and success',
+      purpose: 'Make sure delivery knows what was promised.',
+      entry: 'Closed won.',
+      exit: 'Handoff note accepted by delivery owner: scope, commitments, dates, named customer contacts.',
+      log: ['Delivery owner', 'Scope summary', 'Commitments', 'Kick-off date'] },
+    { id: 'fu-sched', col: 2, row: 2, kind: 'crm', label: 'Follow-up scheduled', sub: 'Due date and reminder',
+      purpose: 'Every open lead has a next action with a date. No exceptions.',
+      entry: 'Any stage in Outreach, Discovery or Proposal.',
+      exit: 'Follow-up completed on or before the due date.',
+      log: ['Next action', 'Due date', 'Owner'] },
+    { id: 'fu-done', col: 3, row: 2, kind: 'crm', label: 'Follow-up completed', sub: 'Log the outcome',
+      purpose: 'Record what happened, not just that it happened.',
+      entry: 'The call, email or meeting took place.',
+      exit: 'Outcome logged: response, no response, meeting notes, objection.',
+      log: ['Outcome', 'Notes', 'Objection'] },
+    { id: 'reassess', col: 4, row: 2, kind: 'crm', label: 'Reassess', sub: 'Next action or stop',
+      purpose: 'Decide whether the lead moves, waits or stops.',
+      entry: 'Follow-up outcome logged.',
+      exit: 'Response: resume the active stage and update stage, value and close date. Still open: schedule the next follow-up. Stop: Closed lost or Deferred.',
+      log: ['Stage', 'Value', 'Close date', 'Decision'] },
+  ];
+
+  /* ---------- Edges ----------
+     kind: main | exception | crm  ·  from/to ports: l r t b (+ optional offset)  ·  via: waypoints */
+  const EDGES = [
+    { from: 'prospect', to: 'quality', fp: 'b', tp: 't', kind: 'main', label: 'New lead' },
+    { from: 'quality', to: 'prospect', fp: 'l', tp: 'l', kind: 'exception', via: 'leftloop', label: 'Fail: enrich and retry' },
+    { from: 'quality', to: 'classify', fp: 'r', tp: 'l', kind: 'main', label: 'Pass' },
+    { from: 'classify', to: 'outreach', fp: 'r', tp: 'l', kind: 'main', label: '' },
+    { from: 'classify', to: 'nurture', fp: 'b', tp: 't', kind: 'exception', off: -22, la: 'end', label: 'Nurture' },
+    { from: 'nurture', to: 'classify', fp: 't', tp: 'b', kind: 'exception', off: 22, la: 'start', label: 'Review date' },
+    { from: 'classify', to: 'lost', fp: 'r', tp: 'l', kind: 'exception', via: [[colX(1) + NODE_W + 14, ROW_Y[0] + 20], [colX(1) + NODE_W + 14, ROW_Y[1] + NODE_H + 18], [colX(5) - 18, ROW_Y[1] + NODE_H + 18], [colX(5) - 18, ROW_Y[1] + 12]], label: 'Disqualified' },
+    { from: 'outreach', to: 'discovery', fp: 'r', tp: 'l', kind: 'main', label: '' },
+    { from: 'outreach', to: 'unresp', fp: 'b', tp: 't', kind: 'exception', off: -22, la: 'end', label: 'No response' },
+    { from: 'unresp', to: 'outreach', fp: 't', tp: 'b', kind: 'exception', off: 22, la: 'start', label: 'Retry' },
+    { from: 'unresp', to: 'deferred', fp: 'b', tp: 'l', kind: 'exception', via: [[colX(2) + NODE_W / 2, ROW_Y[1] + NODE_H + 34], [colX(5) - 40, ROW_Y[1] + NODE_H + 34], [colX(5) - 40, ROW_Y[2] + NODE_H / 2]], label: 'Limit reached' },
+    { from: 'discovery', to: 'proposal', fp: 'r', tp: 'l', kind: 'main', label: '' },
+    { from: 'discovery', to: 'notready', fp: 'b', tp: 't', kind: 'exception', off: -22, la: 'end', label: 'Timing or gaps' },
+    { from: 'notready', to: 'discovery', fp: 't', tp: 'b', kind: 'exception', off: 22, la: 'start', label: 'Follow-up date' },
+    { from: 'notready', to: 'deferred', fp: 'r', tp: 'l', kind: 'exception', via: [[colX(3) + NODE_W + 16, ROW_Y[1] + NODE_H / 2], [colX(3) + NODE_W + 16, ROW_Y[1] + NODE_H + 34]], joinBus: true, label: 'Defer' },
+    { from: 'proposal', to: 'won', fp: 'r', tp: 'l', kind: 'main', label: '' },
+    { from: 'proposal', to: 'negotiate', fp: 'b', tp: 't', kind: 'exception', off: -22, la: 'end', label: 'Counter' },
+    { from: 'negotiate', to: 'proposal', fp: 't', tp: 'b', kind: 'exception', off: 22, la: 'start', label: 'Revise' },
+    { from: 'proposal', to: 'lost', fp: 'r', tp: 'l', kind: 'exception', off: 18, via: [[colX(5) - 18, ROW_Y[0] + NODE_H / 2 + 18], [colX(5) - 18, ROW_Y[1] + NODE_H / 2 - 12]], label: 'Rejected' },
+    { from: 'negotiate', to: 'deferred', fp: 'r', tp: 'l', kind: 'exception', via: [[colX(4) + NODE_W + 16, ROW_Y[1] + NODE_H / 2], [colX(4) + NODE_W + 16, ROW_Y[2] + NODE_H / 2 - 12]], label: 'No decision' },
+    { from: 'won', to: 'handoff', fp: 'r', tp: 'l', kind: 'main', label: '' },
+    { from: 'deferred', to: 'nurture', fp: 'b', tp: 'b', kind: 'exception', via: [[colX(5) + NODE_W / 2, ROW_Y[2] + NODE_H + 28], [colX(1) + NODE_W / 2, ROW_Y[2] + NODE_H + 28]], label: 'Review date: reclassify' },
+    { from: 'lost', to: 'nurture', fp: 'r', tp: 'r', kind: 'exception', via: [[colX(5) + NODE_W + 14, ROW_Y[1] + NODE_H / 2], [colX(5) + NODE_W + 14, ROW_Y[2] + NODE_H + 46], [colX(1) + NODE_W + 14, ROW_Y[2] + NODE_H + 46], [colX(1) + NODE_W + 14, ROW_Y[1] + NODE_H / 2 + 8]], label: 'Re-engage after 6 months', slow: true },
+    { from: 'fu-sched', to: 'fu-done', fp: 'r', tp: 'l', kind: 'crm', label: '' },
+    { from: 'fu-done', to: 'reassess', fp: 'r', tp: 'l', kind: 'crm', label: '' },
+    { from: 'reassess', to: 'fu-sched', fp: 'b', tp: 'b', kind: 'crm', via: [[colX(4) + NODE_W / 2, ROW_Y[2] + NODE_H + 16], [colX(2) + NODE_W / 2, ROW_Y[2] + NODE_H + 16]], label: 'Still open: next follow-up' },
+    { from: 'reassess', to: 'deferred', fp: 'r', tp: 'l', kind: 'crm', off: 12, label: 'Stop' },
+    { from: 'reassess', to: 'proposal', fp: 't', tp: 'b', kind: 'crm', off: -40, via: [[colX(4) + NODE_W / 2 - 40, ROW_Y[2] - 18], [colX(4) - 22, ROW_Y[2] - 18], [colX(4) - 22, ROW_Y[0] + NODE_H + 18], [colX(4) + NODE_W / 2 - 40, ROW_Y[0] + NODE_H + 18]], label: 'Response: resume stage', slow: true },
+    { from: 'outreach', to: 'fu-sched', fp: 'b', tp: 't', kind: 'crm', off: 44, via: [[colX(2) + NODE_W / 2 + 44, ROW_Y[1] - 16], [colX(2) + NODE_W + 14, ROW_Y[1] - 16], [colX(2) + NODE_W + 14, ROW_Y[2] - 16], [colX(2) + NODE_W / 2 + 44, ROW_Y[2] - 16]], label: 'Every open lead' },
+  ];
+
+  const KIND_COLOR = {
+    main: 'var(--site-accent, #4fd8c4)',
+    exception: '#f2b45a',
+    crm: 'var(--site-accent-2, #7c8cf8)',
+  };
+
+  /* ---------- Views ---------- */
+  const VIEWS = {
+    happy: { lede: 'The shortest route from a raw lead to a signed deal and a clean handoff.', kinds: ['main'] },
+    stalls: { lede: 'Where leads wait, loop back, or quietly die. Every hold has a review date and a limit.', kinds: ['exception'] },
+    crm: { lede: 'The follow-up loop that runs underneath Outreach, Discovery and Proposal.', kinds: ['crm'] },
+    walk: { lede: 'One lead, start to finish, including the detours.', kinds: [] },
+  };
+
+  /* ---------- Walk a lead ---------- */
+  const WALK = [
+    { t: 'A website enquiry arrives', s: 'Form submission from an operations manager at a mid-size firm. Source, company and email captured.', nodes: ['prospect'], edges: [] },
+    { t: 'Quality check fails, then passes', s: 'No phone number and the company name is a trading name. Enrichment finds the registered entity and a switchboard number. Retry passes.', nodes: ['prospect', 'quality'], edges: [['prospect','quality'],['quality','prospect']] },
+    { t: 'Classified as Qualified', s: 'Right industry, a stated problem, a budget owner on the form. Owner assigned, next action set.', nodes: ['quality', 'classify'], edges: [['quality','classify']] },
+    { t: 'Outreach gets nothing', s: 'Two emails and a call over a week. Lead moves to Unresponsive. The cadence allows two more attempts on a second channel.', nodes: ['classify', 'outreach', 'unresp'], edges: [['classify','outreach'],['outreach','unresp']] },
+    { t: 'A LinkedIn message lands', s: 'Reply on attempt four. Back to Outreach, meeting booked, follow-up scheduled in the CRM.', nodes: ['unresp', 'outreach', 'fu-sched'], edges: [['unresp','outreach'],['outreach','fu-sched']] },
+    { t: 'Discovery finds a timing problem', s: 'Need is real, budget opens next quarter. Not ready, with a follow-up date in 8 weeks.', nodes: ['outreach', 'discovery', 'notready'], edges: [['outreach','discovery'],['discovery','notready']] },
+    { t: 'Follow-up date arrives', s: 'The CRM reminder fires. Call completed, outcome logged: budget approved. Resume Discovery, confirm decision process.', nodes: ['fu-sched', 'fu-done', 'reassess', 'notready', 'discovery'], edges: [['fu-sched','fu-done'],['fu-done','reassess'],['notready','discovery']] },
+    { t: 'Proposal, counter, revision', s: 'Proposal issued. They counter on payment terms. One revision, resubmitted. Value and close date updated in the CRM.', nodes: ['discovery', 'proposal', 'negotiate'], edges: [['discovery','proposal'],['proposal','negotiate'],['negotiate','proposal']] },
+    { t: 'Signed, and handed over', s: 'Accepted and signed. Won reason logged. Handoff note to delivery within two working days: scope, commitments, named contacts.', nodes: ['proposal', 'won', 'handoff'], edges: [['proposal','won'],['won','handoff']] },
+  ];
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (t, a = {}, h) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (h !== undefined) e.innerHTML = h; return e; };
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  const nodeMap = {};
+  NODES.forEach(n => { n.x = colX(n.col); n.y = ROW_Y[n.row]; n.w = NODE_W; n.h = NODE_H; nodeMap[n.id] = n; });
+
+  function port(n, p, off = 0) {
+    const cx = n.x + n.w / 2, cy = n.y + n.h / 2;
+    if (p === 'l') return [n.x, cy + off];
+    if (p === 'r') return [n.x + n.w, cy + off];
+    if (p === 't') return [cx + off, n.y];
+    return [cx + off, n.y + n.h];
+  }
+  function edgePath(e) {
+    const a = nodeMap[e.from], b = nodeMap[e.to];
+    const off = e.off || 0;
+    let p0 = port(a, e.fp, off), p1 = port(b, e.tp, e.tp === e.fp ? off : (e.tp === 'l' || e.tp === 'r') && (e.fp === 'l' || e.fp === 'r') ? off : off);
+    if (e.via === 'leftloop') {
+      const x = a.x - 26;
+      return `M${p0[0]} ${p0[1]} L${x} ${p0[1]} L${x} ${p1[1]} L${p1[0]} ${p1[1]}`;
+    }
+    if (Array.isArray(e.via)) {
+      const pts = [p0, ...e.via, p1];
+      return pts.map((p, i) => (i ? 'L' : 'M') + p[0] + ' ' + p[1]).join(' ');
+    }
+    const horiz = (e.fp === 'l' || e.fp === 'r');
+    if (horiz && Math.abs(p0[1] - p1[1]) < 1) return `M${p0[0]} ${p0[1]} L${p1[0]} ${p1[1]}`;
+    if (horiz) { const xm = (p0[0] + p1[0]) / 2; return `M${p0[0]} ${p0[1]} C${xm} ${p0[1]}, ${xm} ${p1[1]}, ${p1[0]} ${p1[1]}`; }
+    if (Math.abs(p0[0] - p1[0]) < 1) return `M${p0[0]} ${p0[1]} L${p1[0]} ${p1[1]}`;
+    const ym = (p0[1] + p1[1]) / 2; return `M${p0[0]} ${p0[1]} C${p0[0]} ${ym}, ${p1[0]} ${ym}, ${p1[0]} ${p1[1]}`;
+  }
+
+  /* ---------- Per-instance init ---------- */
+  window.lpSxInit = function (root) {
+    if (!root || root.dataset.sxReady) return;
+    root.dataset.sxReady = '1';
+    const svg = root.querySelector('[data-diagram]');
+    const panel = root.querySelector('[data-panel]');
+    const lede = root.querySelector('[data-lede]');
+    const state = { view: 'happy', step: 0, selected: null };
+
+    function build() {
+      svg.setAttribute('viewBox', `0 0 ${CANVAS_W} ${CANVAS_H}`);
+      svg.appendChild(el('defs', {}, `<marker id="sx-arr" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M1 1L8 5L1 9" fill="none" stroke="context-stroke" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>`));
+      const g0 = el('g');
+      LANES.forEach(l => {
+        g0.appendChild(el('rect', { class: 'sx-lane', x: 14, y: ROW_Y[l.row] - 24, width: colX(5) - 40, height: NODE_H + 48, rx: 12 }));
+        const t = el('text', { class: 'sx-lane-label', x: 28, y: ROW_Y[l.row] + 8 });
+        l.label.split(' and ').forEach((w, i) => t.appendChild(el('tspan', { x: 28, dy: i ? 14 : 0 }, i ? 'and ' + w : w)));
+        g0.appendChild(t);
+      });
+      g0.appendChild(el('rect', { class: 'sx-lane sx-lane--outcome', x: colX(5) - 24, y: ROW_Y[0] - 24, width: NODE_W + 48, height: ROW_Y[2] + NODE_H + 24 - ROW_Y[0] + 24, rx: 12 }));
+      PHASES.forEach((p, i) => g0.appendChild(el('text', { class: 'sx-phase', x: colX(i) + NODE_W / 2, y: 52 }, p)));
+      svg.appendChild(g0);
+      svg.appendChild(el('g', { 'data-edges': '' }));
+      svg.appendChild(el('g', { 'data-elabels': '' }));
+      const gn = el('g');
+      NODES.forEach(n => {
+        const g = el('g', { class: `sx-node k-${n.kind}`, 'data-id': n.id, tabindex: 0, role: 'button' });
+        g.appendChild(el('rect', { x: n.x, y: n.y, width: n.w, height: n.h, rx: 10 }));
+        g.appendChild(el('text', { x: n.x + n.w / 2, y: n.y + 28 }, esc(n.label)));
+        g.appendChild(el('text', { class: 'sub', x: n.x + n.w / 2, y: n.y + 47 }, esc(n.sub)));
+        g.addEventListener('click', () => selectNode(n.id));
+        g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectNode(n.id); } });
+        gn.appendChild(g);
+      });
+      svg.appendChild(gn);
+      EDGES.forEach((e, i) => { e.i = i; e.d = edgePath(e); });
+    }
+
+    function drawEdges() {
+      const g = svg.querySelector('[data-edges]'), gl = svg.querySelector('[data-elabels]');
+      g.innerHTML = ''; gl.innerHTML = '';
+      svg.querySelectorAll('.sx-node').forEach(n => n.classList.remove('dim', 'hot'));
+      const v = VIEWS[state.view];
+      let activeEdge, activeNode;
+      if (state.view === 'walk') {
+        const st = WALK[state.step];
+        const set = new Set(st.edges.map(p => p.join('>')));
+        activeEdge = e => set.has(e.from + '>' + e.to);
+        activeNode = id => st.nodes.includes(id);
+        svg.querySelectorAll('.sx-node').forEach(n => n.classList.toggle('dim', !activeNode(n.dataset.id)));
+        st.nodes.forEach(id => svg.querySelector(`.sx-node[data-id="${id}"]`).classList.add('hot'));
+      } else {
+        activeEdge = e => v.kinds.includes(e.kind);
+        const touched = new Set(); EDGES.filter(activeEdge).forEach(e => { touched.add(e.from); touched.add(e.to); });
+        svg.querySelectorAll('.sx-node').forEach(n => n.classList.toggle('dim', !touched.has(n.dataset.id)));
+      }
+      EDGES.forEach(e => {
+        const on = activeEdge(e);
+        const p = el('path', { class: `sx-edge ${on ? 'anim' : 'faded'} ${e.slow ? 'slow' : ''}`, d: e.d, style: `stroke:${KIND_COLOR[e.kind]}`, 'marker-end': 'url(#sx-arr)' });
+        g.appendChild(p);
+        if (e.label && on) {
+          const len = p.getTotalLength(), pt = p.getPointAtLength(len * (e.labelAt || 0.5));
+          const w = e.label.length * 6.2 + 10;
+          const tx = pt.x + (e.la === 'end' ? -12 : e.la === 'start' ? 12 : 0);
+          const rx = e.la === 'end' ? tx - w + 5 : e.la === 'start' ? tx - 5 : tx - w / 2;
+          const dy = e.la === 'end' ? -9 : e.la === 'start' ? 9 : 0;
+          gl.appendChild(el('rect', { class: 'sx-elabel-bg', x: rx, y: pt.y - 8 + dy, width: w, height: 16, rx: 4 }));
+          gl.appendChild(el('text', { class: 'sx-elabel', x: tx, y: pt.y + 4 + dy, style: e.la ? `text-anchor:${e.la}` : '' }, esc(e.label)));
+        }
+      });
+    }
+
+    const dot = c => `<i style="background:${c}"></i>`;
+    function renderPanel() {
+      lede.textContent = VIEWS[state.view].lede;
+      let html = '';
+      if (state.view === 'happy') {
+        html += `<section class="lp-sx__card"><p class="lp-sx__eyebrow">Happy path</p><p class="lp-sx__big">Seven stages, each with an exit rule. A lead cannot sit in a stage without a next action and a date.</p>
+          <div class="lp-sx__rules">` + ['prospect', 'quality', 'classify', 'outreach', 'discovery', 'proposal', 'won', 'handoff'].map(id => { const n = nodeMap[id]; return `<div class="lp-sx__rule">${dot('var(--site-accent, #4fd8c4)')}<div><b>${esc(n.label)}</b><span>${esc(n.exit)}</span></div></div>`; }).join('') + `</div></section>`;
+      }
+      if (state.view === 'stalls') {
+        html += `<section class="lp-sx__card"><p class="lp-sx__eyebrow">Stalls and loops</p><p class="lp-sx__big">Five places a lead can wait. Each has a cadence, a limit, and a way back in.</p>
+          <div class="lp-sx__rules">` + ['unresp', 'notready', 'negotiate', 'nurture', 'deferred', 'lost'].map(id => { const n = nodeMap[id]; return `<div class="lp-sx__rule">${dot(id === 'lost' ? '#ff6b6b' : '#f2b45a')}<div><b>${esc(n.label)}</b><span>${esc(n.exit)}</span></div></div>`; }).join('') + `</div>
+          <p style="margin-top:12px">The numbers are defaults to argue with. The structure is the point: nothing waits without a date, and nothing loops more than twice without a decision.</p></section>`;
+      }
+      if (state.view === 'crm') {
+        html += `<section class="lp-sx__card"><p class="lp-sx__eyebrow">CRM activity</p><p class="lp-sx__big">Three records per touch: what is next, what happened, what changed.</p>
+          <div class="lp-sx__rules">` + ['fu-sched', 'fu-done', 'reassess'].map(id => { const n = nodeMap[id]; return `<div class="lp-sx__rule">${dot('var(--site-accent-2, #7c8cf8)')}<div><b>${esc(n.label)}</b><span>${esc(n.purpose)}</span><div class="lp-sx__fields">${n.log.map(f => `<span class="lp-sx__tag is-req">${esc(f)}</span>`).join('')}</div></div></div>`; }).join('') + `</div></section>
+          <section class="lp-sx__card"><h3>Always current on the deal</h3><div class="lp-sx__fields">${['Owner', 'Stage', 'Next action', 'Due date', 'Value', 'Close date'].map(f => `<span class="lp-sx__tag is-req">${esc(f)}</span>`).join('')}</div><p style="margin-top:10px">If any of these is blank on an open deal, the pipeline report is fiction.</p></section>`;
+      }
+      if (state.view === 'walk') {
+        const st = WALK[state.step];
+        html += `<section class="lp-sx__card"><p class="lp-sx__eyebrow">Walk a lead · step ${state.step + 1} of ${WALK.length}</p><p class="lp-sx__big">${esc(st.t)}</p><p>${esc(st.s)}</p>
+          <div class="lp-sx__stepper"><button type="button" data-step="-1" ${state.step === 0 ? 'disabled' : ''}>Back</button><button type="button" data-step="1" ${state.step === WALK.length - 1 ? 'disabled' : ''}>Next</button>
+          <div class="lp-sx__dots">${WALK.map((_, i) => `<i class="${i === state.step ? 'on' : ''}"></i>`).join('')}</div></div></section>`;
+      }
+      const sel = state.selected ? nodeMap[state.selected] : null;
+      html += `<section class="lp-sx__card lp-sx__detail"><p class="lp-sx__eyebrow">${sel ? 'Selected' : 'Select any box'}</p>` + (sel
+        ? `<div class="lp-sx__nm">${esc(sel.label)}</div><div class="lp-sx__lane">${esc(PHASES[sel.col])} · ${esc(LANES[sel.row].label)}</div><p>${esc(sel.purpose)}</p><h4>Enters when</h4><p>${esc(sel.entry)}</p><h4>Leaves when</h4><p>${esc(sel.exit)}</p><h4>Log in the CRM</h4><div class="lp-sx__fields">${sel.log.map(f => `<span class="lp-sx__tag">${esc(f)}</span>`).join('')}</div>`
+        : `<p>Click a box for its purpose, entry and exit rules, and what to log.</p>`) + `</section>`;
+      panel.innerHTML = html;
+      panel.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => { state.step = Math.max(0, Math.min(WALK.length - 1, state.step + +b.dataset.step)); drawEdges(); renderPanel(); }));
+    }
+
+    function setView(v) {
+      state.view = v;
+      root.querySelectorAll('.lp-sx__viewbtn').forEach(b => { b.classList.toggle('is-active', b.dataset.view === v); b.setAttribute('aria-selected', b.dataset.view === v); });
+      drawEdges(); renderPanel();
+    }
+    function selectNode(id) {
+      state.selected = state.selected === id ? null : id;
+      svg.querySelectorAll('.sx-node').forEach(n => n.classList.toggle('selected', n.dataset.id === state.selected));
+      renderPanel();
+    }
+
+    root.querySelectorAll('.lp-sx__viewbtn').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+    document.addEventListener('keydown', e => {
+      if (state.view !== 'walk' || !root.isConnected) return;
+      if (e.key === 'ArrowRight') { state.step = Math.min(WALK.length - 1, state.step + 1); drawEdges(); renderPanel(); }
+      if (e.key === 'ArrowLeft') { state.step = Math.max(0, state.step - 1); drawEdges(); renderPanel(); }
+    });
+
+    build();
+    const dv = root.dataset.defaultView;
+    setView(VIEWS[dv] ? dv : 'happy');
+  };
+
+  window.lpSxInit(document.getElementById('lp-sx-{{ forloop.counter|default:1 }}'));
+})();
+</script>
