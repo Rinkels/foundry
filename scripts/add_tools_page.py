@@ -38,7 +38,7 @@ SECTIONS = [
         "type": "cards",
         "anchor": "cissp",
         "eyebrow": "CISSP study suite",
-        "heading": "Five tools, one shared glossary.",
+        "heading": "Four tools, two deep dives, one shared glossary.",
         "subhead": (
             "Built around a single structured glossary of exam concepts: every "
             "flashcard, mind-map node and quiz question draws from the same data."
