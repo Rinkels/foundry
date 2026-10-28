@@ -1,0 +1,415 @@
+{% comment %}
+ot_explorer — interactive Purdue-model explorer (human-curated block, never LLM-emitted).
+Block keys: eyebrow, heading, subhead, default_view (flow|risk|attacks), anchor.
+Everything else (nodes, flows, attack paths, incidents) is data inside the script below;
+edit it there. Styles live in _landing.css under .lp-otx.
+{% endcomment %}
+<section class="lp-section lp-otx-band"{% if s.anchor %} id="{{ s.anchor }}"{% endif %}>
+  <div class="lp-container">
+    {% if s.eyebrow %}<div class="lp-section__eyebrow">{{ s.eyebrow }}</div>{% endif %}
+    {% if s.heading %}<h2 class="lp-section__heading">{{ s.heading }}</h2>{% endif %}
+    {% if s.subhead %}<p class="lp-section__subhead">{{ s.subhead }}</p>{% endif %}
+
+    <div class="lp-otx" id="lp-otx-{{ forloop.counter|default:1 }}" data-default-view="{{ s.default_view|default:'flow' }}">
+      <div class="lp-otx__viewbar" role="tablist" aria-label="View">
+        <span class="lp-otx__viewlbl">View</span>
+        <button class="lp-otx__viewbtn" data-view="flow" type="button" role="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+          Operational data flow
+        </button>
+        <button class="lp-otx__viewbtn" data-view="risk" type="button" role="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+          Residual risk and attack path
+        </button>
+        <button class="lp-otx__viewbtn" data-view="attacks" type="button" role="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 8v4l3 2"/><path d="M3.05 11a9 9 0 1 0 .5-4"/><path d="M3 4v4h4"/></svg>
+          Known OT attacks
+        </button>
+        <span class="lp-otx__lede" data-lede></span>
+        <div class="lp-otx__tour">
+          <button type="button" class="lp-otx__tourbtn" data-tourbtn aria-haspopup="true" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15 9l-2 6-4 2 2-6z"/></svg>
+            Guided tour
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="lp-otx__tourmenu" data-tourmenu role="menu"></div>
+        </div>
+      </div>
+
+      <div class="lp-otx__layout">
+        <div class="lp-otx__canvas">
+          <svg data-diagram role="img" aria-labelledby="lp-otx-title-{{ forloop.counter|default:1 }} lp-otx-desc-{{ forloop.counter|default:1 }}">
+            <title id="lp-otx-title-{{ forloop.counter|default:1 }}">Purdue model of an electric power generation plant</title>
+            <desc id="lp-otx-desc-{{ forloop.counter|default:1 }}">Seven levels from the internet down to the physical process, with firewalls and gateways between levels and animated connectors showing data flows, attack paths or historic incidents.</desc>
+          </svg>
+        </div>
+        <aside class="lp-otx__panel" data-panel></aside>
+      </div>
+      <p class="lp-otx__foot">Illustrative reference architecture. Node names are generic; incident summaries are from public reporting.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  if (window.lpOtxInit) { window.lpOtxInit(document.getElementById('lp-otx-{{ forloop.counter|default:1 }}')); return; }
+
+  /* ---------- Layout constants ---------- */
+  var COL_X0 = 96, COL_W = 140, NODE_W = 118, NODE_H = 76;
+  var BAND_H = 112, GAP = 58, Y0 = 16, CANVAS_W = 1212;
+
+  var LEVELS = [
+    { id: 'L5',   name: 'Internet',            zone: 'it' },
+    { id: 'L4',   name: 'Enterprise IT',       zone: 'it' },
+    { id: 'L3.5', name: 'Industrial DMZ',      zone: 'ot' },
+    { id: 'L3',   name: 'Operations',          zone: 'ot' },
+    { id: 'L2',   name: 'Supervisory control', zone: 'ot' },
+    { id: 'L1',   name: 'Basic control',       zone: 'ot' },
+    { id: 'L0',   name: 'Physical process',    zone: 'ot' }
+  ];
+  LEVELS.forEach(function (l, i) { l.y = Y0 + i * (BAND_H + GAP); });
+  function levelY(id) { return LEVELS.filter(function (l) { return l.id === id; })[0].y; }
+  function levelOf(id) { return LEVELS.filter(function (l) { return l.id === id; })[0]; }
+
+  /* ---------- Icons (24x24 stroke paths) ---------- */
+  var ICONS = {
+    laptop: '<rect x="3" y="5" width="18" height="11" rx="1"/><path d="M2 19h20"/>',
+    desktop: '<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8M12 16v4"/>',
+    server: '<rect x="3" y="4" width="18" height="7" rx="1"/><rect x="3" y="13" width="18" height="7" rx="1"/><path d="M7 7.5h.01M7 16.5h.01"/>',
+    cloud: '<path d="M7 18a4 4 0 0 1-.5-8A6 6 0 0 1 18 9a4 4 0 0 1 0 9z"/>',
+    shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+    shieldCheck: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+    cpu: '<rect x="5" y="5" width="14" height="14" rx="1"/><rect x="9" y="9" width="6" height="6"/><path d="M3 10h2M3 14h2M19 10h2M19 14h2M10 3v2M14 3v2M10 19v2M14 19v2"/>',
+    building: '<rect x="4" y="3" width="16" height="18"/><path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2M10 21v-3h4v3"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    router: '<rect x="3" y="13" width="18" height="7" rx="1"/><path d="M7 16.5h.01M11 16.5h.01M12 13V9M8 9a6 6 0 0 1 8 0M5.5 6.5a10 10 0 0 1 13 0"/>',
+    database: '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    key: '<circle cx="8" cy="15" r="4"/><path d="M10.9 12.1L20 3M15 8l3 3"/>',
+    download: '<path d="M12 4v12M7 11l5 5 5-5M4 20h16"/>',
+    briefcase: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>',
+    gauge: '<path d="M4 15a8 8 0 1 1 16 0"/><path d="M12 15l4-5"/><circle cx="12" cy="15" r="1.5"/>',
+    turbine: '<circle cx="12" cy="12" r="2"/><path d="M12 10c0-4 2-7 2-7s-3 1-5 4M14 12c4 0 7 2 7 2s-1-3-4-5M12 14c0 4-2 7-2 7s3-1 5-4M10 12c-4 0-7-2-7-2s1 3 4 5"/>',
+    flame: '<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3 1-6 1-9z"/>',
+    bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+    sliders: '<path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>'
+  };
+
+  /* ---------- Nodes ---------- */
+  var NODES = [
+    { id: 'attacker',        level: 'L5', col: 0, icon: 'user', cls: 'attacker', label: 'Attacker\nstation', desc: 'Anyone on the internet. Every attack path in the risk view starts here.' },
+    { id: 'vendor-laptop',   level: 'L5', col: 2, icon: 'laptop', label: 'Remote vendor\nlaptop', desc: 'A turbine or DCS vendor engineer supporting the plant from their own office.' },
+    { id: 'av-vendor',       level: 'L5', col: 4, icon: 'cloud', label: 'Antivirus\nvendor', desc: 'Source of signature and patch files. Trusted, but outside your control.' },
+    { id: 'dispatch-centre', level: 'L5', col: 6, icon: 'building', label: 'Generating\ndispatch centre', desc: 'The grid operator sends setpoints (MW, frequency response) and receives telemetry.' },
+    { id: 'vendor-cloud',    level: 'L5', col: 7, icon: 'cloud', label: 'Vendor\ncloud', desc: 'A condition-monitoring cloud that a vendor connected to the turbine controller directly.' },
+    { id: 'corp-ws',    level: 'L4', col: 1, icon: 'desktop', label: 'Corporate\nworkstation', desc: 'Engineers, planners and finance read historian data from here.' },
+    { id: 'vpn',        level: 'L4', col: 2, icon: 'key', label: 'Remote access\nVPN server', desc: 'Terminates vendor and staff VPN sessions on the enterprise network.' },
+    { id: 'ad',         level: 'L4', col: 3, icon: 'server', label: 'Enterprise\nActive Directory', desc: 'Identity for the whole enterprise. Compromise here is a skeleton key.' },
+    { id: 'update-repo',level: 'L4', col: 4, icon: 'download', label: 'Update and AV\nrepository', desc: 'Downloads patches and signatures from vendors and stages them for the DMZ.' },
+    { id: 'erp',        level: 'L4', col: 5, icon: 'briefcase', label: 'ERP and\nbusiness systems', desc: 'Fuel accounting, maintenance planning and settlement. Consumes production data.' },
+    { id: 'historian-replica', level: 'L3.5', col: 2, icon: 'database', label: 'Historian\nreplica', desc: 'A read-only copy of the OT historian that the business reads instead of the real one.' },
+    { id: 'jump-host',  level: 'L3.5', col: 3, icon: 'server', label: 'Remote access\njump host', desc: 'The only machine a remote session may land on before touching OT.' },
+    { id: 'patch-staging', level: 'L3.5', col: 4, icon: 'download', label: 'Patch and AV\nstaging', desc: 'Where patches wait to be checked before OT pulls them.' },
+    { id: 'dispatch-dmz', level: 'L3.5', col: 6, icon: 'cpu', label: 'Dispatch DMZ\nRTU/IED', desc: 'Protocol endpoint for the grid operator link (ICCP or DNP3).' },
+    { id: 'rogue-router', level: 'L3.5', col: 7, icon: 'router', label: 'Unauthorised\nvendor router', desc: 'A 4G router a vendor left behind. It bypasses every firewall on this page.' },
+    { id: 'ot-domain',   level: 'L3', col: 0, icon: 'clock', label: 'OT domain, DNS\nand time', desc: 'Separate identity, name and time services for the plant network.' },
+    { id: 'ot-historian',level: 'L3', col: 2, icon: 'database', label: 'OT historian', desc: 'Collects every tag from SCADA and DCS. The crown jewels of plant data.' },
+    { id: 'eng-ws',      level: 'L3', col: 3, icon: 'desktop', label: 'Engineering\nworkstation', desc: 'Programs controllers and safety systems. The most dangerous keyboard in the plant.' },
+    { id: 'av-server',   level: 'L3', col: 4, icon: 'server', label: 'AV and endpoint\nserver', desc: 'Pushes signatures and patches to OT hosts.' },
+    { id: 'plant-scada', level: 'L3', col: 6, icon: 'gauge', label: 'Plant SCADA\nand AGC', desc: 'Plant-wide supervisory control and automatic generation control.' },
+    { id: 'hmi',         level: 'L2', col: 2, icon: 'desktop', label: 'Operator HMI', desc: 'Control room screens. Operators start, stop and adjust units here.' },
+    { id: 'dcs',         level: 'L2', col: 4, icon: 'sliders', label: 'Unit DCS\ncontrollers', desc: 'Distributed control system running the boiler and balance of plant.' },
+    { id: 'turbine-control', level: 'L2', col: 7, icon: 'turbine', label: 'Turbine\ncontrol system', desc: 'Vendor-supplied governor and sequencing for the turbine.' },
+    { id: 'plc',         level: 'L1', col: 2, icon: 'cpu', label: 'Boiler and\nBOP PLCs', desc: 'Programmable controllers for burners, feedwater and auxiliaries.' },
+    { id: 'sis',         level: 'L1', col: 4, icon: 'shieldCheck', label: 'Safety\ninstrumented system', desc: 'Independent trip logic. Must never share a path with the DCS.' },
+    { id: 'relays',      level: 'L1', col: 6, icon: 'cpu', label: 'Protection\nrelays', desc: 'Trip breakers on faults. Speak IEC 61850 and DNP3.' },
+    { id: 'governor',    level: 'L1', col: 7, icon: 'cpu', label: 'Governor and\nexcitation', desc: 'Speed and voltage regulators on the generator.' },
+    { id: 'boiler',      level: 'L0', col: 2, icon: 'flame', label: 'Boiler and\nfuel system', desc: 'Where the heat comes from.' },
+    { id: 'turbine-gen', level: 'L0', col: 5, icon: 'turbine', label: 'Turbine and\ngenerator', desc: 'Rotating mass. Overspeed or loss of lubrication destroys it in seconds.' },
+    { id: 'switchyard',  level: 'L0', col: 6, icon: 'bolt', label: 'Switchyard\nbreakers', desc: 'The plant\'s connection to the grid.' }
+  ];
+
+  var FIREWALLS = [
+    { id: 'internet-fw', below: 'L5', col: 3, label: 'Internet firewall', desc: 'Perimeter firewall between the internet and the enterprise.' },
+    { id: 'it-dmz-fw',   below: 'L4', col: 3, label: 'IT-side DMZ firewall', desc: 'Separates enterprise IT from the industrial DMZ.' },
+    { id: 'itot-fw',     below: 'L3.5', col: 2, label: 'IT/OT firewall', alt: 'Unidirectional gateway', desc: 'The historian crossing. Two-way firewall today; could be a hardware-enforced one-way gateway.' },
+    { id: 'ra-fw',       below: 'L3.5', col: 3, label: 'Remote access firewall', alt: 'Hardware-enforced remote access', desc: 'The remote access crossing. A firewall permits a live two-way session into OT.' },
+    { id: 'batch-fw',    below: 'L3.5', col: 4, label: 'Batch update firewall', alt: 'Reversible unidirectional gateway', desc: 'The batch update crossing. Patches move in, but so can anything else over an open port.' },
+    { id: 'dispatch-fw', below: 'L3.5', col: 6, label: 'Dispatch firewall', alt: 'Inbound gateway with protocol enforcement', desc: 'The dispatch crossing. Setpoints in, telemetry out.' }
+  ];
+
+  var FLOWS = [
+    { id: 'historian', label: 'Historian data', color: 'var(--site-accent, #4fd8c4)', segs: [['ot-historian','itot-fw'],['itot-fw','historian-replica'],['historian-replica','it-dmz-fw'],['it-dmz-fw','corp-ws'],['it-dmz-fw','erp']] },
+    { id: 'remote',    label: 'Remote access',  color: 'var(--site-accent-2, #7c8cf8)', segs: [['vendor-laptop','internet-fw'],['internet-fw','vpn'],['vpn','it-dmz-fw'],['it-dmz-fw','jump-host'],['jump-host','ra-fw'],['ra-fw','eng-ws']] },
+    { id: 'batch',     label: 'Batch updates',  color: 'var(--site-gold, #d9b36b)', segs: [['av-vendor','internet-fw'],['internet-fw','update-repo'],['update-repo','it-dmz-fw'],['it-dmz-fw','patch-staging'],['patch-staging','batch-fw'],['batch-fw','av-server'],['av-server','hmi']] },
+    { id: 'dispatch',  label: 'Dispatch setpoints', color: '#f2a65a', segs: [['dispatch-centre','dispatch-dmz'],['dispatch-dmz','dispatch-fw'],['dispatch-fw','plant-scada']] },
+    { id: 'rogue',     label: 'Unauthorised vendor link', color: 'var(--site-muted, #71809b)', segs: [['vendor-cloud','rogue-router'],['rogue-router','turbine-control']] },
+    { id: 'control',   label: 'Control traffic', color: 'var(--site-border-strong, rgba(148,163,199,0.45))', slow: true, segs: [['plant-scada','hmi'],['plant-scada','dcs'],['hmi','dcs'],['dcs','plc'],['eng-ws','plc'],['eng-ws','sis'],['turbine-control','governor'],['plc','boiler'],['sis','turbine-gen'],['governor','turbine-gen'],['relays','switchyard'],['plant-scada','relays']] }
+  ];
+
+  var CROSSINGS = [
+    { id: 'historian', title: 'Historian data', fw: 'itot-fw', weak: 'Firewall\nTwo-way session', strong: 'Gateway\nUnidirectional gateway',
+      path: ['attacker','internet-fw','corp-ws','it-dmz-fw','historian-replica','itot-fw','ot-historian','plant-scada','dcs','plc'] },
+    { id: 'remote', title: 'Remote access', fw: 'ra-fw', weak: 'Firewall\nTwo-way session', strong: 'Hardware-enforced\nremote access',
+      path: ['attacker','internet-fw','vpn','it-dmz-fw','jump-host','ra-fw','eng-ws','sis'] },
+    { id: 'batch', title: 'Batch updates', fw: 'batch-fw', weak: 'Firewall\nTwo-way session', strong: 'Reversible\nunidirectional gateway',
+      path: ['attacker','av-vendor','internet-fw','update-repo','it-dmz-fw','patch-staging','batch-fw','av-server','hmi'] },
+    { id: 'dispatch', title: 'Dispatch setpoints', fw: 'dispatch-fw', weak: 'Firewall\nTwo-way session', strong: 'Inbound gateway\nProtocol enforced',
+      path: ['attacker','dispatch-centre','dispatch-dmz','dispatch-fw','plant-scada','relays'] },
+    { id: 'rogue', title: 'Unauthorised vendor router', fw: 'rogue-router', weak: 'Router\nStill connected', strong: 'Router\nFound and removed',
+      path: ['attacker','vendor-cloud','rogue-router','turbine-control','governor','turbine-gen'] }
+  ];
+
+  var INCIDENTS = [
+    { id: 'stuxnet', name: 'Stuxnet', year: '2010', target: 'Uranium enrichment, Iran',
+      path: ['eng-ws','plc','boiler'],
+      summary: 'Malware carried in on removable media reached engineering workstations, then rewrote Siemens S7 PLC logic while replaying normal values to operators.',
+      lesson: 'No internet path at all. The engineering workstation and the controllers it programs are the target.' },
+    { id: 'blackenergy', name: 'BlackEnergy', year: '2015', target: 'Distribution utilities, Ukraine',
+      path: ['attacker','internet-fw','corp-ws','vpn','it-dmz-fw','jump-host','ra-fw','hmi','plant-scada','relays','switchyard'],
+      summary: 'Spear-phishing into corporate IT, harvested VPN credentials, then a live remote session onto operator HMIs to open breakers. About 230,000 customers lost power.',
+      lesson: 'A two-way remote access path from IT into OT is exactly what the attackers used.' },
+    { id: 'industroyer', name: 'Industroyer / CrashOverride', year: '2016', target: 'Transmission substation, Kyiv',
+      path: ['attacker','internet-fw','corp-ws','it-dmz-fw','plant-scada','relays','switchyard'],
+      summary: 'Purpose-built malware spoke IEC 101, IEC 104 and IEC 61850 directly to substation devices, tripping breakers without needing the HMI.',
+      lesson: 'Once inside the control network, the protocols themselves are the weapon. Protocol enforcement at the crossing matters.' },
+    { id: 'triton', name: 'Triton / Trisis', year: '2017', target: 'Petrochemical plant, Saudi Arabia',
+      path: ['attacker','internet-fw','corp-ws','it-dmz-fw','jump-host','ra-fw','eng-ws','sis'],
+      summary: 'Attackers moved from IT through the DMZ to an engineering workstation and loaded a payload onto Triconex safety controllers. A failed update tripped the plant, which is how it was found.',
+      lesson: 'The safety system was reachable from the same engineering workstation as everything else.' },
+    { id: 'colonial', name: 'Colonial Pipeline', year: '2021', target: 'Fuel pipeline, USA',
+      path: ['attacker','internet-fw','vpn','corp-ws','erp'],
+      summary: 'Ransomware entered through a legacy VPN account with no multi-factor authentication. OT was not reached, but the operator shut the pipeline down because billing and safety visibility were lost.',
+      lesson: 'An IT-only incident still stopped production. OT depends on IT services more than the diagram admits.' },
+    { id: 'unitronics', name: 'Unitronics PLC campaign', year: '2023', target: 'Water and energy sites, multiple countries',
+      path: ['attacker','vendor-cloud','rogue-router','turbine-control','governor'],
+      summary: 'Internet-exposed PLCs with default credentials were defaced and disabled at dozens of small utilities.',
+      lesson: 'Controllers reachable from the internet, however they got there, are owned by whoever looks first.' }
+  ];
+
+  var LEDE = {
+    flow: 'How process data reaches the business on an ordinary day.',
+    risk: 'Count the ways in, then harden each crossing and watch the count fall.',
+    attacks: 'Where real incidents travelled through a plant like this one.'
+  };
+
+  /* ---------- Geometry ---------- */
+  var nodeMap = {};
+  NODES.forEach(function (n) { n.x = COL_X0 + n.col * COL_W; n.y = levelY(n.level) + 18; n.w = NODE_W; n.h = NODE_H; n.kind = 'node'; nodeMap[n.id] = n; });
+  FIREWALLS.forEach(function (f) { f.w = 132; f.h = 40; f.x = COL_X0 + f.col * COL_W + NODE_W / 2 - f.w / 2; f.y = levelY(f.below) + BAND_H + 9; f.kind = 'fw'; nodeMap[f.id] = f; });
+  function cx(n) { return n.x + n.w / 2; }
+  function edgePath(aId, bId) {
+    var a = nodeMap[aId], b = nodeMap[bId];
+    if (Math.abs(a.y - b.y) < 1) {
+      var ax = cx(a), bx = cx(b), top = a.y - 2;
+      return 'M' + ax + ' ' + top + ' C' + ax + ' ' + (top - 30) + ', ' + bx + ' ' + (top - 30) + ', ' + bx + ' ' + top;
+    }
+    var down = a.y < b.y;
+    var x1 = cx(a), y1 = down ? a.y + a.h : a.y, x2 = cx(b), y2 = down ? b.y : b.y + b.h, ym = (y1 + y2) / 2;
+    if (Math.abs(x1 - x2) < 1) return 'M' + x1 + ' ' + y1 + ' L' + x2 + ' ' + y2;
+    return 'M' + x1 + ' ' + y1 + ' C' + x1 + ' ' + ym + ', ' + x2 + ' ' + ym + ', ' + x2 + ' ' + y2;
+  }
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, html) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (html !== undefined) e.innerHTML = html;
+    return e;
+  }
+  function h(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  /* ---------- Per-instance init ---------- */
+  window.lpOtxInit = function (root) {
+    if (!root || root.dataset.otxReady) return;
+    root.dataset.otxReady = '1';
+    var svg = root.querySelector('[data-diagram]');
+    var panel = root.querySelector('[data-panel]');
+    var lede = root.querySelector('[data-lede]');
+    var state = { view: 'flow', flowsOn: {}, hardened: {}, incident: 'blackenergy', selected: null };
+    FLOWS.forEach(function (f) { state.flowsOn[f.id] = true; });
+    CROSSINGS.forEach(function (c) { state.hardened[c.id] = false; });
+    function q(sel) { return svg.querySelector(sel); }
+    function nodeEl(id) { return q('.otx-node[data-id="' + id + '"]'); }
+
+    function build() {
+      var last = LEVELS[LEVELS.length - 1], H = last.y + BAND_H + 16;
+      svg.setAttribute('viewBox', '0 0 ' + CANVAS_W + ' ' + H);
+      var titleEls = Array.prototype.slice.call(svg.children);
+      svg.appendChild(el('defs', {}, '<marker id="otx-arr" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M1 1L8 5L1 9" fill="none" stroke="context-stroke" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>'));
+      var gBands = el('g', {});
+      LEVELS.forEach(function (l) {
+        gBands.appendChild(el('rect', { 'class': 'otx-band otx-band--' + l.zone, x: 10, y: l.y, width: CANVAS_W - 20, height: BAND_H, rx: 12 }));
+        gBands.appendChild(el('text', { 'class': 'otx-band__label otx-band__label--' + l.zone, x: 48, y: l.y + 52, 'text-anchor': 'middle' }, l.id));
+        var sub = el('text', { 'class': 'otx-band__sub', x: 48, y: l.y + 72, 'text-anchor': 'middle' });
+        var words = l.name.split(' ');
+        var lines = words.length > 2 ? [words.slice(0, 2).join(' '), words.slice(2).join(' ')] : (words.length === 2 && l.name.length > 12 ? words : [l.name]);
+        lines.forEach(function (t, i) { sub.appendChild(el('tspan', { x: 48, dy: i ? 14 : 0 }, t)); });
+        gBands.appendChild(sub);
+      });
+      svg.appendChild(gBands);
+      svg.appendChild(el('g', { 'data-edges': '' }));
+      svg.appendChild(el('g', { 'data-badges': '' }));
+      var gNodes = el('g', {});
+      NODES.concat(FIREWALLS).forEach(function (n) {
+        var g = el('g', { 'class': 'otx-node' + (n.kind === 'fw' ? ' otx-node--fw' : '') + (n.cls ? ' otx-node--' + n.cls : ''), 'data-id': n.id, tabindex: 0, role: 'button' });
+        g.appendChild(el('rect', { x: n.x, y: n.y, width: n.w, height: n.h, rx: n.kind === 'fw' ? 10 : 8 }));
+        if (n.kind === 'fw') {
+          g.appendChild(el('circle', { 'class': 'otx-icon-bg', cx: n.x + 20, cy: n.y + 20, r: 13 }));
+          g.appendChild(el('g', { 'class': 'otx-icon', transform: 'translate(' + (n.x + 11) + ', ' + (n.y + 11) + ') scale(0.75)' }, ICONS.shield));
+          g.appendChild(el('text', { x: n.x + 38 + (n.w - 38) / 2, y: n.y + 20, 'dominant-baseline': 'central' }));
+        } else {
+          g.appendChild(el('circle', { 'class': 'otx-icon-bg', cx: cx(n), cy: n.y + 24, r: 17 }));
+          g.appendChild(el('g', { 'class': 'otx-icon', transform: 'translate(' + (cx(n) - 11) + ', ' + (n.y + 13) + ') scale(0.92)' }, ICONS[n.icon]));
+          var t = el('text', { x: cx(n), y: n.y + 54 });
+          n.label.split('\n').forEach(function (line, i) { t.appendChild(el('tspan', { x: cx(n), dy: i ? 13 : 0 }, line)); });
+          g.appendChild(t);
+        }
+        g.addEventListener('click', function () { selectNode(n.id); });
+        g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectNode(n.id); } });
+        gNodes.appendChild(g);
+      });
+      svg.appendChild(gNodes);
+      renderFirewallLabels();
+    }
+
+    function renderFirewallLabels() {
+      FIREWALLS.forEach(function (f) {
+        var g = nodeEl(f.id);
+        var crossing = CROSSINGS.filter(function (c) { return c.fw === f.id; })[0];
+        var hard = crossing && state.hardened[crossing.id];
+        var t = g.querySelector('text');
+        var label = hard && f.alt ? f.alt : f.label;
+        t.textContent = '';
+        if (label.length > 20) {
+          var words = label.split(' '), mid = Math.ceil(words.length / 2);
+          [words.slice(0, mid).join(' '), words.slice(mid).join(' ')].forEach(function (line, i) { t.appendChild(el('tspan', { x: t.getAttribute('x'), dy: i ? 12 : -6 }, line)); });
+        } else t.textContent = label;
+        g.classList.toggle('is-hardened', !!hard);
+        g.querySelector('.otx-icon').innerHTML = hard ? ICONS.shieldCheck : ICONS.shield;
+      });
+      nodeEl('rogue-router').classList.toggle('is-removed', !!state.hardened.rogue);
+    }
+
+    function drawEdges() {
+      var g = q('[data-edges]'), badges = q('[data-badges]');
+      g.innerHTML = ''; badges.innerHTML = '';
+      svg.querySelectorAll('.otx-node').forEach(function (n) { n.classList.remove('on-path', 'on-incident', 'is-dim'); });
+      function faintFlows() {
+        FLOWS.forEach(function (f) { f.segs.forEach(function (s) {
+          if (f.id === 'rogue' && state.hardened.rogue) return;
+          g.appendChild(el('path', { 'class': 'otx-edge otx-edge--flow is-faded', d: edgePath(s[0], s[1]), style: 'stroke:' + f.color }));
+        }); });
+      }
+      if (state.view === 'flow') {
+        FLOWS.forEach(function (f) { f.segs.forEach(function (s) {
+          if (f.id === 'rogue' && state.hardened.rogue) return;
+          g.appendChild(el('path', { 'class': 'otx-edge otx-edge--flow' + (f.slow ? ' is-slow' : '') + (state.flowsOn[f.id] ? '' : ' is-hidden'), d: edgePath(s[0], s[1]), style: 'stroke:' + f.color, 'marker-end': 'url(#otx-arr)' }));
+        }); });
+      }
+      if (state.view === 'risk') {
+        faintFlows();
+        CROSSINGS.forEach(function (c) {
+          var hard = state.hardened[c.id], stop = c.path.indexOf(c.fw);
+          for (var i = 0; i < c.path.length - 1; i++) {
+            var a = c.path[i], b = c.path[i + 1];
+            if (hard && i >= stop) break;
+            var blocked = hard && i === stop - 1;
+            g.appendChild(el('path', { 'class': 'otx-edge otx-edge--attack' + (hard ? ' is-blocked' : ''), d: edgePath(a, b), 'marker-end': blocked ? '' : 'url(#otx-arr)' }));
+            nodeEl(a).classList.add('on-path');
+            if (!hard || i < stop - 1) nodeEl(b).classList.add('on-path');
+          }
+          if (hard) {
+            var fw = nodeMap[c.fw], bx = fw.x + fw.w - 4, by = fw.y + 2;
+            badges.appendChild(el('g', { 'class': 'otx-badge' }, '<circle cx="' + bx + '" cy="' + by + '" r="9"/><path d="M' + (bx - 4) + ' ' + by + ' l3 3 5-6"/>'));
+          }
+        });
+      }
+      if (state.view === 'attacks') {
+        var inc = INCIDENTS.filter(function (i) { return i.id === state.incident; })[0];
+        faintFlows();
+        svg.querySelectorAll('.otx-node').forEach(function (n) { n.classList.add('is-dim'); });
+        inc.path.forEach(function (id) { nodeEl(id).classList.remove('is-dim'); nodeEl(id).classList.add('on-incident'); });
+        for (var j = 0; j < inc.path.length - 1; j++) {
+          g.appendChild(el('path', { 'class': 'otx-edge otx-edge--incident', d: edgePath(inc.path[j], inc.path[j + 1]), 'marker-end': 'url(#otx-arr)' }));
+        }
+      }
+    }
+
+    function renderPanel() {
+      lede.textContent = LEDE[state.view];
+      var html = '';
+      if (state.view === 'flow') {
+        html += '<section class="lp-otx__card"><p class="lp-otx__eyebrow">Operational data flow</p>' +
+          '<p class="lp-otx__big">Five kinds of traffic cross from the internet to the process, and one of them was never approved.</p>' +
+          '<p>Dashes move in the direction the data travels. Historian data flows up to the business. Everything else flows down into the plant.</p></section>' +
+          '<section class="lp-otx__card"><h3>Flows on the board</h3><div class="lp-otx__legend">' +
+          FLOWS.map(function (f) { return '<label><input type="checkbox" data-flow="' + f.id + '"' + (state.flowsOn[f.id] ? ' checked' : '') + '><span class="lp-otx__sw" style="border-color:' + f.color + '"></span>' + h(f.label) + '</label>'; }).join('') +
+          '</div></section>';
+      }
+      if (state.view === 'risk') {
+        var open = CROSSINGS.filter(function (c) { return !state.hardened[c.id]; }).length;
+        html += '<section class="lp-otx__card"><p class="lp-otx__eyebrow">Residual risk</p>' +
+          '<div class="lp-otx__count"><b class="' + (open === 0 ? 'is-ok' : '') + '">' + open + '</b><span>' + (open === 1 ? 'way' : 'ways') + ' into the plant from the internet</span></div>' +
+          '<p>' + (open === 0 ? 'Every crossing is now hardware-enforced or removed. The remaining risk is removable media and insiders, which no gateway stops.' : 'Each red path is a live two-way session an attacker can ride. Hardening a crossing takes its path off the board.') + '</p></section>' +
+          '<section class="lp-otx__card"><h3>What sits between the levels</h3>' +
+          CROSSINGS.map(function (c) {
+            var hard = state.hardened[c.id], w = c.weak.split('\n'), s = c.strong.split('\n');
+            return '<h4>' + h(c.title) + '</h4><div class="lp-otx__seg">' +
+              '<button type="button" data-cross="' + c.id + '" data-val="0" class="' + (hard ? '' : 'is-active') + '"><b>' + h(w[0]) + '</b>' + h(w[1]) + '</button>' +
+              '<button type="button" data-cross="' + c.id + '" data-val="1" class="' + (hard ? 'is-active is-good' : '') + '"><b>' + h(s[0]) + '</b>' + h(s[1]) + '</button></div>';
+          }).join('') + '</section>';
+      }
+      if (state.view === 'attacks') {
+        var inc = INCIDENTS.filter(function (i) { return i.id === state.incident; })[0];
+        html += '<section class="lp-otx__card"><p class="lp-otx__eyebrow">Known OT attacks</p>' +
+          '<p class="lp-otx__big">Pick an incident to trace the route it took.</p><div class="lp-otx__attacks">' +
+          INCIDENTS.map(function (i) { return '<button type="button" data-incident="' + i.id + '" class="' + (i.id === state.incident ? 'is-active' : '') + '">' + h(i.name) + '<span>' + i.year + '</span></button>'; }).join('') +
+          '</div><div class="lp-otx__detail"><span class="lp-otx__tag">' + inc.year + '</span><span class="lp-otx__tag">' + h(inc.target) + '</span>' +
+          '<p>' + h(inc.summary) + '</p><p><strong>Lesson.</strong> ' + h(inc.lesson) + '</p></div></section>';
+      }
+      var sel = state.selected ? nodeMap[state.selected] : null;
+      html += '<section class="lp-otx__card lp-otx__selected"><p class="lp-otx__eyebrow">' + (sel ? 'Selected' : 'Select any box') + '</p>' +
+        (sel ? '<div class="lp-otx__nm">' + h(sel.label.replace('\n', ' ')) + '</div><div class="lp-otx__lv">' + (sel.kind === 'fw' ? 'Between levels' : levelOf(sel.level).id + ' ' + levelOf(sel.level).name) + '</div><p>' + h(sel.desc) + '</p>' : '<p>Click a node to read what it does and why it matters.</p>') +
+        '</section>';
+      panel.innerHTML = html;
+      panel.querySelectorAll('[data-flow]').forEach(function (cb) { cb.addEventListener('change', function () { state.flowsOn[cb.dataset.flow] = cb.checked; drawEdges(); }); });
+      panel.querySelectorAll('[data-cross]').forEach(function (b) { b.addEventListener('click', function () { setHardened(b.dataset.cross, b.dataset.val === '1'); }); });
+      panel.querySelectorAll('[data-incident]').forEach(function (b) { b.addEventListener('click', function () { state.incident = b.dataset.incident; drawEdges(); renderPanel(); }); });
+    }
+
+    function setView(v) {
+      state.view = v;
+      root.querySelectorAll('.lp-otx__viewbtn').forEach(function (b) { b.classList.toggle('is-active', b.dataset.view === v); b.setAttribute('aria-selected', b.dataset.view === v); });
+      drawEdges(); renderPanel();
+    }
+    function setHardened(id, val) { state.hardened[id] = val; renderFirewallLabels(); drawEdges(); renderPanel(); }
+    function selectNode(id) {
+      state.selected = state.selected === id ? null : id;
+      svg.querySelectorAll('.otx-node').forEach(function (n) { n.classList.toggle('is-selected', n.dataset.id === state.selected); });
+      renderPanel();
+    }
+    function allHardened(v) { CROSSINGS.forEach(function (c) { state.hardened[c.id] = v; }); renderFirewallLabels(); }
+
+    var TOUR = [
+      { t: 'An ordinary day', s: 'Watch the five flows that cross the levels.', run: function () { FLOWS.forEach(function (f) { state.flowsOn[f.id] = true; }); setView('flow'); } },
+      { t: 'Count the ways in', s: 'Every two-way firewall is a path an attacker can ride.', run: function () { allHardened(false); setView('risk'); } },
+      { t: 'Harden one crossing', s: 'Replace the historian firewall with a one-way gateway.', run: function () { allHardened(false); state.hardened.historian = true; renderFirewallLabels(); setView('risk'); } },
+      { t: 'Harden them all', s: 'Hardware-enforced crossings and the rogue router gone.', run: function () { allHardened(true); setView('risk'); } },
+      { t: 'What really happened', s: 'Trace the 2015 Ukraine grid attack through this plant.', run: function () { state.incident = 'blackenergy'; setView('attacks'); } }
+    ];
+    var tourBtn = root.querySelector('[data-tourbtn]'), tourMenu = root.querySelector('[data-tourmenu]');
+    tourMenu.innerHTML = TOUR.map(function (s, i) { return '<button type="button" role="menuitem" data-step="' + i + '"><b>' + (i + 1) + '. ' + h(s.t) + '</b><small>' + h(s.s) + '</small></button>'; }).join('');
+    function closeTour() { tourMenu.classList.remove('is-open'); tourBtn.setAttribute('aria-expanded', 'false'); }
+    tourBtn.addEventListener('click', function () { var open = tourMenu.classList.toggle('is-open'); tourBtn.setAttribute('aria-expanded', open); });
+    tourMenu.querySelectorAll('button').forEach(function (b) { b.addEventListener('click', function () { TOUR[+b.dataset.step].run(); closeTour(); }); });
+    document.addEventListener('click', function (e) { if (!root.contains(e.target) || !e.target.closest('.lp-otx__tour')) closeTour(); });
+    root.querySelectorAll('.lp-otx__viewbtn').forEach(function (b) { b.addEventListener('click', function () { setView(b.dataset.view); }); });
+
+    build();
+    var dv = root.dataset.defaultView;
+    setView(LEDE[dv] ? dv : 'flow');
+  };
+
+  window.lpOtxInit(document.getElementById('lp-otx-{{ forloop.counter|default:1 }}'));
+})();
+</script>

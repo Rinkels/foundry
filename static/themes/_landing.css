@@ -317,3 +317,131 @@
   .newsletter-form__input { flex-basis: auto; width: 100%; }
   .newsletter-form__button { width: 100%; }
 }
+
+/* ======================================================================
+   OT explorer — interactive Purdue-model block (human-curated, never LLM-set).
+   Markup + data: partials/sections/ot_explorer.html. All colour via --site-* tokens.
+   ====================================================================== */
+.lp .lp-otx-band { overflow-x: clip; }
+.lp .lp-otx { --otx-w: min(1720px, 100vw - 56px); width: var(--otx-w); margin-left: calc(50% - var(--otx-w) / 2); margin-top: 8px; font-size: 15px; }
+.lp .lp-otx__viewbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: var(--site-surface, rgba(255,255,255,0.04)); border: 1px solid var(--site-border, rgba(255,255,255,0.10));
+  border-radius: 14px; padding: 10px 14px;
+}
+.lp .lp-otx__viewlbl { color: var(--site-muted, #9aa3af); margin-right: 4px; }
+.lp .lp-otx__viewbtn {
+  font: inherit; font-size: 0.95rem; padding: 9px 16px; border-radius: 10px; cursor: pointer;
+  background: transparent; color: var(--site-text, #c9d1e3); border: 1px solid var(--site-border-strong, rgba(255,255,255,0.18));
+  display: inline-flex; align-items: center; gap: 9px;
+}
+.lp .lp-otx__viewbtn svg { width: 17px; height: 17px; }
+.lp .lp-otx__viewbtn:hover { border-color: var(--site-accent, #4fd8c4); color: var(--site-heading, #fff); }
+.lp .lp-otx__viewbtn.is-active { background: var(--site-accent, #4fd8c4); color: var(--site-on-accent, #04121c); border-color: var(--site-accent, #4fd8c4); }
+.lp .lp-otx__lede { margin-left: auto; color: var(--site-muted, #9aa3af); font-size: 0.92rem; }
+.lp .lp-otx__tour { position: relative; }
+.lp .lp-otx__tourbtn {
+  font: inherit; font-size: 0.92rem; background: transparent; color: var(--site-heading, #fff);
+  border: 1px solid var(--site-gold, #d9b36b); border-radius: 999px; padding: 7px 14px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.lp .lp-otx__tourbtn svg { width: 15px; height: 15px; }
+.lp .lp-otx__tourmenu {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; display: none; min-width: 320px; padding: 6px;
+  background: var(--site-surface, #101828); border: 1px solid var(--site-border-strong, rgba(255,255,255,0.18));
+  border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+}
+.lp .lp-otx__tourmenu.is-open { display: block; }
+.lp .lp-otx__tourmenu button {
+  display: block; width: 100%; text-align: left; background: none; border: 0; font: inherit; font-size: 0.9rem;
+  padding: 10px 12px; border-radius: 8px; cursor: pointer; color: var(--site-text, #c9d1e3);
+}
+.lp .lp-otx__tourmenu button:hover { background: rgba(255,255,255,0.05); }
+.lp .lp-otx__tourmenu button b { display: block; font-weight: 600; color: var(--site-heading, #fff); }
+.lp .lp-otx__tourmenu button small { color: var(--site-muted, #9aa3af); }
+
+.lp .lp-otx__layout { margin-top: 12px; display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 14px; align-items: start; }
+.lp .lp-otx__canvas { background: var(--site-surface-alt, rgba(255,255,255,0.03)); border: 1px solid var(--site-border, rgba(255,255,255,0.10)); border-radius: 14px; padding: 10px; }
+.lp .lp-otx__canvas svg { width: 100%; height: auto; display: block; }
+.lp .lp-otx__panel { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 14px; }
+.lp .lp-otx__card { background: var(--site-surface, rgba(255,255,255,0.04)); border: 1px solid var(--site-border, rgba(255,255,255,0.10)); border-radius: 14px; padding: 18px 20px; }
+.lp .lp-otx__card h3 { margin: 0 0 6px; font-size: 1rem; font-weight: 600; color: var(--site-heading, #fff); }
+.lp .lp-otx__card h4 { margin: 14px 0 6px; font-size: 0.92rem; font-weight: 500; color: var(--site-text, #c9d1e3); }
+.lp .lp-otx__card p { margin: 6px 0; line-height: 1.5; color: var(--site-muted, #9aa3af); font-size: 0.92rem; }
+.lp .lp-otx__eyebrow { color: var(--site-gold, #d9b36b); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 4px; }
+.lp .lp-otx__big { font-family: var(--site-heading-font, inherit); font-size: 1.25rem; line-height: 1.35; margin: 0; color: var(--site-heading, #fff) !important; }
+.lp .lp-otx__count { display: flex; align-items: baseline; gap: 10px; margin-top: 8px; }
+.lp .lp-otx__count b { font-family: var(--site-heading-font, inherit); font-size: 2.8rem; font-weight: 600; line-height: 1; color: #ff6b6b; }
+.lp .lp-otx__count b.is-ok { color: var(--site-accent, #4fd8c4); }
+.lp .lp-otx__count span { color: var(--site-text, #c9d1e3); }
+.lp .lp-otx__seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lp .lp-otx__seg button {
+  font: inherit; font-size: 0.86rem; line-height: 1.3; padding: 11px 10px; border-radius: 8px; cursor: pointer; min-height: 68px; text-align: center;
+  background: transparent; color: var(--site-muted, #9aa3af); border: 1px solid var(--site-border-strong, rgba(255,255,255,0.18));
+}
+.lp .lp-otx__seg button b { display: block; font-weight: 600; font-size: 0.95rem; color: var(--site-heading, #fff); }
+.lp .lp-otx__seg button.is-active { background: var(--site-accent-2, #7c8cf8); border-color: var(--site-accent-2, #7c8cf8); color: rgba(255,255,255,0.8); }
+.lp .lp-otx__seg button.is-active.is-good { background: var(--site-accent, #4fd8c4); border-color: var(--site-accent, #4fd8c4); color: rgba(4,18,28,0.75); }
+.lp .lp-otx__seg button.is-active.is-good b { color: var(--site-on-accent, #04121c); }
+.lp .lp-otx__legend { display: flex; flex-direction: column; gap: 4px; }
+.lp .lp-otx__legend label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.92rem; padding: 4px 0; color: var(--site-text, #c9d1e3); }
+.lp .lp-otx__legend input { accent-color: var(--site-accent, #4fd8c4); }
+.lp .lp-otx__sw { width: 34px; height: 0; border-top: 3px dashed; border-radius: 2px; }
+.lp .lp-otx__attacks { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.lp .lp-otx__attacks button {
+  font: inherit; font-size: 0.92rem; text-align: left; background: transparent; border: 1px solid var(--site-border-strong, rgba(255,255,255,0.18)); border-radius: 8px;
+  padding: 9px 12px; cursor: pointer; color: var(--site-heading, #fff); display: flex; justify-content: space-between; gap: 10px;
+}
+.lp .lp-otx__attacks button span { color: var(--site-muted, #9aa3af); font-size: 0.8rem; white-space: nowrap; }
+.lp .lp-otx__attacks button.is-active { border-color: #f59e6c; background: rgba(245,158,108,0.12); }
+.lp .lp-otx__detail { border-top: 1px solid var(--site-border, rgba(255,255,255,0.10)); margin-top: 12px; padding-top: 12px; }
+.lp .lp-otx__detail strong { color: var(--site-heading, #fff); }
+.lp .lp-otx__tag { display: inline-block; font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,0.06); color: var(--site-text, #c9d1e3); margin: 0 6px 6px 0; }
+.lp .lp-otx__selected { min-height: 70px; }
+.lp .lp-otx__nm { font-weight: 600; color: var(--site-heading, #fff); }
+.lp .lp-otx__lv { color: var(--site-muted, #9aa3af); font-size: 0.8rem; }
+.lp .lp-otx__foot { margin: 10px 0 0; color: var(--site-muted, #9aa3af); font-size: 0.8rem; text-align: right; }
+@media (max-width: 1280px) { .lp .lp-otx__layout { grid-template-columns: 1fr; } .lp .lp-otx__panel { position: static; } }
+@media (max-width: 760px) { .lp .lp-otx__lede { display: none; } }
+
+/* Diagram (SVG) */
+.lp .otx-band { stroke-width: 1.2; }
+.lp .otx-band--it { fill: rgba(255,107,107,0.05); stroke: rgba(255,107,107,0.38); }
+.lp .otx-band--ot { fill: rgba(124,140,248,0.07); stroke: rgba(124,140,248,0.4); }
+.lp .otx-band__label { font-family: var(--site-heading-font, inherit); font-size: 22px; font-weight: 600; fill: var(--site-heading, #fff); }
+.lp .otx-band__label--it { fill: #ff8585; }
+.lp .otx-band__sub { font-size: 12px; fill: var(--site-muted, #9aa3af); }
+.lp .otx-node { cursor: pointer; }
+.lp .otx-node rect { fill: var(--site-surface, #101828); stroke: var(--site-border-strong, rgba(148,163,199,0.3)); stroke-width: 1.2; transition: stroke .2s, stroke-width .2s, opacity .3s; }
+.lp .otx-node:hover rect { stroke: var(--site-accent, #4fd8c4); }
+.lp .otx-node .otx-icon-bg { fill: rgba(255,255,255,0.06); stroke: none; }
+.lp .otx-node .otx-icon { fill: none; stroke: var(--site-accent, #4fd8c4); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.lp .otx-node text { font-size: 11.5px; fill: var(--site-heading, #fff); text-anchor: middle; pointer-events: none; }
+.lp .otx-node--fw rect { stroke: var(--site-accent-2, #7c8cf8); stroke-width: 1.6; }
+.lp .otx-node--fw text { font-size: 11px; }
+.lp .otx-node--fw .otx-icon { stroke: var(--site-accent-2, #7c8cf8); }
+.lp .otx-node--attacker rect { stroke: #ff6b6b; stroke-width: 2; }
+.lp .otx-node--attacker .otx-icon-bg { fill: rgba(255,107,107,0.15); }
+.lp .otx-node--attacker .otx-icon { stroke: #ff6b6b; }
+.lp .otx-node.is-hardened rect { stroke: var(--site-accent, #4fd8c4); stroke-width: 1.8; }
+.lp .otx-node.is-hardened .otx-icon { stroke: var(--site-accent, #4fd8c4); }
+.lp .otx-node.is-removed { opacity: .25; }
+.lp .otx-node.on-path rect { stroke: #ff6b6b; stroke-width: 1.8; }
+.lp .otx-node.on-path.is-hardened rect { stroke: var(--site-accent, #4fd8c4); }
+.lp .otx-node.on-incident rect { stroke: #f59e6c; stroke-width: 1.8; }
+.lp .otx-node.is-dim { opacity: .3; }
+.lp .otx-node.is-selected rect { stroke: var(--site-gold, #d9b36b); stroke-width: 2.2; }
+.lp .otx-edge { fill: none; stroke-width: 2; stroke-linecap: round; transition: opacity .3s; }
+.lp .otx-edge--flow { stroke-dasharray: 9 7; }
+.lp .otx-edge--attack { stroke: #ff6b6b; stroke-dasharray: 7 6; stroke-width: 2.2; }
+.lp .otx-edge--attack.is-blocked { stroke: rgba(255,107,107,0.4); animation: none !important; }
+.lp .otx-edge--incident { stroke: #f59e6c; stroke-dasharray: 7 6; stroke-width: 2.4; }
+.lp .otx-edge.is-hidden { opacity: 0; pointer-events: none; }
+.lp .otx-edge.is-faded { opacity: .14; animation-play-state: paused; }
+@keyframes lp-otx-march { to { stroke-dashoffset: -32; } }
+@media (prefers-reduced-motion: no-preference) {
+  .lp .otx-edge--flow, .lp .otx-edge--attack, .lp .otx-edge--incident { animation: lp-otx-march 1.1s linear infinite; }
+  .lp .otx-edge.is-slow { animation-duration: 1.8s; }
+}
+.lp .otx-badge circle { fill: var(--site-accent, #4fd8c4); }
+.lp .otx-badge path { fill: none; stroke: var(--site-on-accent, #04121c); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
