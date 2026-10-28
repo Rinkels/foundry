@@ -207,7 +207,8 @@ class StaticBuilder:
         )
 
     def _normalize_landing_href(
-        self, site: Site, href: str, known_slugs: set[str], fallback_text: str = ""
+        self, site: Site, href: str, known_slugs: set[str], fallback_text: str = "",
+        known_paths: Optional[set] = None,
     ) -> str:
         """
         Rewrite LLM-supplied landing-section links to files that exist in this static site.
@@ -252,12 +253,16 @@ class StaticBuilder:
             return resolve_with_fallback(value[1:])
 
         path = value.split("?", 1)[0].split("#", 1)[0]
+        fragment = "#" + value.split("#", 1)[1] if "#" in value else ""
         if path in ("", "/"):
             return "index.html"
         if path.endswith(".html"):
+            clean = path.lstrip("/")
+            if known_paths and clean in known_paths:
+                return clean + fragment  # e.g. insights/<article>.html
             stem = Path(path).stem
             if stem in known_slugs or stem == "index":
-                return path
+                return path + fragment  # keep in-page anchors (page.html#section)
             return resolve_with_fallback(stem)
         if "/" not in path and "." not in path:
             return resolve_with_fallback(path)
@@ -270,6 +275,13 @@ class StaticBuilder:
         """
         normalized = copy.deepcopy(sections or [])
         known_slugs = set(site.pages.exclude(is_root=True).values_list("slug", flat=True))
+        # Published articles live at insights/<slug>.html — allow direct links.
+        known_paths = {
+            f"insights/{slug}.html"
+            for slug in site.evergreen_articles.filter(
+                status="published"
+            ).values_list("slug", flat=True)
+        }
 
         for block in normalized:
             if not isinstance(block, dict):
@@ -278,7 +290,8 @@ class StaticBuilder:
                 cta = block.get(key)
                 if isinstance(cta, dict) and cta.get("href"):
                     cta["href"] = self._normalize_landing_href(
-                        site, cta["href"], known_slugs, cta.get("label", "")
+                        site, cta["href"], known_slugs, cta.get("label", ""),
+                        known_paths=known_paths,
                     )
 
             items = block.get("items")
@@ -286,7 +299,8 @@ class StaticBuilder:
                 for item in items:
                     if isinstance(item, dict) and item.get("href"):
                         item["href"] = self._normalize_landing_href(
-                            site, item["href"], known_slugs, item.get("title", "")
+                            site, item["href"], known_slugs, item.get("title", ""),
+                            known_paths=known_paths,
                         )
 
         return normalized
