@@ -586,6 +586,13 @@ CSS = """
 .gl-more summary:hover{opacity:.85}
 .gl-more ul{margin:8px 0 0;padding-left:20px;color:var(--site-muted,#a8b3c9)}
 .gl-more li{margin:3px 0}
+.gl-table__cap{margin:10px 0 6px;font-size:.82rem;color:var(--site-muted,#a8b3c9);font-style:italic}
+.gl-tablewrap{overflow-x:auto;margin-top:8px}
+.gl-table{width:100%;border-collapse:collapse;font-size:.84rem;min-width:560px}
+.gl-table th{text-align:left;padding:7px 10px;color:var(--site-gold,#d9b36b);font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--site-border-strong,rgba(255,255,255,.18));white-space:nowrap}
+.gl-table td{padding:7px 10px;border-bottom:1px solid var(--site-border,rgba(255,255,255,.08));color:var(--site-muted,#a8b3c9);vertical-align:top;line-height:1.45}
+.gl-table td:first-child{color:var(--site-heading,#fff);font-weight:600;white-space:nowrap}
+.gl-table tr:last-child td{border-bottom:0}
 .gl-studying .gl-entry{cursor:pointer}
 .gl-studying .gl-entry__body{display:none}
 .gl-studying .gl-entry.gl-open .gl-entry__body{display:block}
@@ -728,6 +735,41 @@ JS = """
 # loves asking about the phases, so these enumerate them. Rendered as a native
 # <details> block in the glossary (no JS required) and after the answer in
 # flashcards; exported to the shared JSON as `detail`.
+# Per-term reference tables, rendered inside the "In depth" <details> block
+# after the step list and exported to the shared JSON as `table`.
+# {acr: {"caption", "headers": [...], "rows": [[cell, ...], ...]}}
+TABLES = {
+    "OSI": {
+        "caption": ("What lives at each layer — the protocol, PDU and device "
+                    "placements the exam expects (Sybex keys ARP to Layer 2 and "
+                    "TLS to Layer 4; other sources vary, the exam follows the guide)."),
+        "headers": ["Layer", "Data unit (PDU)", "Protocols & technologies", "Devices"],
+        "rows": [
+            ["7 Application", "Data",
+             "HTTP/HTTPS, FTP/SFTP, SMTP, IMAP, POP3, DNS, SNMP, SSH, Telnet, DHCP",
+             "Application firewalls, gateways, proxies"],
+            ["6 Presentation", "Data",
+             "Formats and encodings: ASCII, EBCDIC, JPEG, MPEG, GIF; encryption and compression of application data",
+             "—"],
+            ["5 Session", "Data",
+             "NFS, SQL sessions, RPC; dialog control: simplex, half-duplex, full-duplex",
+             "—"],
+            ["4 Transport", "Segment (TCP) / Datagram (UDP)",
+             "TCP, UDP, TLS/SSL (keyed here in the study guide)",
+             "—"],
+            ["3 Network", "Packet",
+             "IPv4/IPv6, ICMP, IGMP, IPsec, NAT; routing protocols: OSPF, BGP, RIP, EIGRP",
+             "Routers, layer-3 switches"],
+            ["2 Data Link", "Frame",
+             "Ethernet (802.3), Wi-Fi (802.11), ARP, PPP, L2TP; MAC and LLC sublayers, MAC addressing, VLANs",
+             "Switches, bridges, wireless access points"],
+            ["1 Physical", "Bits",
+             "Cabling (UTP, STP, fiber, coax), RS-232/RS-449, DSL, SONET; electrical, optical and radio signalling",
+             "Hubs, repeaters, modems, media converters"],
+        ],
+    },
+}
+
 DETAILS = {
     "PoR": ["Step 1 — Prove wallet ownership: the custodian demonstrates control of its on-chain addresses (cold and hot)",
             "Step 2 — Snapshot liabilities: every customer balance is captured at one date and time",
@@ -903,11 +945,23 @@ def entry_html(cat, acr, term, definition, pri, tip):
 
 def detail_block(acr):
     det = DETAILS.get(acr)
-    if not det:
+    tab = TABLES.get(acr)
+    if not det and not tab:
         return ""
-    lis = "".join("<li>" + escape(x) + "</li>" for x in det)
+    inner = ""
+    if det:
+        inner += "<ul>" + "".join("<li>" + escape(x) + "</li>" for x in det) + "</ul>"
+    if tab:
+        head = "".join("<th>" + escape(h) + "</th>" for h in tab["headers"])
+        rows = "".join(
+            "<tr>" + "".join("<td>" + escape(c) + "</td>" for c in row) + "</tr>"
+            for row in tab["rows"]
+        )
+        cap = ('<p class="gl-table__cap">' + escape(tab["caption"]) + "</p>") if tab.get("caption") else ""
+        inner += (cap + '<div class="gl-tablewrap"><table class="gl-table">'
+                  "<thead><tr>" + head + "</tr></thead><tbody>" + rows + "</tbody></table></div>")
     return ('<details class="gl-more"><summary>In depth — the steps that get tested</summary>'
-            "<ul>" + lis + "</ul></details>")
+            + inner + "</details>")
 
 
 def remember_html(title, lines):
@@ -1081,7 +1135,8 @@ _json_terms = [
     {"id": term_id(a), "acronym": a, "full_term": t, "definition": d,
      "category": c, "category_label": _cat_labels[c],
      "study_tip": tip or "", "priority": ("Core" if p == "core" else "Extended"),
-     **({"detail": DETAILS[a]} if a in DETAILS else {})}
+     **({"detail": DETAILS[a]} if a in DETAILS else {}),
+     **({"table": TABLES[a]} if a in TABLES else {})}
     for c, a, t, d, p, tip in TERMS
 ]
 _json_scenarios = []
