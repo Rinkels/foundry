@@ -43,8 +43,15 @@ def repos() -> list[Path]:
         if not root.exists():
             continue
         for d in root.iterdir():
-            if d.is_dir() and (d / ".git").exists() and d.name not in SKIP:
+            if not d.is_dir() or d.name in SKIP or d.name.startswith((".", "_")):
+                continue
+            if (d / ".git").exists():
                 seen.setdefault(d.name.lower(), d)   # C:\Projects and C:\projects are the same drive
+                continue
+            # one level deeper: wrapper folders such as DealerMaster\dealermaster (missed until 2026-11-04)
+            for sub in d.iterdir():
+                if sub.is_dir() and (sub / ".git").exists() and sub.name not in SKIP:
+                    seen.setdefault(f"{d.name}/{sub.name}".lower(), sub)
     return sorted(seen.values(), key=lambda p: p.name.lower())
 
 
