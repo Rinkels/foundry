@@ -289,6 +289,9 @@ TERMS = [
      "NAC asks: \u201cmay the device enter?\u201d (DLP asks whether the data may leave.)"),
     ("network", "SASE", "Secure Access Service Edge",
      "Cloud-delivered architecture combining networking and security capabilities.", "ext", None),
+    ("network", "Ports", "Standard & Well-Known Ports",
+     "The default TCP/UDP ports of common services — tested constantly, usually as “which ports must the firewall open?”. Three ranges: well-known 0–1023, registered 1024–49151, dynamic/ephemeral 49152–65535. The full reference table is under “In depth” below.", "core",
+     "The AAA pair is the classic trap: TACACS+ = TCP 49, RADIUS = UDP 1812 (1813 accounting) — each rides the transport most people guess for the other. Second favourite: SNMP polls on 161, traps arrive on 162."),
     ("network", "SDN", "Software Defined Networking",
      "Network architecture separating centralized software-based control from packet forwarding.", "ext",
      "Control plane and data plane are split — the controller is the crown jewel to protect. Access control inside SDNs is commonly ABAC (attribute-based)."),
@@ -739,6 +742,39 @@ JS = """
 # after the step list and exported to the shared JSON as `table`.
 # {acr: {"caption", "headers": [...], "rows": [[cell, ...], ...]}}
 TABLES = {
+    "Ports": {
+        "caption": ("The default ports the exam expects, in port order. Where a cleartext "
+                    "service has a TLS-protected sibling, it is listed in the last column — "
+                    "“which is the SECURE variant” is its own question style."),
+        "headers": ["Port", "Transport", "Service", "Notes / secure variant"],
+        "rows": [
+            ["19", "TCP/UDP", "CHARGEN (Character Generator)", "Legacy test service; classic distractor and amplification vector"],
+            ["20 / 21", "TCP", "FTP (20 data, 21 control)", "Cleartext → FTPS 989/990, or SFTP over SSH (22)"],
+            ["22", "TCP", "SSH (also SCP, SFTP)", "The secure replacement for Telnet, rlogin, FTP"],
+            ["23", "TCP", "Telnet", "Cleartext remote shell → use SSH 22"],
+            ["25", "TCP", "SMTP (server-to-server relay)", "Submission: 587 (STARTTLS) or 465 (implicit TLS)"],
+            ["49", "TCP", "TACACS+", "Whole AAA on one TCP port; encrypts the full payload"],
+            ["53", "UDP + TCP", "DNS", "UDP for queries; TCP for zone transfers and large answers"],
+            ["67 / 68", "UDP", "DHCP (67 server, 68 client)", "—"],
+            ["69", "UDP", "TFTP", "No authentication at all; network-device config copies"],
+            ["80", "TCP", "HTTP", "→ HTTPS 443"],
+            ["88", "TCP/UDP", "Kerberos", "The authentication backbone of Active Directory"],
+            ["110", "TCP", "POP3", "→ POP3S 995"],
+            ["123", "UDP", "NTP", "Accurate time underpins logs, Kerberos and certificates"],
+            ["137–139", "TCP/UDP", "NetBIOS", "Legacy Windows name/session services"],
+            ["143", "TCP", "IMAP", "→ IMAPS 993"],
+            ["161 / 162", "UDP", "SNMP (161 agent polls, 162 traps)", "Direction matters: traps are sent TO 162 on the manager"],
+            ["389", "TCP/UDP", "LDAP", "Cleartext directory → LDAPS 636"],
+            ["443", "TCP", "HTTPS", "Also the outer port for many VPNs (SSTP, OpenVPN-TCP)"],
+            ["445", "TCP", "SMB / CIFS", "Windows file sharing; favourite worm and ransomware target"],
+            ["514", "UDP", "Syslog", "TLS syslog = TCP 6514"],
+            ["636", "TCP", "LDAPS", "LDAP over TLS"],
+            ["1433", "TCP", "Microsoft SQL Server", "Other DBs: Oracle 1521, MySQL 3306, PostgreSQL 5432"],
+            ["1812 / 1813", "UDP", "RADIUS (1812 auth, 1813 accounting)", "Legacy pair: 1645/1646"],
+            ["1723", "TCP", "PPTP", "Obsolete VPN; its MS-CHAPv2 auth is broken"],
+            ["3389", "TCP", "RDP", "Remote desktop; brute-force magnet — gate behind VPN/MFA"],
+        ],
+    },
     "OSI": {
         "caption": ("What lives at each layer — the protocol, PDU and device "
                     "placements the exam expects (Sybex keys ARP to Layer 2 and "
@@ -771,6 +807,12 @@ TABLES = {
 }
 
 DETAILS = {
+    "Ports": ["Ranges — well-known 0–1023, registered 1024–49151, dynamic/ephemeral 49152–65535 (client source ports come from here)",
+              "AAA — TACACS+ = TCP 49 (one port, full AAA, whole payload encrypted); RADIUS = UDP 1812 auth + 1813 accounting (legacy 1645/1646)",
+              "Secure swaps — 23→22, 21→22 (SFTP), 80→443, 389→636, 110→995, 143→993, 25→587/465, 514→6514",
+              "SNMP — agents LISTEN on 161 for polls; managers RECEIVE traps on 162",
+              "DNS 53 — UDP for queries, TCP for zone transfers",
+              "Databases — MS SQL 1433, Oracle 1521, MySQL 3306, PostgreSQL 5432"],
     "PoR": ["Step 1 — Prove wallet ownership: the custodian demonstrates control of its on-chain addresses (cold and hot)",
             "Step 2 — Snapshot liabilities: every customer balance is captured at one date and time",
             "Step 3 — Build the Merkle tree: each leaf hashes a customer ID + balance; the root seals the whole liability set",
@@ -1241,6 +1283,18 @@ QUIZ = [
      "Key agreement without a pre-shared secret is Diffie-Hellman; the elliptic-curve variant gives equivalent strength with far smaller keys — the low-power requirement is the discriminator against RSA."),
 
     # --- Communication & Network Security ------------------------------------
+    ("network",
+     "Network engineers manage routers through a TACACS+ server while a VPN concentrator authenticates users against RADIUS. Which firewall rules support both?",
+     ["TCP 49 and UDP 1812", "UDP 49 and TCP 1812", "TCP 1812 and UDP 49", "TCP 389 and UDP 53"],
+     "TACACS+ runs the whole AAA exchange over TCP 49 with the full payload encrypted; RADIUS authenticates on UDP 1812 (accounting on 1813). The transports are the trap — each protocol uses the one people guess for the other. 389 is LDAP, 53 is DNS."),
+    ("network",
+     "A monitoring station must receive unsolicited alerts sent by network devices the moment something fails. Which port must be open toward the station?",
+     ["UDP 162", "UDP 161", "TCP 514", "UDP 123"],
+     "Devices SEND traps to the manager on UDP 162; 161 is where agents LISTEN for the manager's polls — the direction is the whole question. 514 is syslog (also alerts, but the stem says SNMP-style traps from devices), 123 is NTP."),
+    ("network",
+     "A packet capture shows a client connecting from source port 51,844 to a server on port 443. What kind of port is the client using?",
+     ["A dynamic (ephemeral) port", "A well-known port", "A registered port", "A reserved system port"],
+     "Client source ports are drawn from the dynamic/ephemeral range 49152–65535. Well-known = 0–1023 (the server's 443 lives there), registered = 1024–49151."),
     ("network",
      "A monitoring appliance is connected to a switch SPAN port and must never be able to interrupt production traffic. Which technology matches this deployment?",
      ["IDS", "IPS", "WAF", "NAC"],
