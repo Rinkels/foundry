@@ -528,6 +528,12 @@ TERMS = [
      "A hardened, dedicated workstation used only for privileged operations — no email, browsing or productivity apps — so administrative credentials and signing operations never touch a general-purpose, phishable device. Usually paired with jump hosts and just-in-time elevation so compromise of a daily-driver endpoint cannot reach production controls.", "ext",
      "The 2026 Binance breach reportedly began on a compromised engineer's device with a path to withdrawal-signing systems — the exact scenario PAWs plus jump-host separation exist to prevent."),
     # ---- Software & Cloud Security ------------------------------------------
+    ("cloud", "OOP", "Object-Oriented Programming Vocabulary",
+     "The exam's OOP taxonomy, frozen in textbook form: a CLASS is a collection of the common methods from a set of objects that defines the behavior of those objects; an OBJECT is an instance of a class; a MESSAGE invokes a METHOD, and the result the object exhibits is its BEHAVIOR. Polymorphism is a property (one message, different behaviors by receiver), never a container of methods. The full vocabulary table is under “In depth”.", "core",
+     "Developers lose points here by answering from their codebase: a class is NOT an object (blueprint vs building), and an interface is a contract WITHOUT behavior — when the stem says “defines the behavior”, the answer is class."),
+    ("cloud", "Polyinstantiation", "Polyinstantiation",
+     "A multilevel database security technique: the same primary key deliberately exists as multiple rows at different classification levels, so a lower-cleared user sees an unclassified cover story instead of an error or a gap. It defeats inference attacks — an empty or locked row would itself reveal that something classified exists.", "ext",
+     "Same key, different rows by clearance = polyinstantiation. It only SOUNDS like polymorphism; one is database inference defence, the other is OOP message dispatch."),
     ("cloud", "SDLC", "Software Development Life Cycle",
      "Processes through which software is planned, designed, built, tested, operated and retired.", "core",
      "Phases in order: requirements → design → implementation → testing → deployment/operations → retirement."),
@@ -784,6 +790,25 @@ JS = """
 # after the step list and exported to the shared JSON as `table`.
 # {acr: {"caption", "headers": [...], "rows": [[cell, ...], ...]}}
 TABLES = {
+    "OOP": {
+        "caption": ("The exam's object-oriented vocabulary — definition-recall questions quote "
+                    "these near-verbatim, so match the dictionary, not your codebase."),
+        "headers": ["Term", "Exam definition", "Developer-brain trap"],
+        "rows": [
+            ["Class", "Collection of the common methods from a set of objects that defines the behavior of those objects", "A class is NOT an object — blueprint vs building (even if your language makes classes objects at runtime)"],
+            ["Object", "An instance of a class", "—"],
+            ["Instance", "An object created (instantiated) from a class", "—"],
+            ["Method", "Internal code that defines an object's actions in response to a message", "—"],
+            ["Message", "A communication sent to an object to invoke a method", "“Method call” in modern speech"],
+            ["Behavior", "The results or output an object exhibits in response to a message", "The thing a CLASS defines — the hook in the classic question"],
+            ["Polymorphism", "The same message produces different behaviors depending on the receiving object", "A property, never a collection of methods"],
+            ["Inheritance", "A subclass receives the methods of the class above it", "—"],
+            ["Delegation", "An object forwards a request to another object", "—"],
+            ["Cohesion", "How strongly a module's internal purposes relate — HIGH is good", "Pairs with coupling; the good answer is high cohesion + low coupling"],
+            ["Coupling", "How much a module depends on other modules — LOW is good", "—"],
+            ["Polyinstantiation", "Same database key, different rows per clearance level (inference defence)", "Not OOP at all — it just rhymes with polymorphism"],
+        ],
+    },
     "Ports": {
         "caption": ("The default ports the exam expects, in port order. Where a cleartext "
                     "service has a TLS-protected sibling, it is listed in the last column — "
@@ -1206,6 +1231,7 @@ SCENARIOS = [
     ("SRTP", "Voice calls must be protected against eavesdropping while the packets cross the network. Which protocol secures the media stream itself?"),
     ("UEM", "One console must enforce policy on phones, laptops, wearables and IoT devices alike. Which solution class?"),
     ("BGP", "Routing between your network and external autonomous systems has broken, while internal routing is fine. Which protocol is implicated?"),
+    ("Polyinstantiation", "A database must show different rows for the same primary key depending on the reader's clearance, so classified entries stay invisible without leaving a telltale gap. Which technique?"),
     ("ZKP", "A prover must convince an auditor that every account was counted in a total — without revealing a single account. Which cryptographic technique?"),
     ("Dual control", "No withdrawal can be signed unless three of five officers participate, and no officer ever holds the whole key. Which paired principles are at work?"),
     ("OIDC", "Which identity standard adds authentication and identity information on top of OAuth 2.0?"),
@@ -1493,6 +1519,18 @@ QUIZ = [
      "Extending detection AND response across multiple integrated telemetry layers is XDR. A SIEM aggregates logs broadly but is analytics-first; EDR/NDR cover single layers."),
 
     # --- Software & Cloud Security ----------------------------------------------
+    ("cloud",
+     "A developer notes that calling .render() on a Chart, a Table and a Map object produces three different results from the identical call. Which OOP term names this property?",
+     ["Polymorphism", "Inheritance", "Cohesion", "Instantiation"],
+     "One message, different behaviors depending on the receiving object = polymorphism — it is a property you observe, never a container of methods. Inheritance passes methods DOWN a hierarchy; cohesion rates a module's internal focus; instantiation creates objects from a class."),
+    ("cloud",
+     "A code reviewer praises a module because everything in it serves one purpose and it barely depends on other modules. Which combination is being described?",
+     ["High cohesion and low coupling", "Low cohesion and high coupling", "High cohesion and high coupling", "Low cohesion and low coupling"],
+     "One purpose per module = HIGH cohesion; few dependencies on other modules = LOW coupling. That pairing is the textbook definition of good design — and the exam loves flipping one of the two words in the distractors."),
+    ("cloud",
+     "A defence logistics database returns an unclassified cargo manifest to ordinary users and a classified one to cleared users — for the same primary key. Which technique is in use?",
+     ["Polyinstantiation", "Polymorphism", "Database views", "Noise and perturbation"],
+     "Multiple rows for one key at different classification levels is polyinstantiation: the cover story defeats inference, because an error or empty row would itself leak that something classified exists. Views filter columns/rows but can't present two truths for one key; polymorphism is OOP, not databases."),
     ("cloud",
      "In which cloud service model is the CUSTOMER responsible for patching the guest operating system?",
      ["IaaS", "PaaS", "SaaS", "None — the CSP always patches the OS"],
