@@ -46,6 +46,11 @@ CSS = """
 .fc-btn--primary{background:var(--site-accent,#5dd6c6);color:var(--site-on-accent,#07120f)}
 .fc-btn--primary:hover{filter:brightness(1.08)}
 .fc-btn[disabled]{opacity:.4;cursor:not-allowed}
+.fc-technique{border:1px solid var(--site-gold,#d9b36b);border-radius:14px;margin-top:18px;padding:16px 20px;background:rgba(217,179,107,.06)}
+.fc-technique__head{color:var(--site-gold,#d9b36b);font-weight:700;font-size:.82rem;letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px}
+.fc-technique ul{margin:0 0 12px;padding-left:20px;color:var(--site-muted,#8b93a7);font-size:.9rem;line-height:1.55}
+.fc-technique li{margin:5px 0}
+.fc-technique li strong,.fc-technique li em{color:var(--site-text,#c9d1e3)}
 .fc-card{border:1px solid var(--site-border,rgba(148,163,199,.25));border-radius:16px;margin-top:18px;
   background:var(--site-surface,rgba(255,255,255,.03));padding:26px 26px 22px;min-height:240px;
   display:flex;flex-direction:column}
@@ -122,6 +127,18 @@ APP_HTML = """
     <div class="fc-start">
       <button type="button" class="fc-btn fc-btn--primary" id="fc-start">Start studying</button>
       <p class="fc-note" id="fc-pool-note"></p>
+    </div>
+
+    <div class="fc-technique" id="fc-technique" hidden>
+      <div class="fc-technique__head">Before you answer — read like a lawyer</div>
+      <ul>
+        <li><strong>Trigger words:</strong> NOT · EXCEPT · LEAST · ABSENCE · AVOID · BEST · FIRST · MOST · PRIMARY — when one appears, stop and re-read the stem before touching an option.</li>
+        <li><strong>Count the negatives.</strong> An even number means the question is secretly positive — "the <em>absence</em> of which shows due care is <em>not</em> maintained" just asks "which one demonstrates due care?"</li>
+        <li><strong>Restate the ask</strong> in your own words, positive form, eight words or fewer — <em>before</em> reading any option. If you can't restate it, you haven't finished reading it.</li>
+        <li><strong>Scan options as families.</strong> When three cluster and one is structurally the odd one out, the outlier usually wins NOT/EXCEPT/absence stems.</li>
+        <li><strong>The last sentence is the question.</strong> Everything before it is scenery — read the final sentence first, then the scenario.</li>
+      </ul>
+      <button type="button" class="fc-chip" id="fc-technique-hide">Got it — hide for this visit</button>
     </div>
 
     <div class="fc-card" id="fc-card" hidden aria-live="polite">
@@ -412,8 +429,25 @@ JS = """
       return;
     }
     session = { queue: q, idx: 0, done: 0, again: 0, revealed: false, current: null };
+    showTechnique();
     show();
   }
+
+  // ---- reading-technique panel (Exam Practice, once per visit) -------------
+  function techniqueSeen(set) {
+    try {
+      if (set) { sessionStorage.setItem("mg_fc_technique_seen", "1"); return true; }
+      return sessionStorage.getItem("mg_fc_technique_seen") === "1";
+    } catch (e) { return false; }
+  }
+  function showTechnique() {
+    var panel = document.getElementById("fc-technique");
+    panel.hidden = !(sel.mode === "exam" && !techniqueSeen(false));
+  }
+  document.getElementById("fc-technique-hide").addEventListener("click", function () {
+    techniqueSeen(true);
+    document.getElementById("fc-technique").hidden = true;
+  });
 
   // ---- controls ----------------------------------------------------------
   function bindChips(rootId, key, cb) {
