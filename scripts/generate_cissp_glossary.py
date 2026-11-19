@@ -1062,7 +1062,12 @@ DETAILS = {
         "4 — Options as families: group the options (laws vs frameworks, attacks vs controls) — the odd family member is usually the answer to a NOT question",
         "5 — Last sentence first: in long scenarios the final sentence is the real question; read it, then mine the scenario for only what it needs",
         "6 — Multi-selects: tick only what is DEFINED AS part of the set, not what is merely associated with it (802.1X underpins wireless ENT auth but is not an 802.11 technology)",
-        "7 — Multi-selects: reject the option that is DOWNSTREAM of the set — what the set produces or connects to (the public key is what trusting a certificate gives you, not a check you make first)"],
+        "7 — Multi-selects: reject the option that is DOWNSTREAM of the set — what the set produces or connects to (the public key is what trusting a certificate gives you, not a check you make first)",
+        "8 — Comprehensive beats partial: an option that covers multiple correct aspects outranks one that is merely true (“integrity, authentication and nonrepudiation” beats “integrity”)",
+        "9 — Policy answers address root issues: on BEST/FIRST questions, the management/policy/process option usually beats the point technical fix",
+        "10 — Human safety ALWAYS comes first: when people appear among the options, protecting them outranks data, systems, cost and mission — every time",
+        "11 — Security baked in, not bolted on: designed-in-from-the-start options beat added-afterwards options (and “earlier in the lifecycle” beats “later”)",
+        "12 — Before committing, re-read the stem: does your chosen option meet EVERY stated criterion, not just most of them?"],
     "Ethics": [
         "Canon I — protect society, the common good, necessary public trust and confidence, and the infrastructure",
         "Canon II — act honorably, honestly, justly, responsibly and legally",
