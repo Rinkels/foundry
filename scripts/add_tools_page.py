@@ -12,6 +12,7 @@ Run from the foundry root:
 Re-running is safe: pages are updated in place and the nav/card inserts are
 idempotent.
 """
+import json
 import os
 
 from apps.sites_builder.models import Page, Site, SiteTopNavItem
@@ -40,21 +41,24 @@ SECTIONS = [
         "eyebrow": "CISSP study suite",
         "heading": "Four tools, two deep dives, one shared glossary.",
         "subhead": (
-            "Built around a single structured glossary of exam concepts: every "
-            "flashcard, mind-map node and quiz question draws from the same data."
+            "We built this suite to study for our own CISSP — and passed in "
+            "November 2026. Every flashcard, mind-map node and practice question "
+            "draws from the same structured glossary of 230+ exam concepts."
         ),
         "items": [
             {
                 "icon": "📖",
                 "title": "Security glossary",
-                "text": "120+ exam concepts across all 8 domains, with the step lists and phase orders the exam actually asks about.",
+                "badge": "Exam-passed",
+                "badge_color": "accent",
+                "text": "230+ exam concepts across all 8 domains, with the step lists, comparison tables and phase orders the exam actually asks about.",
                 "href": "insights/cissp-security-glossary.html",
                 "link_label": "Browse the glossary",
             },
             {
                 "icon": "🗂️",
                 "title": "Flashcards & exam practice",
-                "text": "Spaced-repetition flashcards plus auto-graded exam-style questions. Progress saves locally; export and import anytime.",
+                "text": "Spaced-repetition flashcards plus 150 auto-graded exam-style questions. Progress saves locally; export and import anytime.",
                 "href": "insights/cissp-flashcards.html",
                 "link_label": "Start a session",
             },
@@ -141,12 +145,49 @@ page, created = Page.objects.get_or_create(
 page.title = "Tools"
 page.page_type = "landing"
 page.landing_sections = SECTIONS
-page.meta_title = "Free tools: CISSP study suite & OT security explorer | Mindsgate"
+page.meta_title = "Free CISSP study tools: glossary, flashcards & practice questions | Mindsgate"
 page.meta_description = (
-    "Free interactive tools from Mindsgate: a CISSP study suite (glossary, "
-    "flashcards, mind map, score tracker) and an interactive Purdue model "
-    "OT security briefing."
+    "Free CISSP study suite: a 230+ term glossary, spaced-repetition flashcards, "
+    "150 exam-style practice questions, a domain mind map and a score tracker — "
+    "built by the team that used it to pass the CISSP in 2026. No sign-up, no "
+    "tracking. Plus interactive OT security and sales-process briefings."
 )
+page.focus_keyword = (
+    "free CISSP study tools, CISSP flashcards, CISSP glossary, "
+    "CISSP practice questions, CISSP mind map, CISSP acronyms"
+)
+
+# CollectionPage + ItemList schema so search engines see the individual tools.
+_base = (site.base_url or "").rstrip("/")
+_tools = [
+    ("CISSP security glossary (230+ terms)", "insights/cissp-security-glossary.html"),
+    ("CISSP flashcards & practice questions", "insights/cissp-flashcards.html"),
+    ("CISSP domain mind map", "insights/cissp-mind-map.html"),
+    ("CISSP chapter score tracker", "insights/cissp-score-tracker.html"),
+    ("CISSP security models compared", "insights/cissp-security-models.html"),
+    ("SOC 1 vs SOC 2 vs SOC 3 explained", "insights/cissp-soc-reports.html"),
+    ("OT security Purdue Model Explorer", "ot-security.html"),
+    ("B2B Sales Process Explorer", "sales-process.html"),
+]
+page.schema_jsonld = json.dumps({
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": page.meta_title,
+    "description": page.meta_description,
+    "url": f"{_base}/tools.html" if _base else "tools.html",
+    "mainEntity": {
+        "@type": "ItemList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": i,
+                "name": name,
+                "url": f"{_base}/{path}" if _base else path,
+            }
+            for i, (name, path) in enumerate(_tools, start=1)
+        ],
+    },
+}, ensure_ascii=False)
 page.is_locked = False
 page.save()
 print(f"{'created' if created else 'updated'} page {site.slug}/{page.slug} (id={page.id})")

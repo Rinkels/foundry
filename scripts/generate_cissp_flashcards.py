@@ -20,9 +20,10 @@ Then build_site. (Run generate_cissp_glossary.py first so the JSON exists.)
 
 SLUG = "cissp-flashcards"
 TITLE = "CISSP Flashcards: Security Acronyms & Concepts"
-META_DESCRIPTION = ("Interactive CISSP flashcards for studying cybersecurity acronyms, IAM, "
-                    "cryptography, networking, security operations, risk management and "
-                    "secure software development.")
+META_DESCRIPTION = ("Free CISSP flashcards with spaced repetition plus 150 original exam-style "
+                    "practice questions across all 8 domains — risk, cryptography, IAM, "
+                    "networking, security operations and software development. No sign-up; "
+                    "part of the free suite its authors used to pass the CISSP in 2026.")
 DISCLAIMER = ("Independent CISSP study aid. CISSP is a registered trademark of ISC2. "
               "This resource is not affiliated with or endorsed by ISC2.")
 

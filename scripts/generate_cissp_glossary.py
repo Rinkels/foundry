@@ -29,9 +29,9 @@ def slug_id(acr):
 
 SLUG = "cissp-security-glossary"
 TITLE = "CISSP Security Acronyms & Definitions: A Practical Study Glossary"
-META_DESCRIPTION = ("Practical CISSP cybersecurity glossary covering security acronyms, "
-                    "definitions and study tips across risk, cryptography, IAM, networking, "
-                    "security operations and secure software development.")
+META_DESCRIPTION = ("Free CISSP glossary of 230+ security acronyms and definitions across all "
+                    "8 domains, with exam tips, comparison tables and in-depth notes — part of "
+                    "the free study suite its authors used to pass the CISSP in 2026.")
 ISC2_OUTLINE_URL = "https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline"
 DISCLAIMER = ("Independent CISSP study aid. CISSP is a registered trademark of ISC2. "
               "This resource is not affiliated with or endorsed by ISC2.")
